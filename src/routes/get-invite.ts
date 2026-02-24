@@ -10,9 +10,9 @@ export const getInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
 		"/invite/get",
 		{
-			method: "POST",
+			method: "GET",
 			use: [optionalSessionMiddleware],
-			body: z.object({
+			query: z.object({
 				/**
 				 * The invite token to look up.
 				 */
@@ -68,7 +68,7 @@ export const getInvite = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
-			const { token } = ctx.body;
+			const { token } = ctx.query;
 
 			const adapter = getInviteAdapter(ctx.context, options);
 

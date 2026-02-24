@@ -29,7 +29,8 @@ export type InviteOptions = {
 				inviterUser: UserWithRole;
 				ctx: GenericEndpointContext;
 		  }) => Promise<boolean> | boolean)
-		| boolean;
+		| boolean
+		| Permissions;
 	/**
 	 * A function that runs before a user accepts an invite
 	 *
@@ -47,7 +48,8 @@ export type InviteOptions = {
 				invitedUser: UserWithRole;
 				newAccount: boolean;
 		  }) => Promise<boolean> | boolean)
-		| boolean;
+		| boolean
+		| Permissions;
 	/**
 	 * A function that runs before a user cancels an invite.
 	 *
@@ -62,7 +64,8 @@ export type InviteOptions = {
 				invitation: InviteTypeWithId;
 				ctx: GenericEndpointContext;
 		  }) => Promise<boolean> | boolean)
-		| boolean;
+		| boolean
+		| Permissions;
 	/**
 	 * A function that runs before a user rejects an invite.
 	 *
@@ -77,7 +80,8 @@ export type InviteOptions = {
 				invitation: InviteTypeWithId;
 				ctx: GenericEndpointContext;
 		  }) => Promise<boolean> | boolean)
-		| boolean;
+		| boolean
+		| Permissions;
 	/**
 	 * A function to generate a custom token
 	 */
@@ -331,4 +335,9 @@ export type InviteUseType = {
 
 export type InviteUseTypeWithId = InviteUseType & {
 	id: string;
+};
+
+export type Permissions = {
+	statement: string;
+	permissions: string[];
 };

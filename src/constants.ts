@@ -13,6 +13,7 @@ export const ERROR_CODES = {
 	CANT_REJECT_INVITE: "You cannot reject this invite",
 	INVITER_NOT_FOUND: "Inviter not found",
 	ERROR_SENDING_THE_INVITATION_EMAIL: "Error sending the invitation email",
+	ADMIN_PLUGIN_IS_NOT_SET_UP: "Admin plugin is not set-up",
 } as const;
 
 export const Tokens: TokensType[] = ["token", "code", "custom"];

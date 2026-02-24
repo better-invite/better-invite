@@ -1,6 +1,7 @@
 import { beforeEach, expect, vi } from "vitest";
 import { ERROR_CODES } from "../src/constants";
 import type { InviteTypeWithId } from "../src/types";
+import * as utils from "../src/utils";
 import { defaultOptions, test } from "./helpers/better-auth";
 import mock from "./helpers/mocks";
 import { createUser } from "./helpers/users";
@@ -267,6 +268,73 @@ test("canRejectInvite is called and can block rejection", async ({
 		where: [{ field: "token", value: token }],
 	});
 	expect(inviteCount).toBe(1);
+});
+
+test("canRejectInvite supports Permissions objects", async ({ createAuth }) => {
+	const checkPermissionsSpy = vi
+		.spyOn(utils, "checkPermissions")
+		.mockResolvedValue(false);
+
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+			canRejectInvite: {
+				statement: "invite",
+				permissions: ["reject"],
+			},
+		},
+	});
+
+	const invitee = {
+		email: "invitee@test.com",
+		role: "user",
+		name: "Invitee User",
+		password: "12345678",
+	};
+
+	await createUser(invitee, db);
+
+	const { headers: creatorHeaders } = await signInWithTestUser();
+
+	const created = await client.invite.create({
+		role: "admin",
+		email: invitee.email,
+		fetchOptions: { headers: creatorHeaders },
+	});
+
+	expect(created.error).toBe(null);
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "email", value: invitee.email }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+	const token = invite.token;
+
+	const { headers: inviteeHeaders } = await signInWithUser(
+		invitee.email,
+		invitee.password,
+	);
+
+	const rejected = await client.invite.reject({
+		token,
+		fetchOptions: { headers: inviteeHeaders },
+	});
+
+	expect(checkPermissionsSpy).toHaveBeenCalledOnce();
+	expect(rejected.data).toBeNull();
+	expect(rejected.error).toEqual(
+		expect.objectContaining({
+			errorCode: "CANT_REJECT_INVITE",
+			message: ERROR_CODES.CANT_REJECT_INVITE,
+			status: 400,
+			statusText: "BAD_REQUEST",
+		}),
+	);
 });
 
 test("reject invite hooks run in the correct order with the expected arguments", async ({

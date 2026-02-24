@@ -1,5 +1,7 @@
 import { beforeEach, expect, vi } from "vitest";
+import { ERROR_CODES } from "../src/constants";
 import type { InviteTypeWithId } from "../src/types";
+import * as utils from "../src/utils";
 import { defaultOptions, test } from "./helpers/better-auth";
 import mock from "./helpers/mocks";
 import { createUser } from "./helpers/users";
@@ -426,6 +428,40 @@ test("invite hooks run in the correct order with the expected arguments", async 
 				createdAt: expect.any(Date),
 				expiresAt: expect.any(Date),
 			}),
+		}),
+	);
+});
+
+test("canCreateInvite supports Permissions objects", async ({ createAuth }) => {
+	const checkPermissionsSpy = vi
+		.spyOn(utils, "checkPermissions")
+		.mockResolvedValue(false);
+
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			canCreateInvite: {
+				statement: "invite",
+				permissions: ["create"],
+			},
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+
+	const res = await client.invite.create({
+		role: "user",
+		fetchOptions: { headers },
+	});
+
+	expect(checkPermissionsSpy).toHaveBeenCalledOnce();
+	expect(res.data).toBeNull();
+	expect(res.error).toEqual(
+		expect.objectContaining({
+			errorCode: "INSUFFICIENT_PERMISSIONS",
+			message: ERROR_CODES.INSUFFICIENT_PERMISSIONS,
+			status: 400,
+			statusText: "BAD_REQUEST",
 		}),
 	);
 });

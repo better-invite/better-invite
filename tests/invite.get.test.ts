@@ -44,7 +44,9 @@ test("public invite returns inviter info without session", async ({
 	}
 
 	const res = await client.invite.get({
-		token: tokenValue,
+		query: {
+			token: tokenValue,
+		},
 	});
 
 	expect(res.error).toBe(null);
@@ -103,7 +105,9 @@ test("private invite returns inviter info only to the correct invitee", async ({
 	);
 
 	const res = await client.invite.get({
-		token: tokenValue,
+		query: {
+			token: tokenValue,
+		},
 		fetchOptions: { headers: inviteeHeaders },
 	});
 
@@ -170,7 +174,9 @@ test("private invite returns INVALID_TOKEN for non-invitee", async ({
 	);
 
 	const res = await client.invite.get({
-		token: tokenValue,
+		query: {
+			token: tokenValue,
+		},
 		fetchOptions: { headers: otherHeaders },
 	});
 
@@ -219,7 +225,9 @@ test("private invite returns INVALID_TOKEN when unauthenticated", async ({
 	const tokenValue = invite.token;
 
 	const res = await client.invite.get({
-		token: tokenValue,
+		query: {
+			token: tokenValue,
+		},
 	});
 
 	expect(res.data).toBeNull();
@@ -243,7 +251,9 @@ test("getInvite with invalid token returns INVALID_TOKEN", async ({
 	});
 
 	const res = await client.invite.get({
-		token: "invalid_token",
+		query: {
+			token: "invalid_token",
+		},
 	});
 
 	expect(res.data).toBeNull();

@@ -4,6 +4,7 @@ import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
+import { checkPermissions } from "../utils";
 
 export const rejectInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -21,7 +22,7 @@ export const rejectInvite = (options: NewInviteOptions) => {
 				openapi: {
 					operationId: "rejectInvite",
 					description:
-						"Reject an invitation. Only the invitee (user whose email matches the invite for private invites) can reject it.",
+						"Reject an invitation. Only available for private invites. Only the invitee (user whose email matches the invite for private invites) can reject it.",
 					responses: {
 						"200": {
 							description: "Invite rejected successfully",
@@ -87,7 +88,7 @@ export const rejectInvite = (options: NewInviteOptions) => {
 				});
 			}
 
-			const canRejectInvite =
+			const canRejectInviteOptions =
 				typeof options.canRejectInvite === "function"
 					? await options.canRejectInvite({
 							inviteeUser,
@@ -95,6 +96,10 @@ export const rejectInvite = (options: NewInviteOptions) => {
 							ctx,
 						})
 					: options.canRejectInvite;
+			const canRejectInvite =
+				typeof canRejectInviteOptions === "object"
+					? await checkPermissions(ctx, canRejectInviteOptions)
+					: canRejectInviteOptions;
 
 			if (!canRejectInvite) {
 				throw ctx.error("BAD_REQUEST", {

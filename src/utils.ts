@@ -2,6 +2,7 @@ import { base64Url } from "@better-auth/utils/base64";
 import { createHMAC } from "@better-auth/utils/hmac";
 import {
 	type AuthContext,
+	type BetterAuthPlugin,
 	type CookieOptions,
 	type GenericEndpointContext,
 	generateId,
@@ -18,7 +19,11 @@ import {
 	symmetricEncodeJWT,
 } from "better-auth/crypto";
 import { parseUserOutput } from "better-auth/db";
-import { createAuthMiddleware, type UserWithRole } from "better-auth/plugins";
+import {
+	type admin,
+	createAuthMiddleware,
+	type UserWithRole,
+} from "better-auth/plugins";
 import type { InviteAdapter } from "./adapter";
 import type { CreateInvite } from "./body";
 import { ERROR_CODES } from "./constants";
@@ -26,6 +31,7 @@ import type {
 	InviteOptions,
 	InviteTypeWithId,
 	NewInviteOptions,
+	Permissions,
 	TokensType,
 } from "./types";
 
@@ -114,10 +120,14 @@ export const consumeInvite = async ({
 		throw error("BAD_REQUEST", ERROR_CODES.INVALID_EMAIL, "INVALID_EMAIL");
 	}
 
-	const canAcceptInvite =
+	const canAcceptInviteOptions =
 		typeof options.canAcceptInvite === "function"
-			? options.canAcceptInvite({ invitedUser, newAccount })
+			? await options.canAcceptInvite({ invitedUser, newAccount })
 			: options.canAcceptInvite;
+	const canAcceptInvite =
+		typeof canAcceptInviteOptions === "object"
+			? await exports.checkPermissions(ctx, canAcceptInviteOptions) // fix vitest errors with vi.spyOn (https://github.com/vitest-dev/vitest/issues/6551)
+			: canAcceptInviteOptions;
 
 	if (!canAcceptInvite) {
 		throw error(
@@ -240,6 +250,74 @@ export function redirectCallback(
 	}
 
 	return url.href;
+}
+
+export const checkPermissions = async (
+	ctx: GenericEndpointContext,
+	permissions: Permissions,
+) => {
+	console.log("CHECKING PERMISSIONS!");
+	const session = ctx.context.session;
+	if (!session?.session) {
+		throw ctx.error("UNAUTHORIZED");
+	}
+
+	const adminPlugin = getPlugin<AdminPlugin>(
+		"admin" satisfies AdminPlugin["id"],
+		ctx.context,
+	);
+
+	if (!adminPlugin) {
+		ctx.context.logger.error("Admin plugin is not set-up.");
+		throw ctx.error("FAILED_DEPENDENCY", {
+			message: ERROR_CODES.ADMIN_PLUGIN_IS_NOT_SET_UP,
+		});
+	}
+
+	try {
+		return await adminPlugin.endpoints.userHasPermission({
+			...ctx,
+			body: {
+				userId: session.user.id,
+				permissions: { [permissions.statement]: permissions.permissions },
+			},
+			returnHeaders: true,
+		});
+	} catch {
+		return false;
+	}
+};
+
+type AdminPlugin = ReturnType<typeof admin>;
+
+const getPlugin = <P extends BetterAuthPlugin = BetterAuthPlugin>(
+	id: string,
+	context: AuthContext,
+) => {
+	return context.options.plugins?.find((p) => p.id === id) as P | undefined;
+};
+
+type Success<T> = {
+	data: T;
+	error: null;
+};
+
+type Failure<E> = {
+	data: null;
+	error: E;
+};
+
+export type Result<T, E = Error> = Success<T> | Failure<E>;
+
+export async function tryCatch<T, E = Error>(
+	promise: Promise<T>,
+): Promise<Result<T, E>> {
+	try {
+		const data = await promise;
+		return { data, error: null };
+	} catch (error) {
+		return { data: null, error: error as E };
+	}
 }
 
 // https://github.com/better-auth/better-auth/blob/08ff06d3319dc1472f24844378a9e1f572323b90/packages/better-auth/src/api/routes/session.ts#L501

@@ -1,6 +1,7 @@
 import { beforeEach, expect, vi } from "vitest";
 import { ERROR_CODES } from "../src/constants";
 import type { InviteTypeWithId } from "../src/types";
+import * as utils from "../src/utils";
 import { defaultOptions, test } from "./helpers/better-auth";
 import mock from "./helpers/mocks";
 import { createUser } from "./helpers/users";
@@ -224,6 +225,57 @@ test("canCancelInvite is called and can block cancellation", async ({
 		where: [{ field: "token", value: token }],
 	});
 	expect(inviteAfter).toBe(1);
+});
+
+test("canCancelInvite supports Permissions objects", async ({ createAuth }) => {
+	const checkPermissionsSpy = vi
+		.spyOn(utils, "checkPermissions")
+		.mockResolvedValue(false);
+
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			canCancelInvite: {
+				statement: "invite",
+				permissions: ["cancel"],
+			},
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+
+	const created = await client.invite.create({
+		role: "user",
+		senderResponse: "token",
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(created.error).toBe(null);
+
+	const token = created.data?.message;
+	if (!token) {
+		throw new Error("Token value is undefined");
+	}
+
+	const res = await client.invite.cancel({
+		token,
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(checkPermissionsSpy).toHaveBeenCalledOnce();
+	expect(res.data).toBeNull();
+	expect(res.error).toEqual(
+		expect.objectContaining({
+			errorCode: "INSUFFICIENT_PERMISSIONS",
+			message: ERROR_CODES.INSUFFICIENT_PERMISSIONS,
+			status: 400,
+			statusText: "BAD_REQUEST",
+		}),
+	);
 });
 
 test("cancel invite hooks run in the correct order with the expected arguments", async ({

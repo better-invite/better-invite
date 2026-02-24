@@ -4,7 +4,7 @@ import { getInviteAdapter } from "../adapter";
 import { createInviteBodySchema } from "../body";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { resolveInvitePayload } from "../utils";
+import { checkPermissions, resolveInvitePayload } from "../utils";
 
 export const createInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -68,7 +68,7 @@ export const createInvite = (options: NewInviteOptions) => {
 
 			const basicInvitedUser = { email, role };
 
-			const canCreateInvite =
+			const canCreateInviteOption =
 				typeof options.canCreateInvite === "function"
 					? await options.canCreateInvite({
 							invitedUser: basicInvitedUser,
@@ -76,10 +76,15 @@ export const createInvite = (options: NewInviteOptions) => {
 							ctx,
 						})
 					: options.canCreateInvite;
+			const canCreateInvite =
+				typeof canCreateInviteOption === "object"
+					? await checkPermissions(ctx, canCreateInviteOption)
+					: canCreateInviteOption;
 
 			if (!canCreateInvite) {
 				throw ctx.error("BAD_REQUEST", {
 					message: ERROR_CODES.INSUFFICIENT_PERMISSIONS,
+					errorCode: "INSUFFICIENT_PERMISSIONS",
 				});
 			}
 

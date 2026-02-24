@@ -1,6 +1,7 @@
 import { setCookieToHeader } from "better-auth/cookies";
 import { beforeEach, expect, vi } from "vitest";
 import type { InviteTypeWithId } from "../src/types";
+import * as utils from "../src/utils";
 import {
 	defaultOptions,
 	resolveInviteRedirect,
@@ -384,6 +385,72 @@ test("canAcceptInvite is called if it exists", async ({ createAuth }) => {
 	expect(mock.canAcceptInvite).toHaveBeenCalledOnce();
 	// Should throw an error because canAcceptInviteMock returns false
 	expect(error).toStrictEqual({
+		code: "YOU_CANNOT_ACCEPT_THIS_INVITE",
+		errorCode: "CANT_ACCEPT_INVITE",
+		message: "You cannot accept this invite",
+		status: 400,
+		statusText: "BAD_REQUEST",
+	});
+});
+
+test("canAcceptInvite supports Permissions objects", async ({ createAuth }) => {
+	const checkPermissionsSpy = vi
+		.spyOn(utils, "checkPermissions")
+		.mockResolvedValue(false);
+
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			canAcceptInvite: {
+				statement: "invite",
+				permissions: ["accept"],
+			},
+		},
+	});
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+
+	// Create a new user
+	createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	const token = await client.invite.create({
+		role: "admin",
+		senderResponse: "token",
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(token.error).toBe(null);
+
+	const { headers: newHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+
+	const tokenValue = token.data?.message;
+	if (!tokenValue) {
+		throw new Error("Token value is undefined");
+	}
+
+	const res = await client.invite.activate({
+		token: tokenValue,
+		callbackURL: "/auth/sign-in",
+		fetchOptions: {
+			headers: newHeaders,
+		},
+	});
+
+	expect(checkPermissionsSpy).toHaveBeenCalledOnce();
+	expect(res.data).toBeNull();
+	expect(res.error).toStrictEqual({
 		code: "YOU_CANNOT_ACCEPT_THIS_INVITE",
 		errorCode: "CANT_ACCEPT_INVITE",
 		message: "You cannot accept this invite",

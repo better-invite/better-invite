@@ -4,6 +4,7 @@ import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
+import { checkPermissions } from "../utils";
 
 export const cancelInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -85,7 +86,7 @@ export const cancelInvite = (options: NewInviteOptions) => {
 				});
 			}
 
-			const canCancelInvite =
+			const canCancelInviteOption =
 				typeof options.canCancelInvite === "function"
 					? await options.canCancelInvite({
 							inviterUser,
@@ -93,6 +94,10 @@ export const cancelInvite = (options: NewInviteOptions) => {
 							ctx,
 						})
 					: options.canCancelInvite;
+			const canCancelInvite =
+				typeof canCancelInviteOption === "object"
+					? await checkPermissions(ctx, canCancelInviteOption)
+					: canCancelInviteOption;
 
 			if (!canCancelInvite) {
 				throw ctx.error("BAD_REQUEST", {
