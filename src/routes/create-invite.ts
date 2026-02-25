@@ -4,7 +4,11 @@ import { getInviteAdapter } from "../adapter";
 import { createInviteBodySchema } from "../body";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { checkPermissions, resolveInvitePayload } from "../utils";
+import {
+	checkPermissions,
+	createRedirectURL,
+	resolveInvitePayload,
+} from "../utils";
 
 export const createInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -105,8 +109,11 @@ export const createInvite = (options: NewInviteOptions) => {
 
 			const invitation = await adapter.createInvite(ctx.body, inviterUser);
 
-			const url = `${ctx.context.baseURL}/invite/${invitation.token}`;
-			const redirectURLEmail = `${url}?callbackURL=${encodeURIComponent(callbackURL)}`;
+			const redirectURLEmail = createRedirectURL({
+				ctx,
+				invitation,
+				callbackURL,
+			});
 
 			// If the invite is private, send the invitation or role upgrade using the configured function
 			if (inviteType === "private") {
@@ -160,7 +167,11 @@ export const createInvite = (options: NewInviteOptions) => {
 				senderResponseRedirect === "signUp"
 					? redirectToSignUp
 					: redirectToSignIn;
-			const redirectURL = `${url}?callbackURL=${redirectTo}`;
+			const redirectURL = createRedirectURL({
+				ctx,
+				invitation,
+				callbackURL: redirectTo,
+			});
 			const returnToken =
 				senderResponse === "token" ? invitation.token : redirectURL;
 

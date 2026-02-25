@@ -28,6 +28,7 @@ import type { InviteAdapter } from "./adapter";
 import type { CreateInvite } from "./body";
 import { ERROR_CODES } from "./constants";
 import type {
+	afterUpgradeTypes,
 	InviteOptions,
 	InviteTypeWithId,
 	NewInviteOptions,
@@ -192,28 +193,14 @@ export const consumeInvite = async ({
 };
 
 export const redirectToAfterUpgrade = async ({
-	shareInviterName,
 	ctx,
 	invitation,
-	signUp,
-}: {
-	shareInviterName: boolean;
-	ctx: GenericEndpointContext;
-	invitation: InviteTypeWithId;
-	signUp: boolean;
-}) => {
-	const createdByUser = (await ctx.context.internalAdapter.findUserById(
-		invitation.createdByUserId,
-	)) as UserWithRole;
-	const invitedByName = createdByUser.name;
+}: afterUpgradeTypes) => {
+	const redirectUrl = createRedirectAfterUpgradeURL(invitation);
 
-	throw ctx.redirect(
-		redirectCallback(ctx.context, invitation.redirectToAfterUpgrade, {
-			role: invitation.role,
-			signUp: String(signUp),
-			...(shareInviterName && { invitedByName }),
-		}),
-	);
+	if (!redirectUrl) return;
+
+	throw ctx.redirect(redirectCallback(ctx.context, redirectUrl));
 };
 
 export const getDate = (span: number, unit: "sec" | "ms" = "ms") => {
@@ -319,6 +306,31 @@ export async function tryCatch<T, E = Error>(
 		return { data: null, error: error as E };
 	}
 }
+
+export const createRedirectAfterUpgradeURL = (invitation: InviteTypeWithId) => {
+	return invitation.redirectToAfterUpgrade?.replace(
+		"{token}",
+		invitation.token,
+	);
+};
+
+export const createRedirectURL = ({
+	ctx,
+	invitation,
+	callbackURL,
+}: {
+	ctx: GenericEndpointContext;
+	invitation: InviteTypeWithId;
+	callbackURL: string;
+}) => {
+	if (ctx.body.inviteUrlType === "api" || !ctx.body.customInviteUrl) {
+		return `${ctx.context.baseURL}/invite/${invitation.token}?callbackURL=${encodeURIComponent(callbackURL)}`;
+	}
+
+	return ctx.body.customInviteUrl
+		.replace("{token}", invitation.token)
+		.replace("{callbackURL}", encodeURIComponent(callbackURL));
+};
 
 // https://github.com/better-auth/better-auth/blob/08ff06d3319dc1472f24844378a9e1f572323b90/packages/better-auth/src/api/routes/session.ts#L501
 

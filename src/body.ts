@@ -65,6 +65,8 @@ export const createInviteBodySchema = z.object({
 		.optional(),
 	/**
 	 * The URL to redirect the user to after upgrade their role (if the user is already logged in).
+	 * {token} will be replaced with the user's actual token.
+	 *
 	 * @default options.defaultRedirectAfterUpgrade
 	 */
 	redirectToAfterUpgrade: z
@@ -109,6 +111,23 @@ export const createInviteBodySchema = z.object({
 			"Where should we redirect the user? (only if no email is provided)",
 		)
 		.optional(),
+	/**
+	 * If inviteUrlType is set to custom, this will be used
+	 * Use {token} and {callbackUrl}, this will be replaced with their values
+	 */
+	customInviteUrl: z
+		.string()
+		.describe("If inviteUrlType is set to custom, this will be used")
+		.optional(),
+	/**
+	 * The url to send in the email to the user
+	 *
+	 * @default api
+	 */
+	inviteUrlType: z
+		.enum(["api", "custom"])
+		.describe("The url to send in the email to the user")
+		.default("api"),
 });
 
 export type CreateInvite = z.infer<typeof createInviteBodySchema>;

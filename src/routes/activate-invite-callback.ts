@@ -31,7 +31,8 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				 */
 				callbackURL: z
 					.string()
-					.describe("Where to redirect the user after sing in/up"),
+					.describe("Where to redirect the user after sing in/up")
+					.optional(),
 			}),
 			metadata: {
 				openapi: {
@@ -95,7 +96,12 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				redirectToAfterUpgrade(opts);
 
 			const needToSignInUp = () =>
-				ctx.redirect(redirectCallback(ctx.context, callbackURL));
+				ctx.redirect(
+					redirectCallback(
+						ctx.context,
+						callbackURL ?? options.defaultRedirectToSignIn,
+					),
+				);
 
 			return await activateInviteLogic({
 				ctx,

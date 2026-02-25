@@ -80,10 +80,8 @@ export const activateInviteLogic = async ({
 		});
 
 		return await afterUpgrade({
-			shareInviterName: invitation.shareInviterName,
 			ctx,
 			invitation,
-			signUp: true,
 		});
 	}
 

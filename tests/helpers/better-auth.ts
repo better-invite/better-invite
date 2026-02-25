@@ -97,7 +97,7 @@ export async function activateInviteGet(
 		fetchOptions: customFetchOptions,
 	}: {
 		token: string;
-		callbackURL: string;
+		callbackURL?: string;
 		fetchOptions?: Omit<ClientFetchOption, "params">;
 	},
 ): Promise<{
@@ -111,6 +111,7 @@ export async function activateInviteGet(
 	} | null;
 	path: string | null;
 	data: Record<string, never> | null;
+	params?: URLSearchParams;
 }> {
 	let location: string | null = null;
 
@@ -130,11 +131,11 @@ export async function activateInviteGet(
 	});
 
 	if (!location) {
-		return res;
+		return { ...res, newError: null, path: null, params: null };
 	}
 
 	// biome-ignore lint/style/noNonNullAssertion: it will NOT be undefined
-	const { params, path } = parseInviteError(location!);
+	const { params, path, allParams } = parseInviteError(location!);
 
 	// We have newError because a redirect to a successful page shouldn't be considered an error
 	// newError fixes this
@@ -145,6 +146,7 @@ export async function activateInviteGet(
 		...res,
 		path,
 		newError,
+		params: allParams,
 	};
 }
 
@@ -163,6 +165,7 @@ export async function resolveInviteRedirect(
 	} | null;
 	path: string | null;
 	data: Record<string, never> | null;
+	params: URLSearchParams;
 }> {
 	let location: string | null = null;
 
@@ -182,7 +185,7 @@ export async function resolveInviteRedirect(
 		return res;
 	}
 
-	const { params, path } = parseInviteError(location);
+	const { params, path, allParams } = parseInviteError(location);
 
 	const newError =
 		res.error && !(res.error.status === 302 && !params.error) ? params : null;
@@ -191,6 +194,7 @@ export async function resolveInviteRedirect(
 		...res,
 		path,
 		newError,
+		params: allParams,
 	};
 }
 
@@ -203,6 +207,7 @@ function parseInviteError(location: string) {
 			error: params.get("error"),
 			message: params.get("message"),
 		},
+		allParams: params,
 		path,
 	};
 }

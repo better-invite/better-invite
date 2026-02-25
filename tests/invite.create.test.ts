@@ -317,7 +317,7 @@ test("respects defaultSenderResponseRedirect = signIn", async ({
 
 	expect(error).toBe(null);
 
-	expect(data?.message).toContain("/auth/test");
+	expect(data?.message).toContain("%2Fauth%2Ftest");
 });
 
 test("tokenType=code generates a short token", async ({ createAuth }) => {
@@ -464,4 +464,65 @@ test("canCreateInvite supports Permissions objects", async ({ createAuth }) => {
 			statusText: "BAD_REQUEST",
 		}),
 	);
+});
+
+test("returns default api redirect URL when inviteUrlType is api", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			defaultSenderResponse: "url",
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+
+	const { error, data } = await client.invite.create({
+		role: "user",
+		senderResponse: "url",
+		fetchOptions: { headers },
+	});
+
+	expect(error).toBe(null);
+
+	const token = data?.message.split("/invite/")[1].split("?")[0];
+
+	const expectedURL = `http://localhost:3000/api/auth/invite/${token}?callbackURL=%2Fauth%2Fsign-up`;
+
+	expect(data?.message).toBe(expectedURL);
+});
+
+test("returns custom redirect URL when inviteUrlType is custom", async ({
+	createAuth,
+}) => {
+	const customInviteUrl =
+		"https://myapp.com/invite/{token}?redirect={callbackURL}";
+
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			defaultSenderResponse: "url",
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+
+	const { error, data } = await client.invite.create({
+		role: "user",
+		senderResponse: "url",
+		inviteUrlType: "custom",
+		customInviteUrl,
+		fetchOptions: { headers },
+	});
+
+	expect(error).toBe(null);
+
+	const token = data?.message.split("/invite/")[1].split("?")[0];
+
+	const expectedURL = customInviteUrl
+		.replace("{token}", token)
+		.replace("{callbackURL}", "%2Fauth%2Fsign-up");
+
+	expect(data?.message).toBe(expectedURL);
 });

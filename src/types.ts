@@ -109,8 +109,9 @@ export type InviteOptions = {
 	defaultRedirectToSignIn?: string;
 	/**
 	 * The default redirect after upgrading role (or logging in with an invite)
+	 * {token} will be replaced with the user's actual token.
 	 */
-	defaultRedirectAfterUpgrade: string;
+	defaultRedirectAfterUpgrade?: string;
 	/**
 	 * Whether the inviter's name should be shared with the invitee by default.
 	 *
@@ -308,7 +309,7 @@ export type InviteType = {
 	createdAt: Date;
 	expiresAt: Date;
 	maxUses: number;
-	redirectToAfterUpgrade: string;
+	redirectToAfterUpgrade?: string;
 	shareInviterName: boolean;
 	email?: string;
 	role: string;
@@ -321,10 +322,8 @@ export type InviteTypeWithId = InviteType & {
 export type TokensType = "token" | "code" | "custom";
 
 export type afterUpgradeTypes = {
-	shareInviterName: boolean;
 	ctx: GenericEndpointContext;
 	invitation: InviteTypeWithId;
-	signUp: boolean;
 };
 
 export type InviteUseType = {

@@ -86,6 +86,7 @@ test("test activateInvite with maxUses set to 2", async ({ createAuth }) => {
 	expect(data).toStrictEqual({
 		status: true,
 		message: "Invite activated successfully",
+		redirectTo: "/auth/invited",
 	});
 
 	const newInvite = await db.findOne<InviteTypeWithId>({
@@ -155,6 +156,7 @@ test("invite and inviteUses are deleted after reaching maxUses", async ({
 	expect(data).toStrictEqual({
 		status: true,
 		message: "Invite activated successfully",
+		redirectTo: "/auth/invited",
 	});
 
 	const newInvite = await db.count({
@@ -269,6 +271,7 @@ test("activateInvite skips login step if already logged in", async ({
 	expect(data).toStrictEqual({
 		status: true,
 		message: "Invite activated successfully",
+		redirectTo: "/auth/invited",
 	});
 });
 
@@ -515,6 +518,7 @@ test("onInvitationUsed is called with correct payload", async ({
 	expect(data).toStrictEqual({
 		status: true,
 		message: "Invite activated successfully",
+		redirectTo: "/auth/invited",
 	});
 
 	expect(mock.onInvitationUsed).toHaveBeenCalledOnce();
@@ -588,6 +592,7 @@ test("activate invite hooks run in the correct order with the expected arguments
 	expect(data).toStrictEqual({
 		status: true,
 		message: "Invite activated successfully",
+		redirectTo: "/auth/invited",
 	});
 
 	expect(mock.beforeAcceptInvite).toHaveBeenCalledTimes(1);
@@ -766,6 +771,7 @@ test("test activateInvite with custom schema", async ({ createAuth }) => {
 	expect(data).toStrictEqual({
 		status: true,
 		message: "Invite activated successfully",
+		redirectTo: "/auth/invited",
 	});
 
 	const newInvite = await db.findOne<InviteTypeWithId>({
@@ -834,6 +840,7 @@ test("test activateInvite with infinite maxUses", async ({ createAuth }) => {
 	expect(data).toStrictEqual({
 		status: true,
 		message: "Invite activated successfully",
+		redirectTo: "/auth/invited",
 	});
 
 	const newInvite = await db.findOne<InviteTypeWithId>({
@@ -849,4 +856,122 @@ test("test activateInvite with infinite maxUses", async ({ createAuth }) => {
 	// It should still exist because maxUses is infinite
 	expect(inviteUses).toBe(1);
 	expect(newInvite).not.toBeNull();
+});
+
+test("activateInvite uses defaultRedirectAfterUpgrade", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser, signInWithUser, db } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			defaultRedirectAfterUpgrade: "/auth/invited/{token}",
+		},
+	});
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+
+	// Create a new user
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	// This should be a role upgrade, because user already exists
+	const token = await client.invite.create({
+		role: "owner",
+		senderResponse: "token",
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(token.error).toBe(null);
+	const tokenValue = token.data?.message;
+
+	if (!tokenValue) {
+		throw new Error("Token value is undefined");
+	}
+
+	const { headers: newHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+
+	// We activate the invite while being logged in as the invited user
+	const { error, data } = await client.invite.activate({
+		token: tokenValue,
+		callbackURL: "/auth/sign-in",
+		fetchOptions: {
+			headers: newHeaders,
+		},
+	});
+
+	expect(error).toBeNull();
+	expect(data).toStrictEqual({
+		status: true,
+		message: "Invite activated successfully",
+		redirectTo: `/auth/invited/${tokenValue}`,
+	});
+});
+
+test("activateInvite supports no redirectAfterUpgrade", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser, signInWithUser, db } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			defaultRedirectAfterUpgrade: undefined,
+		},
+	});
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+
+	// Create a new user
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	// This should be a role upgrade, because user already exists
+	const token = await client.invite.create({
+		role: "owner",
+		senderResponse: "token",
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(token.error).toBe(null);
+	const tokenValue = token.data?.message;
+
+	if (!tokenValue) {
+		throw new Error("Token value is undefined");
+	}
+
+	const { headers: newHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+
+	// We activate the invite while being logged in as the invited user
+	const { error, data } = await client.invite.activate({
+		token: tokenValue,
+		fetchOptions: {
+			headers: newHeaders,
+		},
+	});
+
+	expect(error).toBeNull();
+	expect(data).toStrictEqual({
+		status: true,
+		message: "Invite activated successfully",
+	});
 });

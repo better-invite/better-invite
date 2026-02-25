@@ -134,12 +134,9 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						invitedUser,
 					});
 
-					// return { context: ctx };
 					await redirectToAfterUpgrade({
-						shareInviterName: invitation.shareInviterName,
 						ctx,
 						invitation,
-						signUp: false,
 					});
 				}),
 			},

@@ -11,7 +11,7 @@ export const schema = {
 				type: "string",
 				references: { model: "user", field: "id", onDelete: "set null" },
 			},
-			redirectToAfterUpgrade: { type: "string", required: true },
+			redirectToAfterUpgrade: { type: "string", required: false },
 			shareInviterName: { type: "boolean", required: true },
 			email: { type: "string", required: false },
 			role: { type: "string", required: true },

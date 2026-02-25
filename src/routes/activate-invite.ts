@@ -1,7 +1,10 @@
 import { createAuthEndpoint, originCheck } from "better-auth/api";
 import * as z from "zod";
-import type { NewInviteOptions } from "../types";
-import { optionalSessionMiddleware } from "../utils";
+import type { afterUpgradeTypes, NewInviteOptions } from "../types";
+import {
+	createRedirectAfterUpgradeURL,
+	optionalSessionMiddleware,
+} from "../utils";
 import { activateInviteLogic } from "./activate-invite-logic";
 
 export const activateInvite = (options: NewInviteOptions) => {
@@ -19,7 +22,8 @@ export const activateInvite = (options: NewInviteOptions) => {
 				 */
 				callbackURL: z
 					.string()
-					.describe("Where to redirect the user after sing in/up"),
+					.describe("Where to redirect the user after sing in/up")
+					.optional(),
 				/**
 				 * The invite token.
 				 */
@@ -91,10 +95,11 @@ export const activateInvite = (options: NewInviteOptions) => {
 					errorCode: urlErrorCode,
 				});
 
-			const afterUpgrade = () =>
+			const afterUpgrade = (opts: afterUpgradeTypes) =>
 				ctx.json({
 					status: true,
 					message: "Invite activated successfully",
+					redirectTo: createRedirectAfterUpgradeURL(opts.invitation),
 				});
 
 			const needToSignInUp = () =>
@@ -102,7 +107,7 @@ export const activateInvite = (options: NewInviteOptions) => {
 					status: true,
 					message: "Invite activated successfully",
 					action: "SIGN_IN_UP_REQUIRED",
-					redirectTo: callbackURL,
+					redirectTo: callbackURL ?? options.defaultRedirectToSignIn,
 				});
 
 			return await activateInviteLogic({

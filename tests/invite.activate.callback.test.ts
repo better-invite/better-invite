@@ -614,3 +614,115 @@ test("test activateInviteCallback with custom schema", async ({
 	expect(inviteUses).toBe(1);
 	expect(newInvite).not.toBeNull();
 });
+
+test("activateInviteCallback uses redirectAfterUpgrade", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+
+	// Create a new user
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	// This should be a role upgrade, because user already exists
+	const token = await client.invite.create({
+		role: "owner",
+		senderResponse: "token",
+		redirectToAfterUpgrade: "/auth/invited?token={token}",
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(token.error).toBe(null);
+
+	const { headers: newHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+	const tokenValue = token.data?.message;
+
+	if (!tokenValue) {
+		throw new Error("Token value is undefined");
+	}
+
+	// We activate the invite while being logged in as the invited user
+	const { newError, path, params } = await activateInviteGet(client, {
+		token: tokenValue,
+		callbackURL: "/auth/sign-in",
+		fetchOptions: {
+			headers: newHeaders,
+		},
+	});
+
+	expect(newError).toBe(null);
+	expect(path).toBe("http://localhost:3000/auth/invited");
+	expect(params?.get("token")).toBe(tokenValue);
+});
+
+test("activateInviteCallback supports no redirectAfterUpgrade", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			defaultRedirectAfterUpgrade: undefined,
+		},
+	});
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+
+	// Create a new user
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	// This should be a role upgrade, because user already exists
+	const token = await client.invite.create({
+		role: "owner",
+		senderResponse: "token",
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(token.error).toBeNull();
+
+	const { headers: newHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+	const tokenValue = token.data?.message;
+
+	if (!tokenValue) {
+		throw new Error("Token value is undefined");
+	}
+
+	// We activate the invite while being logged in as the invited user
+	const { newError, path } = await activateInviteGet(client, {
+		token: tokenValue,
+		fetchOptions: {
+			headers: newHeaders,
+		},
+	});
+
+	expect(newError).toBeNull();
+	expect(path).toBeNull(); // We shouldn't be redirected
+});
