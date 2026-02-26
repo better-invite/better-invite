@@ -15,6 +15,7 @@ export const schema = {
 			shareInviterName: { type: "boolean", required: true },
 			email: { type: "string", required: false },
 			role: { type: "string", required: true },
+			newAccount: { type: "boolean", required: false },
 		},
 	},
 	inviteUse: {

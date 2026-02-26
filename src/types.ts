@@ -313,6 +313,7 @@ export type InviteType = {
 	shareInviterName: boolean;
 	email?: string;
 	role: string;
+	newAccount?: boolean; // Only in private invites
 };
 
 export type InviteTypeWithId = InviteType & {

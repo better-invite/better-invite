@@ -43,8 +43,17 @@ export const getInvite = (options: NewInviteOptions) => {
 													image: { type: "string", nullable: true },
 												},
 											},
+											invitation: {
+												type: "object",
+												properties: {
+													email: { type: "string", nullable: true },
+													createdAt: { type: "string", format: "date-time" },
+													role: { type: "string" },
+													newAccount: { type: "boolean" },
+												},
+											},
 										},
-										required: ["status", "inviter"],
+										required: ["status", "inviter", "invitation"],
 									},
 								},
 							},
@@ -72,7 +81,7 @@ export const getInvite = (options: NewInviteOptions) => {
 
 			const adapter = getInviteAdapter(ctx.context, options);
 
-			const invite = await adapter.findInvitation(token);
+			const invitation = await adapter.findInvitation(token);
 
 			const invalid = () =>
 				ctx.error("BAD_REQUEST", {
@@ -80,7 +89,7 @@ export const getInvite = (options: NewInviteOptions) => {
 					errorCode: "INVALID_TOKEN",
 				});
 
-			if (!invite) {
+			if (!invitation) {
 				throw invalid();
 			}
 
@@ -88,18 +97,18 @@ export const getInvite = (options: NewInviteOptions) => {
 			const sessionUser = sessionObject?.user as UserWithRole | null;
 
 			// For private invites (with email), the requester must match the invite email.
-			if (invite.email) {
-				if (!sessionUser || sessionUser.email !== invite.email) {
+			if (invitation.email) {
+				if (!sessionUser || sessionUser.email !== invitation.email) {
 					throw invalid();
 				}
 			}
 
-			if (!invite.createdByUserId) {
+			if (!invitation.createdByUserId) {
 				throw invalid();
 			}
 
 			const inviter = (await ctx.context.internalAdapter.findUserById(
-				invite.createdByUserId,
+				invitation.createdByUserId,
 			)) as UserWithRole | null;
 
 			if (!inviter) {
@@ -115,6 +124,12 @@ export const getInvite = (options: NewInviteOptions) => {
 					email: inviter.email,
 					name: inviter.name,
 					image: inviter.image,
+				},
+				invitation: {
+					email: invitation.email,
+					createdAt: invitation.createdAt,
+					role: invitation.role,
+					newAccount: invitation.newAccount,
 				},
 			});
 		},

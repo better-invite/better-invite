@@ -107,7 +107,13 @@ export const createInvite = (options: NewInviteOptions) => {
 			// If the user already exists they should sign in, else they should sign up
 			const callbackURL = invitedUser ? redirectToSignIn : redirectToSignUp;
 
-			const invitation = await adapter.createInvite(ctx.body, inviterUser);
+			const newAccount = !invitedUser;
+
+			const invitation = await adapter.createInvite(
+				ctx.body,
+				inviterUser,
+				inviteType === "private" ? newAccount : undefined,
+			);
 
 			const redirectURLEmail = createRedirectURL({
 				ctx,
@@ -117,8 +123,6 @@ export const createInvite = (options: NewInviteOptions) => {
 
 			// If the invite is private, send the invitation or role upgrade using the configured function
 			if (inviteType === "private") {
-				const newAccount = !invitedUser;
-
 				if (!newAccount && options.sendUserRoleUpgrade) {
 					ctx.context.logger.warn(
 						"`sendUserRoleUpgrade` is deprecated. Use `sendUserInvitation` instead (it now receives `newAccount`).",

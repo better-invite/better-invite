@@ -18,7 +18,11 @@ export const getInviteAdapter = (
 	const inviteUseTable = "inviteUse";
 
 	return {
-		createInvite: (invite: CreateInvite, user: UserWithRole) => {
+		createInvite: (
+			invite: CreateInvite,
+			user: UserWithRole,
+			newAccount?: boolean,
+		) => {
 			const payload = resolveInvitePayload(invite, options);
 			const generateToken = resolveTokenGenerator(payload.tokenType, options);
 
@@ -42,6 +46,7 @@ export const getInviteAdapter = (
 					shareInviterName: payload.shareInviterName,
 					email: invite.email,
 					role: invite.role,
+					newAccount,
 				},
 			});
 		},
