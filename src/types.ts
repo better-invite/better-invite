@@ -201,6 +201,11 @@ export type InviteOptions = {
 	 */
 	cleanupInvitesAfterMaxUses?: boolean;
 	/**
+	 * The user will be redirected here to activate their invite
+	 * Use {token} and {callbackUrl}, this will be replaced with their values
+	 */
+	defaultCustomInviteUrl?: string;
+	/**
 	 * A callback function that is triggered
 	 * when a invite is used.
 	 */

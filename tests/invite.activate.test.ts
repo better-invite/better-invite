@@ -337,7 +337,7 @@ test("activateInvite uses custom cookie names", async ({ createAuth }) => {
 	expect(error).toBe(null);
 	expect(data).toStrictEqual({
 		status: true,
-		message: "Invite activated successfully",
+		message: "Please sign in or sign up to continue.",
 		action: "SIGN_IN_UP_REQUIRED",
 		redirectTo: "/auth/sign-in",
 	});

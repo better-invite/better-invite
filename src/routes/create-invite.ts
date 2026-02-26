@@ -53,6 +53,7 @@ export const createInvite = (options: NewInviteOptions) => {
 				redirectToSignIn,
 				senderResponse,
 				senderResponseRedirect,
+				customInviteUrl,
 			} = resolveInvitePayload(ctx.body, options);
 
 			const inviteType = email ? "private" : "public";
@@ -119,6 +120,7 @@ export const createInvite = (options: NewInviteOptions) => {
 				ctx,
 				invitation,
 				callbackURL,
+				customInviteUrl,
 			});
 
 			// If the invite is private, send the invitation or role upgrade using the configured function
@@ -175,6 +177,7 @@ export const createInvite = (options: NewInviteOptions) => {
 				ctx,
 				invitation,
 				callbackURL: redirectTo,
+				customInviteUrl,
 			});
 			const returnToken =
 				senderResponse === "token" ? invitation.token : redirectURL;

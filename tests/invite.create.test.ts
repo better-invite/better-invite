@@ -511,7 +511,6 @@ test("returns custom redirect URL when inviteUrlType is custom", async ({
 	const { error, data } = await client.invite.create({
 		role: "user",
 		senderResponse: "url",
-		inviteUrlType: "custom",
 		customInviteUrl,
 		fetchOptions: { headers },
 	});
@@ -519,6 +518,10 @@ test("returns custom redirect URL when inviteUrlType is custom", async ({
 	expect(error).toBe(null);
 
 	const token = data?.message.split("/invite/")[1].split("?")[0];
+
+	if (!token) {
+		throw new Error("Token not found in the URL");
+	}
 
 	const expectedURL = customInviteUrl
 		.replace("{token}", token)

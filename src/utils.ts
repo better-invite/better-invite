@@ -71,6 +71,7 @@ export const resolveInvitePayload = (
 	senderResponse: body.senderResponse ?? options.defaultSenderResponse,
 	senderResponseRedirect:
 		body.senderResponseRedirect ?? options.defaultSenderResponseRedirect,
+	customInviteUrl: body.customInviteUrl ?? options.defaultCustomInviteUrl,
 });
 
 export const resolveTokenGenerator = (
@@ -329,16 +330,18 @@ export const createRedirectURL = ({
 	ctx,
 	invitation,
 	callbackURL,
+	customInviteUrl,
 }: {
 	ctx: GenericEndpointContext;
 	invitation: InviteTypeWithId;
 	callbackURL: string;
+	customInviteUrl?: string;
 }) => {
-	if (ctx.body.inviteUrlType === "api" || !ctx.body.customInviteUrl) {
+	if (!customInviteUrl) {
 		return `${ctx.context.baseURL}/invite/${invitation.token}?callbackURL=${encodeURIComponent(callbackURL)}`;
 	}
 
-	return ctx.body.customInviteUrl
+	return customInviteUrl
 		.replace("{token}", invitation.token)
 		.replace("{callbackURL}", encodeURIComponent(callbackURL));
 };

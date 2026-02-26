@@ -112,22 +112,13 @@ export const createInviteBodySchema = z.object({
 		)
 		.optional(),
 	/**
-	 * If inviteUrlType is set to custom, this will be used
+	 * The user will be redirected here to activate their invite
 	 * Use {token} and {callbackUrl}, this will be replaced with their values
 	 */
 	customInviteUrl: z
 		.string()
-		.describe("If inviteUrlType is set to custom, this will be used")
+		.describe("The user will be redirected here to activate their invite")
 		.optional(),
-	/**
-	 * The url to send in the email to the user
-	 *
-	 * @default api
-	 */
-	inviteUrlType: z
-		.enum(["api", "custom"])
-		.describe("The url to send in the email to the user")
-		.default("api"),
 });
 
 export type CreateInvite = z.infer<typeof createInviteBodySchema>;

@@ -63,7 +63,7 @@ test("test invite hook after sign-in/email", async ({ createAuth }) => {
 
 	expect(data).toStrictEqual({
 		status: true,
-		message: "Invite activated successfully",
+		message: "Please sign in or sign up to continue.",
 		action: "SIGN_IN_UP_REQUIRED",
 		redirectTo: "/auth/sign-in",
 	});
@@ -127,7 +127,7 @@ test("invite hook deletes invite cookie after sign-up/email", async ({
 
 	expect(data).toStrictEqual({
 		status: true,
-		message: "Invite activated successfully",
+		message: "Please sign in or sign up to continue.",
 		action: "SIGN_IN_UP_REQUIRED",
 		redirectTo: "/auth/sign-in",
 	});
@@ -237,7 +237,7 @@ test("invitesHook runs after sign-up and triggers invite hooks in correct order"
 
 	expect(data).toStrictEqual({
 		status: true,
-		message: "Invite activated successfully",
+		message: "Please sign in or sign up to continue.",
 		action: "SIGN_IN_UP_REQUIRED",
 		redirectTo: "/auth/sign-in",
 	});
