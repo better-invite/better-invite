@@ -105,7 +105,7 @@ export const activateInvite = (options: NewInviteOptions) => {
 			const needToSignInUp = () =>
 				ctx.json({
 					status: true,
-					message: "Invite activated successfully",
+					message: "Please sign in or sign up to continue.",
 					action: "SIGN_IN_UP_REQUIRED",
 					redirectTo: callbackURL ?? options.defaultRedirectToSignIn,
 				});
