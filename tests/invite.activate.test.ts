@@ -159,7 +159,7 @@ test("invite and inviteUses are deleted after reaching maxUses", async ({
 		redirectTo: "/auth/invited",
 	});
 
-	const newInvite = await db.count({
+	const newInvite = await db.findOne({
 		model: "invite",
 		where: [{ field: "token", value: tokenValue }],
 	});
@@ -169,9 +169,13 @@ test("invite and inviteUses are deleted after reaching maxUses", async ({
 		where: [{ field: "inviteId", value: inviteId }],
 	});
 
-	// They should delete automatically once maxUses is reached
-	expect(inviteUses).toBe(0);
-	expect(newInvite).toBe(0);
+	// The invite should have been marked as used but not deleted and an inviteUse should have been created
+	expect(newInvite).toEqual(
+		expect.objectContaining({
+			status: "used",
+		}),
+	);
+	expect(inviteUses).toBe(1);
 });
 
 test("test activateInvite with an expired invite", async ({ createAuth }) => {
@@ -974,4 +978,81 @@ test("activateInvite supports no redirectAfterUpgrade", async ({
 		status: true,
 		message: "Invite activated successfully",
 	});
+});
+
+test("cannot reuse an invite after it has already been used", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const invitedUser = {
+		email: "reuse@email.com",
+		role: "user",
+		name: "Reuse User",
+		password: "12345678",
+	};
+
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	// Create invite with maxUses = 1
+	const tokenRes = await client.invite.create({
+		role: "admin",
+		senderResponse: "token",
+		maxUses: 1,
+		fetchOptions: { headers },
+	});
+
+	expect(tokenRes.error).toBeNull();
+
+	const tokenValue = tokenRes.data?.message;
+	if (!tokenValue) {
+		throw new Error("Token value is undefined");
+	}
+
+	const { headers: invitedHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+
+	// First activation (should succeed)
+	const firstUse = await client.invite.activate({
+		token: tokenValue,
+		callbackURL: "/auth/sign-in",
+		fetchOptions: { headers: invitedHeaders },
+	});
+
+	expect(firstUse.error).toBeNull();
+	expect(firstUse.data).toStrictEqual({
+		status: true,
+		message: "Invite activated successfully",
+		redirectTo: "/auth/invited",
+	});
+
+	// Second activation (should fail)
+	const secondUse = await client.invite.activate({
+		token: tokenValue,
+		callbackURL: "/auth/sign-in",
+		fetchOptions: { headers: invitedHeaders },
+	});
+
+	expect(secondUse.data).toBeNull();
+	expect(secondUse.error).not.toBeNull();
+
+	// Optional: si tu implementación marca el invite como "used"
+	const invite = await db.findOne({
+		model: "invite",
+		where: [{ field: "token", value: tokenValue }],
+	});
+
+	expect(invite).toEqual(
+		expect.objectContaining({
+			status: "used",
+		}),
+	);
 });

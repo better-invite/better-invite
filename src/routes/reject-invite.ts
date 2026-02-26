@@ -88,6 +88,13 @@ export const rejectInvite = (options: NewInviteOptions) => {
 				});
 			}
 
+			if (invitation.status !== "pending" && invitation.status !== undefined) {
+				throw ctx.error("BAD_REQUEST", {
+					message: ERROR_CODES.INVALID_TOKEN,
+					errorCode: "INVALID_TOKEN",
+				});
+			}
+
 			const canRejectInviteOptions =
 				typeof options.canRejectInvite === "function"
 					? await options.canRejectInvite({
@@ -110,8 +117,12 @@ export const rejectInvite = (options: NewInviteOptions) => {
 
 			await options.inviteHooks?.beforeRejectInvite?.({ ctx, invitation });
 
-			await adapter.deleteInviteUses(invitation.id);
-			await adapter.deleteInvitation(token);
+			if (options.cleanupInvitesOnDecision) {
+				await adapter.deleteInviteUses(invitation.id);
+				await adapter.deleteInvitation(token);
+			} else {
+				await adapter.updateInvitation(invitation.id, "rejected");
+			}
 
 			await options.inviteHooks?.afterRejectInvite?.({ ctx, invitation });
 

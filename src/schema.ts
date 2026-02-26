@@ -16,6 +16,10 @@ export const schema = {
 			email: { type: "string", required: false },
 			role: { type: "string", required: true },
 			newAccount: { type: "boolean", required: false },
+			status: {
+				type: ["pending", "rejected", "canceled", "used"] as const,
+				required: true,
+			},
 		},
 	},
 	inviteUse: {

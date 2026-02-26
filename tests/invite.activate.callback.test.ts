@@ -150,7 +150,7 @@ test("invite and inviteUses are deleted after reaching maxUses", async ({
 	// We should be redirected to the invited page since we used the invitation successfully
 	expect(path).toBe("http://localhost:3000/auth/invited");
 
-	const newInvite = await db.count({
+	const newInvite = await db.findOne({
 		model: "invite",
 		where: [{ field: "token", value: tokenValue }],
 	});
@@ -160,9 +160,13 @@ test("invite and inviteUses are deleted after reaching maxUses", async ({
 		where: [{ field: "inviteId", value: inviteId }],
 	});
 
-	// They should delete automatically once maxUses is reached
-	expect(inviteUses).toBe(0);
-	expect(newInvite).toBe(0);
+	// The invite should have been marked as used but not deleted and an inviteUse should have been created
+	expect(newInvite).toEqual(
+		expect.objectContaining({
+			status: "used",
+		}),
+	);
+	expect(inviteUses).toBe(1);
 });
 
 test("test activateInvite with an expired invite", async ({ createAuth }) => {

@@ -2,6 +2,7 @@ import type { AuthContext, DBAdapter } from "better-auth";
 import type { UserWithRole } from "better-auth/plugins";
 import type { CreateInvite } from "./body";
 import type {
+	InvitationStatus,
 	InviteTypeWithId,
 	InviteUseType,
 	InviteUseTypeWithId,
@@ -47,6 +48,7 @@ export const getInviteAdapter = (
 					email: invite.email,
 					role: invite.role,
 					newAccount,
+					status: "pending",
 				},
 			});
 		},
@@ -104,6 +106,19 @@ export const getInviteAdapter = (
 						value: inviteId,
 					},
 				],
+			}),
+		updateInvitation: (id: string, status: InvitationStatus) =>
+			baseAdapter.update<InviteTypeWithId>({
+				model: inviteTable,
+				where: [
+					{
+						field: "id",
+						value: id,
+					},
+				],
+				update: {
+					status,
+				},
 			}),
 	};
 };

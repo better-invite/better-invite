@@ -189,6 +189,18 @@ export type InviteOptions = {
 	 */
 	inviteCookieMaxAge?: number;
 	/**
+	 * Delete invitations when a decision is made (rejected, canceled).
+	 *
+	 * @default false
+	 */
+	cleanupInvitesOnDecision?: boolean;
+	/**
+	 * Delete invitations after they reach max uses.
+	 *
+	 * @default false
+	 */
+	cleanupInvitesAfterMaxUses?: boolean;
+	/**
 	 * A callback function that is triggered
 	 * when a invite is used.
 	 */
@@ -314,6 +326,7 @@ export type InviteType = {
 	email?: string;
 	role: string;
 	newAccount?: boolean; // Only in private invites
+	status: InvitationStatus;
 };
 
 export type InviteTypeWithId = InviteType & {
@@ -341,3 +354,5 @@ export type Permissions = {
 	statement: string;
 	permissions: string[];
 };
+
+export type InvitationStatus = "pending" | "rejected" | "canceled" | "used";

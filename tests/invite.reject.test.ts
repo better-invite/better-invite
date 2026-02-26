@@ -65,11 +65,15 @@ test("invitee can reject their own invite", async ({ createAuth }) => {
 		message: "Invite rejected successfully",
 	});
 
-	const inviteCount = await db.count({
+	const invitation = await db.findOne({
 		model: "invite",
 		where: [{ field: "token", value: token }],
 	});
-	expect(inviteCount).toBe(0);
+	expect(invitation).toEqual(
+		expect.objectContaining({
+			status: "rejected",
+		}),
+	);
 });
 
 test("non-invitee cannot reject invite", async ({ createAuth }) => {
@@ -435,4 +439,67 @@ test("reject invite hooks run in the correct order with the expected arguments",
 			}),
 		}),
 	);
+});
+
+test("test reject invite with cleanupInvitesOnDecision enabled", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+			cleanupInvitesOnDecision: true,
+		},
+	});
+
+	const invitee = {
+		email: "invitee@test.com",
+		role: "user",
+		name: "Invitee User",
+		password: "12345678",
+	};
+
+	await createUser(invitee, db);
+
+	const { headers: creatorHeaders } = await signInWithTestUser();
+
+	const created = await client.invite.create({
+		role: "admin",
+		email: invitee.email,
+		fetchOptions: { headers: creatorHeaders },
+	});
+
+	expect(created.error).toBe(null);
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "email", value: invitee.email }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+	const token = invite.token;
+
+	const { headers: inviteeHeaders } = await signInWithUser(
+		invitee.email,
+		invitee.password,
+	);
+
+	const rejected = await client.invite.reject({
+		token,
+		fetchOptions: { headers: inviteeHeaders },
+	});
+
+	expect(rejected.error).toBe(null);
+	expect(rejected.data).toStrictEqual({
+		status: true,
+		message: "Invite rejected successfully",
+	});
+
+	const inviteCount = await db.count({
+		model: "invite",
+		where: [{ field: "token", value: token }],
+	});
+	expect(inviteCount).toBe(0);
 });

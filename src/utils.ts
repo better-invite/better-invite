@@ -51,6 +51,8 @@ export const resolveInviteOptions = (
 	canAcceptInvite: opts.canAcceptInvite ?? true,
 	canCancelInvite: opts.canCancelInvite ?? true,
 	canRejectInvite: opts.canRejectInvite ?? true,
+	cleanupInvitesAfterMaxUses: opts.cleanupInvitesAfterMaxUses ?? false,
+	cleanupInvitesOnDecision: opts.cleanupInvitesOnDecision ?? false,
 	...opts,
 });
 
@@ -121,6 +123,10 @@ export const consumeInvite = async ({
 		throw error("BAD_REQUEST", ERROR_CODES.INVALID_EMAIL, "INVALID_EMAIL");
 	}
 
+	if (invitation.status !== "pending" && invitation.status !== undefined) {
+		throw error("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN, "INVALID_TOKEN");
+	}
+
 	const canAcceptInviteOptions =
 		typeof options.canAcceptInvite === "function"
 			? await options.canAcceptInvite({ invitedUser, newAccount })
@@ -160,15 +166,20 @@ export const consumeInvite = async ({
 
 	const usedAt = options.getDate();
 
-	// If it's the last use
-	if (timesUsed === invitation.maxUses - 1) {
-		// Delete all invite uses records for the invite
-		adapter.deleteInviteUses(invitation.id);
+	const isLastUse = timesUsed === invitation.maxUses - 1;
+	const shouldCleanup = isLastUse && options.cleanupInvitesAfterMaxUses;
+	const shouldCreateInviteUse = !shouldCleanup;
 
-		// Delete the invite
+	if (shouldCleanup) {
+		await adapter.deleteInviteUses(invitation.id);
 		await adapter.deleteInvitation(token);
-	} else {
-		// If it isn't the last use, create a invite use
+	}
+
+	if (isLastUse && !options.cleanupInvitesAfterMaxUses) {
+		await adapter.updateInvitation(invitation.id, "used");
+	}
+
+	if (shouldCreateInviteUse) {
 		await adapter.createInviteUse({
 			inviteId: invitation.id,
 			usedByUserId: userId,

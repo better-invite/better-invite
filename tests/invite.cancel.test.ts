@@ -57,7 +57,7 @@ test("invite creator can cancel their own invite", async ({ createAuth }) => {
 		message: "Invite cancelled successfully",
 	});
 
-	const inviteCount = await db.count({
+	const invitation = await db.findOne({
 		model: "invite",
 		where: [{ field: "token", value: token }],
 	});
@@ -66,13 +66,17 @@ test("invite creator can cancel their own invite", async ({ createAuth }) => {
 		throw new Error("Invite not found");
 	}
 
-	const inviteUseCount = await db.count({
+	const invitationUses = await db.count({
 		model: "inviteUse",
 		where: [{ field: "inviteId", value: inviteBefore.id }],
 	});
 
-	expect(inviteCount).toBe(0);
-	expect(inviteUseCount).toBe(0);
+	expect(invitation).toEqual(
+		expect.objectContaining({
+			status: "canceled",
+		}),
+	);
+	expect(invitationUses).toBe(0);
 });
 
 test("non-creator cannot cancel invite", async ({ createAuth }) => {

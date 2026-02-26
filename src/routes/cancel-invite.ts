@@ -86,6 +86,13 @@ export const cancelInvite = (options: NewInviteOptions) => {
 				});
 			}
 
+			if (invitation.status !== "pending" && invitation.status !== undefined) {
+				throw ctx.error("BAD_REQUEST", {
+					message: ERROR_CODES.INVALID_TOKEN,
+					errorCode: "INVALID_TOKEN",
+				});
+			}
+
 			const canCancelInviteOption =
 				typeof options.canCancelInvite === "function"
 					? await options.canCancelInvite({
@@ -108,8 +115,12 @@ export const cancelInvite = (options: NewInviteOptions) => {
 
 			await options.inviteHooks?.beforeCancelInvite?.({ ctx, invitation });
 
-			await adapter.deleteInviteUses(invitation.id);
-			await adapter.deleteInvitation(token);
+			if (options.cleanupInvitesOnDecision) {
+				await adapter.deleteInviteUses(invitation.id);
+				await adapter.deleteInvitation(token);
+			} else {
+				await adapter.updateInvitation(invitation.id, "canceled");
+			}
 
 			await options.inviteHooks?.afterCancelInvite?.({ ctx, invitation });
 
