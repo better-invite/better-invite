@@ -64,10 +64,6 @@
 		"branches": [
 			"main",
 			{
-				"name": "alpha",
-				"prerelease": "alpha"
-			},
-			{
 				"name": "beta",
 				"prerelease": "beta"
 			}
