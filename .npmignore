@@ -19,3 +19,4 @@ biome.json
 *.tgz
 lefthook.yml
 assets/
+pnpm-workspace.yaml

@@ -1,0 +1,89 @@
+name: Report an issue
+description: Create a report to help us improve
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This template is used for reporting a issue with better-auth-invite-plugin.
+
+        Feature requests should be opened in [here](https://github.com/0-Sandy/better-auth-invite-plugin/discussions/new?category=feature-request).
+        Documentation errors should be reported in [here](https://github.com/0-Sandy/better-auth-invite-docs/issues/new)
+
+        Before opening a new issue, please do a [search](https://github.com/0-Sandy/better-auth-invite-plugin/issues) of existing issues and :+1: upvote the existing issue instead. This will result in a quicker resolution.
+  - type: textarea
+    attributes:
+      label: To Reproduce
+      description: A step-by-step description of how to reproduce the issue, based on the linked reproduction. Screenshots can be provided in the issue body below. If using code blocks, make sure that [syntax highlighting is correct](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-and-highlighting-code-blocks#syntax-highlighting) and double check that the rendered preview is not broken.
+      placeholder: |
+        Ex:
+        1. I get this error
+        2. ... doesn't work
+        3. X will happen
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Current vs. Expected behavior
+      description: |
+        A clear and concise description of what the bug is (e.g., screenshots, logs, etc.), and what you expected to happen.
+
+        **Skipping this/failure to provide complete information of the bug will result in the issue being closed.**
+      placeholder: 'Following the steps from the previous section, I expected A to happen, but I observed B instead.'
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: What version of Better Auth Invite Plugin are you using?
+      description: Please provide the current version of `better-auth-invite-plugin` that you are reporting the bug on
+      placeholder: "0.x.x"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: System info
+      description: Output of `npx auth info --json`
+      render: bash
+      placeholder: System and Better Auth info
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Which area(s) are affected? (Select all that apply)
+      multiple: true
+      options:
+        - 'API'
+        - 'Backend'
+        - 'Incorrect Roles'
+        - 'Types'
+        - 'Package'
+        - 'Other'
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Auth config (if applicable)
+      description: If you haven't already shared a reproducible example or don't think it's unrelated, please include your auth config. Make sure to remove any sensitive information.
+      render: typescript
+      value: |
+        import { betterAuth } from "better-auth"
+        import { invite } from "better-auth-invite-plugin"
+        export const auth = betterAuth({
+          emailAndPassword: {  
+            enabled: true
+          },
+          // ...
+          plugins: [
+            invite({
+              defaultMaxUses: 1,
+              defaultRedirectAfterUpgrade: "/auth/invited",
+              // ...
+            })
+          ]
+        });
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: |
+        Any extra information that might help us investigate. For example, is it only reproducible online, or locally too? Is the issue only happening in a specific browser? etc.
+      placeholder: |
+        I tested my reproduction against the latest release.

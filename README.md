@@ -15,19 +15,22 @@
 </p>
 
 <p align="center">
-  <a href="https://choosealicense.com/licenses/mit/" style="text-decoration: none;">
+  <a href="https://choosealicense.com/licenses/mit/">
     <img src="https://img.shields.io/badge/License-MIT-green.svg" />
   </a>
-  <a href="https://www.typescriptlang.org/" style="text-decoration: none;">
+  <a href="https://www.typescriptlang.org/">
     <img src="https://img.shields.io/badge/TypeScript-Ready-blue?logo=typescript&logoColor=white" />
   </a>
-  <a href="https://www.npmjs.com/package/better-auth-invite-plugin/" style="text-decoration: none;">
+  <a href="https://www.npmjs.com/package/better-auth-invite-plugin/">
     <img src="https://img.shields.io/npm/v/better-auth-invite-plugin?logo=npm" />
   </a>
-  <a href="https://www.better-auth.com/docs/concepts/plugins/" style="text-decoration: none;">
+  <a href="https://www.npmjs.com/package/better-auth-invite-plugin/">
+    <img src="https://img.shields.io/npm/dm/better-auth-invite-plugin?logo=npm&label=Downloads&labelColor=gray&color=red" />
+  </a>
+  <a href="https://www.better-auth.com/docs/concepts/plugins/">
     <img src="https://img.shields.io/badge/Better_Auth-Plugin-blue?logo=better-auth" />
   </a>
-  <a href="https://github.com/0-Sandy/better-auth-invite-plugin/actions/workflows/ci.yml" style="text-decoration: none;">
+  <a href="https://github.com/0-Sandy/better-auth-invite-plugin/actions/workflows/ci.yml">
     <img src="https://github.com/0-Sandy/better-auth-invite-plugin/actions/workflows/ci.yml/badge.svg?branch=main" />
   </a>
 </p>
@@ -178,4 +181,4 @@ console.log("Invite activated successfully.");
 
 ## Acknowledgements
 
- - Inspired in the [invite system](https://github.com/bard/better-auth-invite) from max.
+ - Inspired in the [invite system](https://github.com/bard/better-auth-invite) from Max.
