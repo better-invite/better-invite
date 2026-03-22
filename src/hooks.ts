@@ -6,7 +6,7 @@ import * as z from "zod";
 import { getInviteAdapter } from "./adapter";
 import { ERROR_CODES, INVITE_COOKIE_NAME } from "./constants";
 import type { NewInviteOptions } from "./types";
-import { consumeInvite, redirectToAfterUpgrade } from "./utils";
+import { consumeInvite, redirectError } from "./utils";
 
 export const invitesHooks = (options: NewInviteOptions) => {
 	return {
@@ -121,7 +121,6 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						token: inviteToken,
 						session,
 						newAccount: true,
-						error,
 						adapter,
 					});
 
@@ -134,10 +133,11 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						invitedUser,
 					});
 
-					await redirectToAfterUpgrade({
-						ctx,
-						invitation,
-					});
+					const redirectURL = invitation.redirectToAfterUpgrade?.replace(
+						"{token}",
+						ctx.params.token,
+					);
+					return ctx.redirect(redirectError(ctx.context, redirectURL));
 				}),
 			},
 		],

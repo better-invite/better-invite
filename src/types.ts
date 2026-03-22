@@ -344,11 +344,6 @@ export type InviteTypeWithId = InviteType & {
 
 export type TokensType = "token" | "code" | "custom";
 
-export type afterUpgradeTypes = {
-	ctx: GenericEndpointContext;
-	invitation: InviteTypeWithId;
-};
-
 export type InviteUseType = {
 	inviteId: string;
 	usedByUserId: string;

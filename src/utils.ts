@@ -4,8 +4,6 @@ import {
 	type GenericEndpointContext,
 	generateId,
 	type Session,
-	type Status,
-	type statusCodes,
 } from "better-auth";
 import { getSessionFromCtx } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
@@ -19,7 +17,6 @@ import type { InviteAdapter } from "./adapter";
 import { ERROR_CODES } from "./constants";
 import type { CreateInvite } from "./routes/create-invite";
 import type {
-	afterUpgradeTypes,
 	InviteOptions,
 	InviteTypeWithId,
 	NewInviteOptions,
@@ -92,7 +89,6 @@ export const consumeInvite = async ({
 	token,
 	session,
 	newAccount,
-	error,
 	adapter,
 }: {
 	ctx: GenericEndpointContext;
@@ -104,11 +100,6 @@ export const consumeInvite = async ({
 	token: string;
 	session: Session;
 	newAccount: boolean;
-	error: (
-		httpErrorCode: keyof typeof statusCodes | Status,
-		errorMessage: string,
-		urlErrorCode: string,
-	) => void;
 	adapter: InviteAdapter;
 }) => {
 	const emails = normalizeEmails<string[]>(
@@ -118,11 +109,17 @@ export const consumeInvite = async ({
 	const isPrivate = emails.length > 0;
 
 	if (isPrivate && !emails.includes(invitedUser.email)) {
-		throw error("BAD_REQUEST", ERROR_CODES.INVALID_EMAIL, "INVALID_EMAIL");
+		throw ctx.error("BAD_REQUEST", {
+			message: ERROR_CODES.INVALID_EMAIL,
+			code: "INVALID_EMAIL",
+		});
 	}
 
 	if (invitation.status !== "pending" && invitation.status !== undefined) {
-		throw error("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN, "INVALID_TOKEN");
+		throw ctx.error("BAD_REQUEST", {
+			message: ERROR_CODES.INVALID_TOKEN,
+			code: "INVALID_TOKEN",
+		});
 	}
 
 	const canAcceptInviteOptions =
@@ -135,11 +132,10 @@ export const consumeInvite = async ({
 			: canAcceptInviteOptions;
 
 	if (!canAcceptInvite) {
-		throw error(
-			"BAD_REQUEST",
-			ERROR_CODES.CANT_ACCEPT_INVITE,
-			"CANT_ACCEPT_INVITE",
-		);
+		throw ctx.error("BAD_REQUEST", {
+			message: ERROR_CODES.CANT_ACCEPT_INVITE,
+			code: "CANT_ACCEPT_INVITE",
+		});
 	}
 
 	await ctx.context.adapter.update({
@@ -207,18 +203,6 @@ export function normalizeEmails<T = string[] | undefined>(
 ): string[] | T {
 	return email ? (Array.isArray(email) ? email : [email]) : undefinedVal;
 }
-
-export const redirectToAfterUpgrade = async ({
-	ctx,
-	invitation,
-}: afterUpgradeTypes) => {
-	const redirectUrl = createRedirectAfterUpgradeURL(invitation);
-
-	if (!redirectUrl) return;
-	console.log(redirectUrl);
-
-	throw ctx.redirect(redirectCallback(ctx.context, redirectUrl));
-};
 
 export const getDate = (span: number, unit: "sec" | "ms" = "ms") => {
 	return new Date(Date.now() + (unit === "sec" ? span * 1000 : span));
@@ -298,13 +282,6 @@ const getPlugin = <P extends BetterAuthPlugin = BetterAuthPlugin>(
 	context: AuthContext,
 ) => {
 	return context.options.plugins?.find((p) => p.id === id) as P | undefined;
-};
-
-export const createRedirectAfterUpgradeURL = (invitation: InviteTypeWithId) => {
-	return invitation.redirectToAfterUpgrade?.replace(
-		"{token}",
-		invitation.token,
-	);
 };
 
 export const createRedirectURL = ({

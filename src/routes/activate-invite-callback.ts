@@ -1,14 +1,12 @@
-import type { Status, statusCodes } from "better-auth";
 import { createAuthEndpoint, originCheck } from "better-auth/api";
 import * as z from "zod";
-import type { afterUpgradeTypes, NewInviteOptions } from "../types";
+import type { NewInviteOptions } from "../types";
 import {
 	optionalSessionMiddleware,
 	redirectCallback,
 	redirectError,
-	redirectToAfterUpgrade,
 } from "../utils";
-import { activateInviteLogic } from "./activate-invite-logic";
+import { activateInviteLogic } from "./activate-invite";
 
 /**
  * Only used for invite links
@@ -77,39 +75,46 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
-			const { token } = ctx.params;
-			const { callbackURL } = ctx.query;
+			let res: Awaited<ReturnType<typeof activateInviteLogic>> | null = null;
+			try {
+				res = await activateInviteLogic(options, ctx, ctx.params);
+			} catch (e) {
+				const err = e as
+					| { body?: { code?: string; message?: string } }
+					| undefined;
 
-			const error = (
-				_httpErrorCode: keyof typeof statusCodes | Status,
-				errorMessage: string,
-				urlErrorCode: string,
-			) =>
-				ctx.redirect(
-					redirectError(ctx.context, callbackURL, {
-						error: urlErrorCode,
-						message: errorMessage,
-					}),
+				const error = err?.body?.code ?? "SERVER_ERROR";
+				const message = err?.body?.message ?? "Internal server error";
+
+				return ctx.redirect(
+					redirectError(ctx.context, ctx.query.callbackURL, { message, error }),
 				);
+			}
 
-			const afterUpgrade = async (opts: afterUpgradeTypes) =>
-				redirectToAfterUpgrade(opts);
+			if (!res) {
+				return;
+			}
 
-			const needToSignInUp = () =>
-				ctx.redirect(
+			if (res.action === "REDIRECT_TO_AFTER_UPGRADE" && res.redirectTo) {
+				const redirectURL = res.redirectTo?.replace(
+					"{token}",
+					ctx.params.token,
+				);
+				return ctx.redirect(redirectError(ctx.context, redirectURL));
+			}
+
+			if (res.action === "SIGN_IN_UP_REQUIRED")
+				return ctx.redirect(
 					redirectCallback(
 						ctx.context,
-						callbackURL ?? options.defaultRedirectToSignIn,
+						res.redirectTo ?? options.defaultRedirectToSignIn,
 					),
 				);
 
-			return await activateInviteLogic({
-				ctx,
-				options,
-				token,
-				error,
-				afterUpgrade,
-				needToSignInUp,
+			// Fallback (unknown error)
+			redirectError(ctx.context, ctx.query.callbackURL, {
+				message: "Internal server error",
+				error: "SERVER_ERROR",
 			});
 		},
 	);

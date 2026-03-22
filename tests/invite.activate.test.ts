@@ -29,9 +29,8 @@ test("test activateInvite with an invalid token", async ({ createAuth }) => {
 
 	// Should throw an error because the invite token is invalid
 	expect(error).toStrictEqual({
-		code: "INVALID_INVITE_TOKEN",
+		code: "INVALID_TOKEN",
 		message: "Invalid invite token",
-		errorCode: "INVALID_TOKEN",
 		status: 400,
 		statusText: "BAD_REQUEST",
 	});
@@ -85,6 +84,7 @@ test("test activateInvite with maxUses set to 2", async ({ createAuth }) => {
 	expect(error).toBe(null);
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: "/auth/invited",
 	});
@@ -155,6 +155,7 @@ test("invite and inviteUses are deleted after reaching maxUses", async ({
 	expect(error).toBe(null);
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: "/auth/invited",
 	});
@@ -212,9 +213,8 @@ test("test activateInvite with an expired invite", async ({ createAuth }) => {
 
 	// Should throw an error because the invite has expired
 	expect(error).toStrictEqual({
-		code: "INVITE_TOKEN_HAS_EXPIRED",
+		code: "INVALID_TOKEN",
 		message: "Invite token has expired",
-		errorCode: "INVALID_TOKEN",
 		status: 400,
 		statusText: "BAD_REQUEST",
 	});
@@ -274,6 +274,7 @@ test("activateInvite skips login step if already logged in", async ({
 	expect(error).toBe(null);
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: "/auth/invited",
 	});
@@ -392,8 +393,7 @@ test("canAcceptInvite is called if it exists", async ({ createAuth }) => {
 	expect(mock.canAcceptInvite).toHaveBeenCalledOnce();
 	// Should throw an error because canAcceptInviteMock returns false
 	expect(error).toStrictEqual({
-		code: "YOU_CANNOT_ACCEPT_THIS_INVITE",
-		errorCode: "CANT_ACCEPT_INVITE",
+		code: "CANT_ACCEPT_INVITE",
 		message: "You cannot accept this invite",
 		status: 400,
 		statusText: "BAD_REQUEST",
@@ -458,8 +458,7 @@ test("canAcceptInvite supports Permissions objects", async ({ createAuth }) => {
 	expect(checkPermissionsSpy).toHaveBeenCalledOnce();
 	expect(res.data).toBeNull();
 	expect(res.error).toStrictEqual({
-		code: "YOU_CANNOT_ACCEPT_THIS_INVITE",
-		errorCode: "CANT_ACCEPT_INVITE",
+		code: "CANT_ACCEPT_INVITE",
 		message: "You cannot accept this invite",
 		status: 400,
 		statusText: "BAD_REQUEST",
@@ -521,6 +520,7 @@ test("onInvitationUsed is called with correct payload", async ({
 	expect(error).toBe(null);
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: "/auth/invited",
 	});
@@ -595,6 +595,7 @@ test("activate invite hooks run in the correct order with the expected arguments
 	expect(error).toBe(null);
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: "/auth/invited",
 	});
@@ -710,8 +711,7 @@ test("throws error when using different email than invite email", async ({
 
 	// Should throw an error because the logged in user's email doesn't match
 	expect(error).toStrictEqual({
-		code: "THIS_TOKEN_IS_FOR_A_SPECIFIC_EMAIL_THIS_IS_NOT_IT",
-		errorCode: "INVALID_EMAIL",
+		code: "INVALID_EMAIL",
 		message: "This token is for a specific email, this is not it",
 		status: 400,
 		statusText: "BAD_REQUEST",
@@ -774,6 +774,7 @@ test("test activateInvite with custom schema", async ({ createAuth }) => {
 	expect(error).toBe(null);
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: "/auth/invited",
 	});
@@ -843,6 +844,7 @@ test("test activateInvite with infinite maxUses", async ({ createAuth }) => {
 	expect(error).toBe(null);
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: "/auth/invited",
 	});
@@ -917,6 +919,7 @@ test("activateInvite uses defaultRedirectAfterUpgrade", async ({
 	expect(error).toBeNull();
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: `/auth/invited/${tokenValue}`,
 	});
@@ -976,6 +979,7 @@ test("activateInvite supports no redirectAfterUpgrade", async ({
 	expect(error).toBeNull();
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 	});
 });
@@ -1030,6 +1034,7 @@ test("cannot reuse an invite after it has already been used", async ({
 	expect(firstUse.error).toBeNull();
 	expect(firstUse.data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: "/auth/invited",
 	});
@@ -1119,6 +1124,7 @@ test("works with old email field in db", async ({ createAuth }) => {
 	expect(error).toBe(null);
 	expect(data).toStrictEqual({
 		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite activated successfully",
 		redirectTo: "/auth/invited",
 	});

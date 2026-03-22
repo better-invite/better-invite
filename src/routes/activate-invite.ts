@@ -1,11 +1,11 @@
+import type { GenericEndpointContext } from "better-auth";
 import { createAuthEndpoint, originCheck } from "better-auth/api";
+import type { UserWithRole } from "better-auth/plugins";
 import * as z from "zod";
-import type { afterUpgradeTypes, NewInviteOptions } from "../types";
-import {
-	createRedirectAfterUpgradeURL,
-	optionalSessionMiddleware,
-} from "../utils";
-import { activateInviteLogic } from "./activate-invite-logic";
+import { getInviteAdapter } from "../adapter";
+import { INVITE_COOKIE_NAME } from "../constants";
+import type { NewInviteOptions } from "../types";
+import { consumeInvite, optionalSessionMiddleware } from "../utils";
 
 export const activateInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -82,42 +82,106 @@ export const activateInvite = (options: NewInviteOptions) => {
 				},
 			},
 		},
-		async (ctx) => {
-			const { token, callbackURL } = ctx.body;
-
-			const error = (
-				httpErrorCode: Parameters<typeof ctx.error>[0],
-				errorMessage: string,
-				urlErrorCode: string,
-			) =>
-				ctx.error(httpErrorCode, {
-					message: errorMessage,
-					errorCode: urlErrorCode,
-				});
-
-			const afterUpgrade = (opts: afterUpgradeTypes) =>
-				ctx.json({
-					status: true,
-					message: "Invite activated successfully",
-					redirectTo: createRedirectAfterUpgradeURL(opts.invitation),
-				});
-
-			const needToSignInUp = () =>
-				ctx.json({
-					status: true,
-					message: "Please sign in or sign up to continue.",
-					action: "SIGN_IN_UP_REQUIRED",
-					redirectTo: callbackURL ?? options.defaultRedirectToSignIn,
-				});
-
-			return await activateInviteLogic({
-				ctx,
-				options,
-				token,
-				error,
-				afterUpgrade,
-				needToSignInUp,
-			});
+		(ctx) => {
+			return activateInviteLogic(options, ctx, ctx.body);
 		},
 	);
+};
+
+export const activateInviteLogic = async (
+	options: NewInviteOptions,
+	ctx: GenericEndpointContext,
+	body: { token: string; callbackURL?: string },
+) => {
+	const adapter = getInviteAdapter(ctx.context, options);
+
+	const invitation = await adapter.findInvitation(body.token);
+
+	if (!invitation) {
+		throw ctx.error("BAD_REQUEST", {
+			message: "Invalid invite token",
+			code: "INVALID_TOKEN",
+		});
+	}
+
+	const timesUsed = await adapter.countInvitationUses(invitation.id);
+
+	if (!(timesUsed < invitation.maxUses)) {
+		throw ctx.error("BAD_REQUEST", {
+			message: "Invite token has already been used",
+			code: "INVALID_TOKEN",
+		});
+	}
+
+	if (options.getDate() > invitation.expiresAt) {
+		throw ctx.error("BAD_REQUEST", {
+			message: "Invite token has expired",
+			code: "INVALID_TOKEN",
+		});
+	}
+
+	const sessionObject = ctx.context.session;
+	const session = sessionObject?.session;
+	let invitedUser = sessionObject?.user as UserWithRole | null;
+
+	if (invitedUser && session) {
+		const before = await options.inviteHooks?.beforeAcceptInvite?.({
+			ctx,
+			invitedUser,
+		});
+		if (before?.user) {
+			invitedUser = before.user;
+		}
+
+		await consumeInvite({
+			ctx,
+			invitation,
+			invitedUser,
+			options,
+			userId: invitedUser.id,
+			timesUsed,
+			token: body.token,
+			session,
+			newAccount: false,
+			adapter,
+		});
+
+		await options.inviteHooks?.afterAcceptInvite?.({
+			ctx,
+			invitation,
+			invitedUser,
+		});
+
+		return ctx.json({
+			status: true,
+			message: "Invite activated successfully",
+			action: "REDIRECT_TO_AFTER_UPGRADE",
+			redirectTo: invitation.redirectToAfterUpgrade?.replace(
+				"{token}",
+				invitation.token,
+			),
+		});
+	}
+
+	// If user doesn't already exist, we set a cookie and redirect them to the sign in/up page
+
+	// Get cookie name (customizable)
+	const maxAge = options.inviteCookieMaxAge ?? 10 * 60; // 10 minutes
+	const inviteCookie = ctx.context.createAuthCookie(INVITE_COOKIE_NAME, {
+		maxAge,
+	});
+
+	await ctx.setSignedCookie(
+		inviteCookie.name,
+		body.token,
+		ctx.context.secret,
+		inviteCookie.attributes,
+	);
+
+	return ctx.json({
+		status: true,
+		message: "Please sign in or sign up to continue.",
+		action: "SIGN_IN_UP_REQUIRED",
+		redirectTo: body.callbackURL ?? options.defaultRedirectToSignIn,
+	});
 };
