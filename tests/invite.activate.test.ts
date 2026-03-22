@@ -692,7 +692,7 @@ test("throws error when using different email than invite email", async ({
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: fakeEmail }],
+		where: [{ field: "emails", value: JSON.stringify([fakeEmail]) }],
 	});
 	const token = invite?.token;
 
@@ -1055,4 +1055,71 @@ test("cannot reuse an invite after it has already been used", async ({
 			status: "used",
 		}),
 	);
+});
+
+test("works with old email field in db", async ({ createAuth }) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+	const newRole = "admin";
+
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	const token = await client.invite.create({
+		email: invitedUser.email,
+		role: newRole,
+		fetchOptions: { headers },
+	});
+
+	expect(token.error).toBe(null);
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([invitedUser.email]) }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	await db.update({
+		model: "invite",
+		where: [{ field: "id", value: invite.id }],
+		update: {
+			email: invitedUser.email,
+			emails: undefined,
+		},
+	});
+
+	const tokenValue = invite.token;
+
+	const { headers: newHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+
+	const { error, data } = await client.invite.activate({
+		token: tokenValue,
+		callbackURL: "/auth/sign-in",
+		fetchOptions: { headers: newHeaders },
+	});
+
+	expect(error).toBe(null);
+	expect(data).toStrictEqual({
+		status: true,
+		message: "Invite activated successfully",
+		redirectTo: "/auth/invited",
+	});
 });

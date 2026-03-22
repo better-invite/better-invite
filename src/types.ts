@@ -23,7 +23,7 @@ export type InviteOptions = {
 	canCreateInvite?:
 		| ((data: {
 				invitedUser: {
-					email?: string;
+					email?: string | string[];
 					role: string;
 				};
 				inviterUser: UserWithRole;
@@ -236,7 +236,7 @@ export type InviteOptions = {
 		 */
 		afterCreateInvite?: (data: {
 			ctx: GenericEndpointContext;
-			invitation: InviteTypeWithId;
+			invitations: InviteTypeWithId[];
 		}) => Promise<void> | void;
 		/**
 		 * A function that runs before a user accepts an invite
@@ -328,7 +328,11 @@ export type InviteType = {
 	maxUses: number;
 	redirectToAfterUpgrade?: string;
 	shareInviterName: boolean;
+	/**
+	 * @deprecated Use emails
+	 */
 	email?: string;
+	emails?: string[];
 	role: string;
 	newAccount?: boolean; // Only in private invites
 	status: InvitationStatus;

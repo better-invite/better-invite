@@ -4,7 +4,7 @@ import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { checkPermissions } from "../utils";
+import { checkPermissions, normalizeEmails } from "../utils";
 
 export const rejectInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -79,15 +79,21 @@ export const rejectInvite = (options: NewInviteOptions) => {
 				});
 			}
 
-			const inviteType = invitation.email ? "private" : "public";
+			const emails = normalizeEmails<string[]>(
+				invitation.emails ?? invitation.email,
+				[],
+			);
+			const isPrivate = emails.length > 0;
 
-			if (inviteType === "public" || invitation.email !== inviteeUser.email) {
+			// Throws error if the invite is public or if the user email doesn’t match the invite
+			if (!isPrivate || !invitation.emails?.includes(inviteeUser.email)) {
 				throw ctx.error("BAD_REQUEST", {
 					message: ERROR_CODES.CANT_REJECT_INVITE,
 					errorCode: "CANT_REJECT_INVITE",
 				});
 			}
 
+			// Throws error if the invite is already rejected, accepted...
 			if (invitation.status !== "pending" && invitation.status !== undefined) {
 				throw ctx.error("BAD_REQUEST", {
 					message: ERROR_CODES.INVALID_TOKEN,

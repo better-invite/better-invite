@@ -13,7 +13,8 @@ export const schema = {
 			},
 			redirectToAfterUpgrade: { type: "string", required: false },
 			shareInviterName: { type: "boolean", required: true },
-			email: { type: "string", required: false },
+			email: { type: "string", required: false }, //! Deprecated
+			emails: { type: "string[]", required: false },
 			role: { type: "string", required: true },
 			newAccount: { type: "boolean", required: false },
 			status: {

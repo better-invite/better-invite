@@ -521,7 +521,7 @@ test("throws error when using different email than invite email", async ({
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: fakeEmail }],
+		where: [{ field: "emails", value: JSON.stringify([fakeEmail]) }],
 	});
 	const token = invite?.token;
 
@@ -729,4 +729,73 @@ test("activateInviteCallback supports no redirectAfterUpgrade", async ({
 
 	expect(newError).toBeNull();
 	expect(path).toBeNull(); // We shouldn't be redirected
+});
+
+test("works with old email field in db", async ({ createAuth }) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+
+	// Create a new user
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	// This should be a role upgrade, because user already exists
+	const token = await client.invite.create({
+		email: invitedUser.email,
+		role: "owner",
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(token.error).toBe(null);
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([invitedUser.email]) }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	await db.update({
+		model: "invite",
+		where: [{ field: "id", value: invite.id }],
+		update: {
+			email: invitedUser.email,
+			emails: undefined,
+		},
+	});
+
+	const tokenValue = invite.token;
+
+	const { headers: newHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+
+	// We activate the invite while being logged in as the invited user
+	const { newError, path } = await activateInviteGet(client, {
+		token: tokenValue,
+		callbackURL: "/auth/sign-in",
+		fetchOptions: {
+			headers: newHeaders,
+		},
+	});
+
+	expect(newError).toBe(null);
+	expect(path).toBe("http://localhost:3000/auth/invited");
 });

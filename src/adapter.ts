@@ -1,6 +1,6 @@
 import type { AuthContext, DBAdapter } from "better-auth";
 import type { UserWithRole } from "better-auth/plugins";
-import type { CreateInvite } from "./body";
+import type { CreateInvite } from "./routes/create-invite";
 import type {
 	InvitationStatus,
 	InviteTypeWithId,
@@ -8,7 +8,12 @@ import type {
 	InviteUseTypeWithId,
 	NewInviteOptions,
 } from "./types";
-import { getDate, resolveInvitePayload, resolveTokenGenerator } from "./utils";
+import {
+	getDate,
+	normalizeEmails,
+	resolveInvitePayload,
+	resolveTokenGenerator,
+} from "./utils";
 
 export const getInviteAdapter = (
 	context: AuthContext,
@@ -27,13 +32,14 @@ export const getInviteAdapter = (
 			const payload = resolveInvitePayload(invite, options);
 			const generateToken = resolveTokenGenerator(payload.tokenType, options);
 
+			const emails = normalizeEmails<string[]>(invite.email, []);
+			const isPrivate = emails.length > 0;
+
 			const expiresAt = getDate(payload.expiresIn, "sec");
 			const token = generateToken();
 			const now = options.getDate();
 			const newMaxUses =
-				invite.maxUses ??
-				options.defaultMaxUses ??
-				(invite.email ? 1 : Infinity);
+				invite.maxUses ?? options.defaultMaxUses ?? (isPrivate ? 1 : Infinity);
 
 			return baseAdapter.create<InviteTypeWithId>({
 				model: inviteTable,
@@ -45,7 +51,7 @@ export const getInviteAdapter = (
 					maxUses: newMaxUses,
 					redirectToAfterUpgrade: payload.redirectToAfterUpgrade,
 					shareInviterName: payload.shareInviterName,
-					email: invite.email,
+					emails: normalizeEmails(invite.email),
 					role: invite.role,
 					newAccount,
 					status: "pending",

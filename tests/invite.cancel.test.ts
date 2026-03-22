@@ -359,3 +359,93 @@ test("cancel invite hooks run in the correct order with the expected arguments",
 		}),
 	);
 });
+
+test("works with old email field in db", async ({ createAuth }) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+
+	// Create a new user
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	const created = await client.invite.create({
+		email: invitedUser.email,
+		role: "user",
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(created.error).toBe(null);
+
+	// Ensure invite exists before cancelling
+	const inviteBefore = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([invitedUser.email]) }],
+	});
+
+	if (!inviteBefore) {
+		throw new Error("Invite not found");
+	}
+
+	if (!inviteBefore.emails) {
+		throw new Error("No invitation emails");
+	}
+
+	await db.update({
+		model: "invite",
+		where: [{ field: "id", value: inviteBefore.id }],
+		update: {
+			email: inviteBefore.emails[0],
+			emails: undefined,
+		},
+	});
+
+	const tokenValue = inviteBefore.token;
+
+	const cancelled = await client.invite.cancel({
+		token: tokenValue,
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(cancelled.error).toBe(null);
+	expect(cancelled.data).toStrictEqual({
+		status: true,
+		message: "Invite cancelled successfully",
+	});
+
+	const invitation = await db.findOne({
+		model: "invite",
+		where: [{ field: "token", value: tokenValue }],
+	});
+
+	if (!inviteBefore) {
+		throw new Error("Invite not found");
+	}
+
+	const invitationUses = await db.count({
+		model: "inviteUse",
+		where: [{ field: "inviteId", value: inviteBefore.id }],
+	});
+
+	expect(invitation).toEqual(
+		expect.objectContaining({
+			status: "canceled",
+		}),
+	);
+	expect(invitationUses).toBe(0);
+});

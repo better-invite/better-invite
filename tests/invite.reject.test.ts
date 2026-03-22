@@ -41,7 +41,7 @@ test("invitee can reject their own invite", async ({ createAuth }) => {
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: invitee.email }],
+		where: [{ field: "emails", value: JSON.stringify([invitee.email]) }],
 	});
 
 	if (!invite) {
@@ -106,7 +106,7 @@ test("non-invitee cannot reject invite", async ({ createAuth }) => {
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: inviteeEmail }],
+		where: [{ field: "emails", value: JSON.stringify([inviteeEmail]) }],
 	});
 
 	if (!invite) {
@@ -238,7 +238,7 @@ test("canRejectInvite is called and can block rejection", async ({
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: invitee.email }],
+		where: [{ field: "emails", value: JSON.stringify([invitee.email]) }],
 	});
 
 	if (!invite) {
@@ -311,7 +311,7 @@ test("canRejectInvite supports Permissions objects", async ({ createAuth }) => {
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: invitee.email }],
+		where: [{ field: "emails", value: JSON.stringify([invitee.email]) }],
 	});
 
 	if (!invite) {
@@ -376,7 +376,7 @@ test("reject invite hooks run in the correct order with the expected arguments",
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: invitee.email }],
+		where: [{ field: "emails", value: JSON.stringify([invitee.email]) }],
 	});
 
 	if (!invite) {
@@ -415,7 +415,7 @@ test("reject invite hooks run in the correct order with the expected arguments",
 				id: expect.any(String),
 				token,
 				role: "admin",
-				email: invitee.email,
+				emails: [invitee.email],
 				createdAt: expect.any(Date),
 				expiresAt: expect.any(Date),
 			}),
@@ -433,7 +433,7 @@ test("reject invite hooks run in the correct order with the expected arguments",
 				id: expect.any(String),
 				token,
 				role: "admin",
-				email: invitee.email,
+				emails: [invitee.email],
 				createdAt: expect.any(Date),
 				expiresAt: expect.any(Date),
 			}),
@@ -473,7 +473,7 @@ test("test reject invite with cleanupInvitesOnDecision enabled", async ({
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: invitee.email }],
+		where: [{ field: "emails", value: JSON.stringify([invitee.email]) }],
 	});
 
 	if (!invite) {
@@ -502,4 +502,78 @@ test("test reject invite with cleanupInvitesOnDecision enabled", async ({
 		where: [{ field: "token", value: token }],
 	});
 	expect(inviteCount).toBe(0);
+});
+
+test("works with old email field in db", async ({ createAuth }) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const invitee = {
+		email: "invitee@test.com",
+		role: "user",
+		name: "Invitee User",
+		password: "12345678",
+	};
+
+	await createUser(invitee, db);
+
+	const { headers: creatorHeaders } = await signInWithTestUser();
+
+	const created = await client.invite.create({
+		role: "admin",
+		email: invitee.email,
+		fetchOptions: { headers: creatorHeaders },
+	});
+
+	expect(created.error).toBe(null);
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([invitee.email]) }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	await db.update({
+		model: "invite",
+		where: [{ field: "id", value: invite.id }],
+		update: {
+			email: invitee.email,
+			emails: undefined,
+		},
+	});
+
+	const token = invite.token;
+
+	const { headers: inviteeHeaders } = await signInWithUser(
+		invitee.email,
+		invitee.password,
+	);
+
+	const rejected = await client.invite.reject({
+		token,
+		fetchOptions: { headers: inviteeHeaders },
+	});
+
+	expect(rejected.error).toBe(null);
+	expect(rejected.data).toStrictEqual({
+		status: true,
+		message: "Invite rejected successfully",
+	});
+
+	const invitation = await db.findOne({
+		model: "invite",
+		where: [{ field: "token", value: token }],
+	});
+	expect(invitation).toEqual(
+		expect.objectContaining({
+			status: "rejected",
+		}),
+	);
 });

@@ -57,7 +57,7 @@ test("test warn when using sendUserRoleUpgrade", async ({ createAuth }) => {
 	);
 
 	expect(warnSpy).toHaveBeenCalledWith(
-		"`sendUserRoleUpgrade` is deprecated. Use `sendUserInvitation` instead (it now receives `newAccount`).",
+		"`sendUserRoleUpgrade` is deprecated. Use `sendUserInvitation` instead (it now receives `newAccount` to know if it's a role upgrade invite or a user creation invite).",
 	);
 });
 
@@ -264,7 +264,7 @@ test("getDate should be used if it exists", async ({ createAuth }) => {
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: invitedUserEmail }],
+		where: [{ field: "emails", value: JSON.stringify([invitedUserEmail]) }],
 	});
 
 	// The getDateMock should have been called to set createdAt
@@ -362,7 +362,7 @@ test("shareInviterName is stored correctly", async ({ createAuth }) => {
 
 	const invite = await db.findOne<InviteTypeWithId>({
 		model: "invite",
-		where: [{ field: "email", value: "share@test.com" }],
+		where: [{ field: "emails", value: JSON.stringify(["share@test.com"]) }],
 	});
 
 	// Make sure we respect privacy, the person who sent the invite shouldn’t be shown
@@ -421,13 +421,15 @@ test("invite hooks run in the correct order with the expected arguments", async 
 				body: expect.any(Object),
 				headers: expect.any(Headers),
 			}),
-			invitation: expect.objectContaining({
-				id: expect.any(String),
-				token: expect.any(String),
-				role: "user",
-				createdAt: expect.any(Date),
-				expiresAt: expect.any(Date),
-			}),
+			invitations: expect.arrayContaining([
+				expect.objectContaining({
+					id: expect.any(String),
+					token: expect.any(String),
+					role: "user",
+					createdAt: expect.any(Date),
+					expiresAt: expect.any(Date),
+				}),
+			]),
 		}),
 	);
 });

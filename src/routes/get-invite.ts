@@ -4,7 +4,7 @@ import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { optionalSessionMiddleware } from "../utils";
+import { normalizeEmails, optionalSessionMiddleware } from "../utils";
 
 export const getInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -47,6 +47,7 @@ export const getInvite = (options: NewInviteOptions) => {
 												type: "object",
 												properties: {
 													email: { type: "string", nullable: true },
+													emails: { type: "string[]" },
 													createdAt: { type: "string", format: "date-time" },
 													role: { type: "string" },
 													newAccount: { type: "boolean" },
@@ -83,28 +84,31 @@ export const getInvite = (options: NewInviteOptions) => {
 
 			const invitation = await adapter.findInvitation(token);
 
-			const invalid = () =>
-				ctx.error("BAD_REQUEST", {
+			if (!invitation) {
+				throw ctx.error("BAD_REQUEST", {
 					message: ERROR_CODES.INVALID_TOKEN,
 					errorCode: "INVALID_TOKEN",
 				});
-
-			if (!invitation) {
-				throw invalid();
 			}
+
+			const emails = normalizeEmails<string[]>(
+				invitation.emails ?? invitation.email,
+				[],
+			);
+			const isPrivate = emails.length > 0;
 
 			const sessionObject = ctx.context.session;
 			const sessionUser = sessionObject?.user as UserWithRole | null;
 
-			// For private invites (with email), the requester must match the invite email.
-			if (invitation.email) {
-				if (!sessionUser || sessionUser.email !== invitation.email) {
-					throw invalid();
-				}
-			}
-
-			if (!invitation.createdByUserId) {
-				throw invalid();
+			// For private invites, the requester must exist, match the invite email, and the invite must have a creator.
+			if (
+				(isPrivate && (!sessionUser || !emails?.includes(sessionUser.email))) ||
+				!invitation.createdByUserId
+			) {
+				throw ctx.error("BAD_REQUEST", {
+					message: ERROR_CODES.INVALID_TOKEN,
+					errorCode: "INVALID_TOKEN",
+				});
 			}
 
 			const inviter = (await ctx.context.internalAdapter.findUserById(
@@ -127,6 +131,7 @@ export const getInvite = (options: NewInviteOptions) => {
 				},
 				invitation: {
 					email: invitation.email,
+					emails,
 					createdAt: invitation.createdAt,
 					role: invitation.role,
 					newAccount: invitation.newAccount,

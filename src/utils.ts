@@ -16,8 +16,8 @@ import {
 	type UserWithRole,
 } from "better-auth/plugins";
 import type { InviteAdapter } from "./adapter";
-import type { CreateInvite } from "./body";
 import { ERROR_CODES } from "./constants";
+import type { CreateInvite } from "./routes/create-invite";
 import type {
 	afterUpgradeTypes,
 	InviteOptions,
@@ -111,7 +111,13 @@ export const consumeInvite = async ({
 	) => void;
 	adapter: InviteAdapter;
 }) => {
-	if (invitation.email && invitation.email !== invitedUser.email) {
+	const emails = normalizeEmails<string[]>(
+		invitation.emails ?? invitation.email,
+		[],
+	);
+	const isPrivate = emails.length > 0;
+
+	if (isPrivate && !emails.includes(invitedUser.email)) {
 		throw error("BAD_REQUEST", ERROR_CODES.INVALID_EMAIL, "INVALID_EMAIL");
 	}
 
@@ -179,8 +185,8 @@ export const consumeInvite = async ({
 		});
 	}
 
-	// After all the logic, we run onInvitationUsed
 	if (options.onInvitationUsed) {
+		// After all the logic, we run onInvitationUsed
 		try {
 			await Promise.resolve(
 				options.onInvitationUsed({
@@ -195,6 +201,13 @@ export const consumeInvite = async ({
 	}
 };
 
+export function normalizeEmails<T = string[] | undefined>(
+	email: string | string[] | undefined = undefined,
+	undefinedVal: T = undefined as T,
+): string[] | T {
+	return email ? (Array.isArray(email) ? email : [email]) : undefinedVal;
+}
+
 export const redirectToAfterUpgrade = async ({
 	ctx,
 	invitation,
@@ -202,6 +215,7 @@ export const redirectToAfterUpgrade = async ({
 	const redirectUrl = createRedirectAfterUpgradeURL(invitation);
 
 	if (!redirectUrl) return;
+	console.log(redirectUrl);
 
 	throw ctx.redirect(redirectCallback(ctx.context, redirectUrl));
 };
@@ -246,7 +260,6 @@ export const checkPermissions = async (
 	ctx: GenericEndpointContext,
 	permissions: Permissions,
 ) => {
-	console.log("CHECKING PERMISSIONS!");
 	const session = ctx.context.session;
 	if (!session?.session) {
 		throw ctx.error("UNAUTHORIZED");
