@@ -1,0 +1,183 @@
+---
+title: API
+description: Invitation API endpoints and routes.
+icon: Route
+---
+
+# Create Invite
+
+<APIMethod path="/invite/create" method="POST" requireSession note="All parameters default to the plugin's options defaults, except for role and email.">
+```ts
+type createInvite = {
+	/**
+	 * The role to give the invited user.
+	 */
+	role: string
+	/**
+	 * The email address of the user to send a invitation email to.
+	 */
+	email?: string // If email is present, the invite is private
+	/**
+	 * Type of token to use, 24 character token,
+	 * 6 digit code or custom options.generateToken.
+   * @default options.defaultTokenType
+	 */
+	tokenType?: "token" | "code" | "custom"
+	/**
+	 * The URL to redirect the user to create their account.
+	 * If the token isn't valid or expired, it'll be redirected with a query parameter
+	 * `?error=INVALID_TOKEN`.
+	 * If the token is valid, it'll be redirected with a query parameter
+	 * `?token=VALID_TOKEN`.
+   * 
+   * @default options.defaultRedirectTo
+	 */
+	redirectToSignUp?: string
+	/**
+	 * The URL to redirect the user to upgrade their role.
+   * If the token isn't valid or expired, it'll be redirected with a query parameter
+	 * `?error=INVALID_TOKEN`.
+	 * If the token is valid, it'll be redirected with a query parameter
+	 * `?token=VALID_TOKEN`.
+   * 
+   * @default options.defaultRedirectToSignIn
+	 */
+	redirectToSignIn?: string
+	/**
+	 * The number of times an invitation can be used.
+   * 
+   * @default options.defaultMaxUses
+	 */
+	maxUses?: number
+	/**
+	 * Number of seconds the invitation token is valid for.
+   * 
+   * @default options.invitationTokenExpiresIn
+	 */
+	expiresIn?: number
+	/**
+	 * The URL to redirect the user to after upgrading their role (if the user is already logged in).
+	 * {token} will be replaced with the user's actual token.
+   * 
+   * @default options.defaultRedirectAfterUpgrade
+	 */
+	redirectToAfterUpgrade?: string
+	/**
+	 * Whether the inviter's name should be shared with the invitee.
+	 *
+	 * When enabled, the person receiving the invitation will see
+	 * the name of the user who created the invitation.
+   * 
+   * @default options.defaultShareInviterName
+	 */
+	shareInviterName?: boolean
+	/**
+	 * How should the sender receive the token.
+	 * (sender only receives a token if no email is provided)
+   * 
+   * @default options.defaultSenderResponse
+	 */
+	senderResponse?: "token" | "url"
+	/**
+	 * Where should we redirect the user?
+	 * (only if no email is provided)
+   * 
+   * @default options.defaultSenderResponseRedirect
+	 */
+	senderResponseRedirect?: "signUp" | "signIn"
+	/**
+	 * If inviteUrlType is set to custom, this will be used
+	 * Use {token} and {callbackUrl}, this will be replaced with their values
+	 */
+	customInviteUrl?: string
+	/**
+	 * The url to send in the email to the user
+	 *
+	 * @default api
+	 */
+	inviteUrlType?: "api" | "custom"
+}
+```
+</APIMethod>
+
+# Activate Invite
+
+<APIMethod path="/invite/activate" method="POST" optionalSession note="If the user is not logged in, it redirects the user to the callback URL with the token in a cookie.">
+```ts
+type activateInvite = {
+	/**
+	 * Where to redirect the user after sing in/up
+	 */
+	callbackURL?: string
+  /**
+   * The invite token
+  */
+  token: string
+}
+```
+</APIMethod>
+
+# Activate Invite Callback
+
+<Callout type="info" title="Note">
+  This endpoint is not recommended for direct usage. It exists mainly for internal use (e.g. the default link sent in invite emails).
+  The email link opens in the browser and triggers a `GET` request to `/api/auth/invite/{token}?callbackURL=...`.
+  For most apps, you should use [Activate Invite](#activate-invite) instead.
+</Callout>
+
+<APIMethod path="/invite/:token" clientMethod='invite[":token"]' method="GET" optionalSession fetchOptionsParams="token" note="If the user is not logged in, it redirects the user to the callback URL with the token in a cookie.">
+```ts
+type activateInviteCallback = {
+	/**
+	 * Where to redirect the user after sing in/up
+	 */
+	callbackURL?: string
+  /**
+   * @ignore
+   * The invite token
+  */
+  token: string
+}
+```
+</APIMethod>
+
+# Reject Invite
+
+<APIMethod path="/invite/reject" method="POST" requireSession note="Only available for private invites.">
+```ts
+type rejectInvite = {
+  /**
+   * The invite token to reject.
+  */
+  token: string
+}
+```
+</APIMethod>
+
+# Cancel Invite
+
+<APIMethod path="/invite/cancel" method="POST" requireSession note="Only the user that created the invite can cancel it.">
+```ts
+type cancelInvite = {
+  /**
+   * The invite token to cancel.
+  */
+  token: string
+}
+```
+</APIMethod>
+
+# Get Invite
+
+Get basic information about an invitation.
+
+<APIMethod path="/invite/get" method="GET" optionalSession note="For private invites, the requester must match the invite email.">
+```ts
+type getInvite = {
+  /**
+   * The invite token to look up.
+  */
+  token: string
+}
+```
+</APIMethod>

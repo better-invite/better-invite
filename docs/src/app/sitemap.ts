@@ -1,0 +1,53 @@
+import type { MetadataRoute } from "next";
+import { baseUrl } from "@/lib/metadata";
+import { blog, source } from "@/lib/source";
+
+export const revalidate = false;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+	const url = (path: string): string => new URL(path, baseUrl).toString();
+	// biome-ignore lint/suspicious/useIterableCallbackReturn: filtered out in the end
+	const docPages = source.getPages().map((page) => {
+		if (page.data.type === "openapi") return;
+
+		const lastModified = page.data.lastModified;
+
+		return {
+			url: url(page.url),
+			lastModified: lastModified ? new Date(lastModified) : undefined,
+			changeFrequency: "weekly",
+			priority: 0.5,
+		} satisfies MetadataRoute.Sitemap[number];
+	});
+
+	const blogPages = blog.getPages().map((page) => {
+		const lastModified = page.data.lastModified;
+
+		return {
+			url: url(page.url),
+			lastModified: lastModified ? new Date(lastModified) : undefined,
+			changeFrequency: "weekly",
+			priority: 0.5,
+		} satisfies MetadataRoute.Sitemap[number];
+	});
+
+	return [
+		{
+			url: url("/"),
+			changeFrequency: "monthly",
+			priority: 1,
+		},
+		{
+			url: url("/blog"),
+			changeFrequency: "weekly",
+			priority: 1,
+		},
+		/*{
+      url: url("/showcase"),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },*/
+		...docPages.filter((v) => v !== undefined),
+		...blogPages,
+	];
+}

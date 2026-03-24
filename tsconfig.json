@@ -1,25 +1,4 @@
 {
-	"compilerOptions": {
-		"lib": [
-			"es2024",
-			"ESNext.Array",
-			"ESNext.Collection",
-			"ESNext.Error",
-			"ESNext.Iterator",
-			"ESNext.Promise"
-		],
-		"module": "esnext",
-		"target": "es2024",
-
-		"strict": true,
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"moduleResolution": "bundler",
-
-		"declaration": true,
-
-		"outDir": "dist",
-		"rootDir": "src"
-	},
-	"include": ["src/**/*"]
+	"files": [],
+	"references": [{ "path": "./package" }, { "path": "./docs" }]
 }

@@ -4,12 +4,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        This template is used for reporting a issue with better-auth-invite-plugin.
+        This template is used for reporting a issue with better-invite.
 
-        Feature requests should be opened in [here](https://github.com/0-Sandy/better-auth-invite-plugin/discussions/new?category=feature-request).
-        Documentation errors should be reported in [here](https://github.com/0-Sandy/better-auth-invite-docs/issues/new)
+        Feature requests should be opened in [here](https://github.com/better-invite/better-invite/discussions/new?category=feature-request).
+        Documentation errors should be reported in [here](https://github.com/better-invite/better-invite-docs/issues/new)
 
-        Before opening a new issue, please do a [search](https://github.com/0-Sandy/better-auth-invite-plugin/issues) of existing issues and :+1: upvote the existing issue instead. This will result in a quicker resolution.
+        Before opening a new issue, please do a [search](https://github.com/better-invite/better-invite/issues) of existing issues and :+1: upvote the existing issue instead. This will result in a quicker resolution.
   - type: textarea
     attributes:
       label: To Reproduce
@@ -33,8 +33,8 @@ body:
       required: true
   - type: input
     attributes:
-      label: What version of Better Auth Invite Plugin are you using?
-      description: Please provide the current version of `better-auth-invite-plugin` that you are reporting the bug on
+      label: What version of Better Invite are you using?
+      description: Please provide the current version of `better-invite` that you are reporting the bug on
       placeholder: "0.x.x"
     validations:
       required: true
@@ -66,7 +66,7 @@ body:
       render: typescript
       value: |
         import { betterAuth } from "better-auth"
-        import { invite } from "better-auth-invite-plugin"
+        import { invite } from "better-invite"
         export const auth = betterAuth({
           emailAndPassword: {  
             enabled: true

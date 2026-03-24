@@ -1,0 +1,86 @@
+---
+title: Basic Usage
+description: Learn how to use the plugin.
+icon: Code
+---
+
+# Creating an invite
+
+To invite a user to our application, we need to create an invite. We can create a public or private invite:
+- If the invite has an **email** the user will get an invite email and the invite will be **private**, meaning only that user can use that invite.
+- But if no email is present when creating the invite, the invite will be **public**, and the user that created the invite will receive the invite url or token to share.
+
+Example:
+```ts
+const res = authClient.invite.create({
+	role: "user",
+	email: "test@test.com" // If email is present, the invite is private
+})
+```
+
+If the invite is private, the plugin will send an email to the user with the invite link (see [Activate Invite Callback](/docs/core/api#activate-invite-callback)).
+The response from `invite.create()` depends on whether the invite is **public** or **private**:
+
+### Public invite
+
+No email is sent, and the API returns the invite **token or URL** (depending on your `senderResponse` config):
+
+```ts
+{
+  status: true,
+  message: "token", // The invite token or URL
+}
+```
+
+### Private invite
+
+The plugin will send an invite email, and the response will be:
+
+```ts
+{
+  status: true,
+  message: "The invitation was sent",
+}
+```
+
+# Activating an invite
+
+Activating an invite handles two cases depending on the user's session:
+
+- **If the user is not signed in**, the invite is stored in a temporary cookie and the API returns an action telling you the user must sign in or sign up first.
+- **If the user is already signed in**, the user's role is updated immediately.
+
+Example:
+
+```ts
+const res = await authClient.invite.activate({
+  callbackURL: "/auth/sign-in-or-sign-up", // The user will be redirected here if they need to sign in or sign up
+  token: "token123",
+});
+```
+
+## If the user is not signed in
+
+The API returns:
+
+```ts
+{
+  status: true,
+  message: "Invite activated successfully",
+  action: "SIGN_IN_UP_REQUIRED",
+  redirectTo: "/auth/sign-in-or-sign-up",
+}
+```
+
+At this point, redirect the user to `redirectTo` and perform sign in or sign up. After that, the plugin will automatically activate the invite using a hook, reading the invite data from the cookie. **No further response is returned from the hook**—it just completes the activation once the user has a session.
+
+## If the user is already signed in
+
+The API returns:
+
+```ts
+{
+  status: true,
+  message: "Invite activated successfully",
+}
+```

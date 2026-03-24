@@ -1,0 +1,149 @@
+---
+title: 0.4 Release
+description: Better Auth Invite Plugin 0.4 introduces permissions-based invite authorization, full reject and cancel flows, lifecycle hooks, and a new adapter architecture for greater flexibility and control.
+date: 2026-02-26
+author:
+  name: "Sandy"
+  avatar: "https://avatars.githubusercontent.com/0-Sandy"
+  github: "0-Sandy"
+image: /0-4.png
+---
+
+# 0.4 Release
+
+<Callout type="warning" title="Package Renamed">
+  This article refers to version 0.4, when the package was still named **better-auth-invite-plugin**.  
+  Starting from version 0.5, it has been renamed to **better-invite**.
+</Callout>
+
+We're excited to announce the release of **Better Auth Invite Plugin 0.4**. This is a major step forward for flexibility, control, and extensibility in your invite flows.
+
+To upgrade run:
+
+```npm
+npm install better-auth-invite-plugin@0.4
+```
+
+Then update your database schema by running one of the following commands:
+
+<Tabs items={["migrate", "generate"]}>
+
+<Tab value="migrate">
+```npm
+npx @better-auth/cli migrate
+```
+</Tab>
+<Tab value="generate">
+```npm
+npx @better-auth/cli generate
+```
+</Tab>
+
+</Tabs>
+
+---
+
+## 🚀 Highlights
+
+### Full reject invite flow
+
+Invitations can now be rejected via:
+
+- `POST /invite/reject`
+- `canRejectInvite` option (default: `true`)
+- `beforeRejectInvite` and `afterRejectInvite` hooks
+- `CANT_REJECT_INVITE` error code
+
+This gives you complete control over how rejections are handled, logged, or audited.
+
+[👉 See the api of reject invite](/docs/core/api#reject-invite)
+
+---
+
+### Cancel invite support
+
+You can now cancel pending invitations with:
+
+- `canCancelInvite`
+- `beforeCancelInvite` and `afterCancelInvite` hooks
+- Full route and test coverage for the cancel flow
+
+This is especially useful for admin panels or moderation tools where invites may need to be revoked.
+
+[👉 See the api of cancel invite](/docs/core/api#cancel-invite)
+
+---
+
+### Get invite
+
+A dedicated route for retrieving invite information has been added, making it easier to build custom UIs around invitation state.
+
+[👉 See the api of get invite](/docs/core/api#get-invite)
+
+---
+
+### New adapter architecture
+
+0.4 introduces `getInviteAdapter`, centralizing invite and invite usage database logic.
+
+This refactor:
+- Simplifies internal architecture
+- Makes database integrations cleaner
+- Improves long-term extensibility
+
+Routes, hooks, and utilities now rely on this adapter layer for better separation of concerns.
+
+---
+
+## ✨ More features
+
+### Lifecycle hooks across the invite flow
+
+You now have access to:
+
+- `beforeCreateInvite`
+- `afterCreateInvite`
+- `beforeAcceptInvite`
+- `afterAcceptInvite`
+- `beforeRejectInvite`
+- `afterRejectInvite`
+- `beforeCancelInvite`
+- `afterCancelInvite`
+
+Hooks are standardized to receive a single object argument, improving consistency and type safety.
+
+This makes it easier to:
+- Trigger side effects
+- Send analytics events
+- Add logging
+- Integrate with external services
+
+---
+
+### Internal improvements
+
+- Routes refactored from `src/routes.ts` into `src/routes/*`
+- Renamed internal references from `invite` to `invitation` for clarity
+- Improved type definitions
+- Expanded test coverage across new flows
+
+---
+
+## 🐛 Bug fixes & Improvements
+
+- Fixed test issues and improved reliability
+- Ensured async support for:
+  - `canCreateInvite`
+  - `canAcceptInvite`
+  - `sendUserInvitation`
+- Verified hook execution order and arguments via tests
+- Fixed lefthook error
+- General internal refactors for stability and maintainability
+
+---
+
+Version 0.4 significantly expands what you can build with the Invite Plugin—while keeping the API clean and predictable.
+
+As always, feedback and contributions are welcome :)
+
+[Check the full changelog](https://github.com/0-Sandy/better-auth-invite-plugin/releases/tag/v0.4.0)

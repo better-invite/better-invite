@@ -1,0 +1,44 @@
+---
+title: Security
+description: Security considerations for the invite plugin.
+icon: Shield
+---
+
+Better Invite is designed with security in mind to protect invitations, tokens, and role upgrades. Below are the main mechanisms and best practices.
+
+## Token Security
+
+- **Unique Tokens:** Each invite uses a unique token to prevent guessing.  
+- **Types of Tokens:**
+  - **Token:** Long, random string (default, recommended for email and URL invites).  
+  - **Code:** Short, human-readable code (easier to share but less secure).  
+  - **Custom:** Fully customizable token generator via `generateToken`.  
+- **HTTP-Only Cookies:** Tokens are stored in HTTP-only cookies to prevent access from client-side scripts.  
+- **Expiration:** Tokens can expire (`invitationTokenExpiresIn`), limiting the window for misuse.
+
+## Permissions and Access Control
+
+- **Creating Invites:** By default, users can create invites. This can be restricted with `canCreateInvite` to prevent role escalation.  
+- **Accepting Invites:** Default behavior allows invite acceptance, but `canAcceptInvite` can enforce rules such as only allowing new account creation or restricting certain roles.
+
+## Usage Limits
+
+- Each invite has a `maxUses` property to prevent unlimited sharing.  
+- Expired or fully used invites are automatically rejected.
+
+## Secure Delivery
+
+- **Private Invites:** When an invite is sent via email, only that email can activate it.  
+- **Public Invites:** Anyone with the token can use it, but usage limits and expiration still apply.  
+
+## Best Practices
+
+- Prefer the default **Token** type for email invites for maximum security.  
+- Configure `canCreateInvite` and `canAcceptInvite` to prevent role abuse.  
+- Never log or expose invite tokens on the client side.  
+- Monitor token usage and expiration to avoid old invites being exploited.
+
+## Reporting Vulnerabilities
+
+If you discover a vulnerability in Better Invite, please report it to us at better-auth-invite-plugin@sandy00.aleeas.com.
+All reports are addressed promptly, and validated discoveries will receive credit. Please include as much detail as possible (steps to reproduce, affected versions, etc.) to help us investigate efficiently.

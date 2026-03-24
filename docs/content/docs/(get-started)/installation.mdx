@@ -1,0 +1,105 @@
+---
+title: Installation
+description: Learn how to configure the invite plugin in your project.
+icon: Download
+---
+
+<Steps>
+
+<Step>
+### Install the package
+
+Start by adding the invite plugin to your project:
+
+```npm
+npm install better-invite
+```
+
+</Step>
+
+<Step>
+### Add the plugin to your auth config
+
+Add the invite plugin to your auth configuration, make sure you also have the plugin admin.
+
+```ts title="auth.ts"
+import { betterAuth } from "better-auth"; // [!code focus]
+import { admin } from "better-auth/plugins";
+import { invite } from "better-invite"; // [!code highlight] [!code focus]
+
+export const auth = betterAuth({
+  // [!code focus]
+  // ... other config options // [!code focus]
+  plugins: [
+    // [!code focus]
+    admin({
+      ac,
+      roles: { user, admin },
+      defaultRole: "user",
+    }),
+    invite({
+      // [!code highlight] [!code focus]
+      defaultRedirectAfterUpgrade: "/auth/invited?token={token}", // Show the user their new role or account // [!code focus]
+      async sendUserInvitation({ email, role, url, token, newAccount }) {
+        // [!code focus]
+        if (newAccount)
+          // [!code focus]
+          void sendInvitationEmail(role as RoleType, email, url); // [!code focus]
+
+        void sendRoleUpgradeEmail(role as RoleType, email, url); // [!code focus]
+      }, // [!code focus]
+    }), // [!code focus]
+  ], // [!code focus]
+}); // [!code focus]
+```
+
+</Step>
+
+<Step>
+### Migrate the database
+
+Run the migration or generate the schema to add the necessary fields and tables to the database.
+
+<Tabs items={["migrate", "generate"]}>
+
+<Tab value="migrate">
+```npm
+npx @better-auth/cli migrate
+```
+</Tab>
+<Tab value="generate">
+```npm
+npx @better-auth/cli generate
+```
+</Tab>
+
+</Tabs>
+
+See the [Schema](/docs/core/schema) section to add the fields manually.
+
+</Step>
+
+<Step>
+### Add the client plugin
+
+Add the client plugin to your better auth client.
+
+```ts
+import { createAuthClient } from "better-auth/client"; // [!code focus]
+import { adminClient } from "better-auth/client/plugins";
+import { inviteClient } from "better-invite"; // [!code highlight] [!code focus]
+
+const authClient = createAuthClient({
+  // [!code focus]
+  //... other options // [!code focus]
+  plugins: [
+    // [!code focus]
+    adminClient(),
+    inviteClient(), // [!code highlight] [!code focus]
+  ], // [!code focus]
+}); // [!code focus]
+```
+
+</Step>
+
+</Steps>

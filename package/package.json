@@ -1,0 +1,72 @@
+{
+	"name": "better-invite",
+	"version": "0.0.0-semantically-released",
+	"description": "A better-auth plugin that allows you to invite users to your app.",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"type": "module",
+	"scripts": {
+		"test": "vitest run --coverage",
+		"build": "tsc"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/better-invite/better-invite.git"
+	},
+	"homepage": "https://better-invite.vercel.app",
+	"keywords": [
+		"better-auth",
+		"invite",
+		"invitation",
+		"better-auth-invite",
+		"better-auth-plugin",
+		"better-auth-invite-plugin",
+		"better-invite-plugin",
+		"better-invite",
+		"invite-plugin"
+	],
+	"author": "Sandy",
+	"license": "MIT",
+	"packageManager": "pnpm@10.28.0",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"dependencies": {
+		"@better-auth/utils": "^0.3.0",
+		"zod": "^4.3.5"
+	},
+	"devDependencies": {
+		"@types/better-sqlite3": "^7.6.13",
+		"@types/node": "^25.0.8",
+		"@vitest/coverage-v8": "4.0.17",
+		"better-auth": "^1.4.13",
+		"better-sqlite3": "^12.6.0",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.17"
+	},
+	"peerDependencies": {
+		"better-auth": "^1.4.13"
+	},
+	"onlyBuiltDependencies": [
+		"better-sqlite3"
+	],
+	"release": {
+		"branches": [
+			"main",
+			{
+				"name": "beta",
+				"prerelease": "beta"
+			}
+		],
+		"plugins": [
+			"@semantic-release/commit-analyzer",
+			"@semantic-release/release-notes-generator",
+			"@semantic-release/npm",
+			"@semantic-release/github"
+		]
+	}
+}

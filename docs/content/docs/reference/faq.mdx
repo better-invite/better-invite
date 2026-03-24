@@ -1,0 +1,81 @@
+---
+title: FAQ
+description: Frequently Asked Questions about the invite plugin.
+icon: CircleQuestionMark
+---
+
+<Accordions type="single">
+
+  <Accordion title="Why I built the plugin" id="why-built">
+  I originally needed an easy way to grant roles without having to:
+
+  - Manually edit the database
+  - Build a full admin UI
+  - Write one-off scripts
+
+  I also wanted a solution that:
+
+  - Fits naturally into Better Auth's plugin system
+  - Doesn't assume a specific permission model
+  - Remains flexible for real-world applications
+
+  After implementing it for my own project, I realized it could be useful for other Better Auth users, so I packaged it as a plugin.
+</Accordion>
+
+<Accordion title="Is this plugin officially affiliated with Better Auth?" id="official-affiliation">
+  No. This is a community-maintained plugin and is not officially affiliated with Better Auth.
+  The plugin is maintained by <GithubUser user="0-Sandy" userName="Sandy" />
+</Accordion>
+
+<Accordion title="How does the plugin upgrade a user's role?" id="role-upgrade">
+  When an invite is activated, a hook runs after authentication to validate the
+  token. If valid, the plugin automatically upgrades the user's role according
+  to the invite and marks the invite as used.
+</Accordion>
+
+<Accordion title="Do I need to modify my sign-in or sign-up logic?" id="sign-logic">
+  No. The plugin integrates seamlessly with the default sign-in and sign-up
+  flows using hooks, so no extra logic is required.
+</Accordion>
+
+<Accordion title="Can I limit how many times an invite can be used?" id="max-uses">
+  Yes. Each invite has a <code>maxUses</code> property. Once the maximum number
+  of uses is reached, the invite becomes invalid.
+</Accordion>
+
+<Accordion title="Can I send invites without specifying an email?" id="public-invites">
+  Yes. You can create **public invites** that generate a token or URL. Anyone
+  with this token can use the invite without needing an email.
+</Accordion>
+
+<Accordion title="What happens if the invited user already exists?" id="existing-user">
+  If the invited user already has an account, the invite will be treated as a
+  **role upgrade**. If the user does not exist, they can use the invite to
+  create a new account.
+</Accordion>
+
+<Accordion title="How secure are the invites?" id="cookie-security">
+  Invites use tokens stored in HTTP-only cookies, which prevents client-side
+  access. Email-specific invites can only be used by the intended recipient.
+  Tokens can expire, and usage limits prevent abuse.
+</Accordion>
+
+<Accordion title="Can I customize the invite token?" id="customize-token">
+  Yes! You can use the default token, a shorter human-readable code, or provide
+  a custom token generator using the <code>generateToken</code> option.
+</Accordion>
+
+<Accordion title="Do I need to manually activate an invite?" id="manual-activation">
+  No. For private invites sent via email, the link automatically activates the
+  invite. However, you can use the <code>activateInvite</code> method if you
+  prefer manual activation.
+</Accordion>
+
+<Accordion title="Can I control who can create or accept invites?" id="permissions">
+  Absolutely. You can use the <code>canCreateInvite</code> function to restrict
+  who can create invites, and the <code>canAcceptInvite</code> function to
+  control who can accept them. This allows you to enforce role hierarchies and
+  other business rules.
+</Accordion>
+
+</Accordions>

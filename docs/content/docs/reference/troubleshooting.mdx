@@ -1,0 +1,33 @@
+---
+title: Troubleshooting
+description: Guidelines for contributing to the invite plugin documentation.
+icon: Bug
+---
+
+## `Export expireCookie doesn't exist in target module`
+
+If you see an error like:
+
+```ts
+./node_modules/.pnpm/better-invite@.../dist/hooks.js:2:1
+Export expireCookie doesn't exist in target module
+  1 | import { createAuthMiddleware } from "better-auth/api";
+> 2 | import { expireCookie } from "better-auth/cookies";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+The export expireCookie was not found in module .../better-auth/dist/cookies/index.mjs
+```
+
+### Why this happens
+
+The plugin relies on the `expireCookie` export, which was introduced in Better Auth v1.4.13.
+If you're using an older version of Better Auth, this export won't be available, leading to the error.
+(see [PR #7363 in Better Auth](https://github.com/better-auth/better-auth/pull/7363/changes/243b0c728aa34dcb5d1200f25ea707a1c2d59709#diff-f528705ea9dfb694ce74a60f2e2b4d204f2130b2122aad677a5f99241c968329R300))
+
+### Solution
+
+Upgrade Better Auth to v1.4.13 or newer
+
+```npm
+npm install better-auth@latest
+```

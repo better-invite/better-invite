@@ -1,0 +1,79 @@
+---
+title: Flow Diagram
+description: Step-by-step diagrams showing how the plugin works internally.
+icon: Layers
+---
+
+# Invite Creation
+
+This diagram shows how an inviter creates an invite, including validation, token generation, and email sending.
+
+<Callout type="info" title="Note" className="hidden md:flex">
+  To move and zoom the diagram, hold the **Alt** key and use your mouse wheel or click and drag.
+</Callout>
+
+```mermaid
+flowchart TD
+  A(Inviter logs in) --> B(POST /invite/create)
+  B --> C(Validate session and role)
+  C -->|No permission| Z1(Error INSUFFICIENT_PERMISSIONS)
+  C --> D(Resolve payload: tokenType, maxUses, redirects)
+  D --> E(Generate token)
+  E --> F(Check if email exists)
+  F -->|User exists| G(Set redirect callback to signIn)
+  F -->|User does not exist| H(Set redirect callback to signUp)
+  E --> I(Create invite record in DB)
+  I --> J{Email provided?}
+  J -->|Yes| K(Send invitation email or role upgrade)
+  K -->|Sent| L(Return success JSON)
+  K -->|Error sending| Z2(Error sending invitation email)
+  J -->|No| M(Return token or redirect URL to inviter)
+```
+
+# Invite Activation
+
+This diagram shows the full invite activation flow, including both logged-in and not logged-in users, with validations, role updates, hook execution, and final redirection.
+
+```mermaid
+flowchart TB
+  %% Activation entry points
+  N1(User clicks invite link) --> ACT(activateInviteLogic)
+  N2(Client calls activate API) --> ACT
+
+  %% Validations
+  ACT --> P(Find invite by token in DB)
+  P -->|Not found| Z3(Redirect callback INVALID_TOKEN)
+  P --> Q(Check times used vs maxUses)
+  Q -->|No uses left| Z3
+  P --> R(Check expiresAt)
+  R -->|Expired| Z3
+
+  %% Decision: does user have a session?
+  P --> S(Check optional session)
+  S -->|User logged in| T1(User session exists)
+  S -->|No session| T2(No session)
+
+  %% Logged-in user path
+  subgraph USER_DIAG [Logged-in User Flow]
+    T1 --> U1(Check if invite email exists)
+    U1 --> U2{Email matches?}
+    U2 -->|No| Z4(Error INVALID_EMAIL or redirect)
+    U2 -->|Yes or no email| V1(Consume invite: update role and session)
+    V1 --> W1{Is last use?}
+    W1 -->|Yes| X1(Delete invite_use records and invite)
+    W1 -->|No| Y1(Create invite_use record)
+    V1 --> Z5(Run onInvitationUsed hook)
+    Z5 --> AA(Redirect to redirectToAfterUpgrade)
+  end
+
+  %% Not logged-in user path
+  subgraph NOUSER_DIAG [Not Logged-in User Flow]
+    T2 --> B1(Set invite token cookie)
+    B1 --> C1(Redirect to signUp or signIn)
+    C1 --> Hk(invitesHook triggered on signup/signin endpoints)
+    Hk --> HkCheck(Check cookie and invite)
+    HkCheck -->|No cookie or invalid| HkStop(Do nothing)
+    HkCheck -->|Valid cookie| HkConsume(Consume invite and cleanup)
+    HkConsume --> AA
+  end
+```

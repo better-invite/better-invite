@@ -1,0 +1,130 @@
+---
+title: Extras
+description: Additional features and customization options for the invite plugin.
+icon: CirclePlus
+---
+
+# Cookie Customization
+
+The invite plugin stores the token in an HTTP-only cookie called `{my_app_name}.invite_token` by default. You can customize cookies globally using Better Auth's `advanced` options.
+
+### Cookie Prefix
+
+Change the default cookie prefix (the app name) with `cookiePrefix`:
+
+```ts title="auth.ts"
+import { betterAuth } from "better-auth";
+
+export const auth = betterAuth({
+  advanced: {
+    cookiePrefix: "my-app"
+  }
+});
+```
+
+### Custom Cookie Name
+
+Customize the cookie name for the invite plugin:
+
+```ts title="auth.ts"
+import { betterAuth } from "better-auth";
+
+export const auth = betterAuth({
+  advanced: {
+    cookies: {
+      invite_token: {
+        name: "custom_invite_token"
+      }
+    }
+  }
+});
+```
+
+For more details, see [Better Auth Cookies Documentation](https://www.better-auth.com/docs/concepts/cookies).
+
+# Schema Customization
+
+You can rename tables and fields for the plugin using the `schema` option in the plugin configuration. For example, changing field names or table names:
+
+```ts title="auth.ts"
+import { invite } from "better-invite";
+
+const auth = betterAuth({
+  plugins: {
+    invite({
+      schema: {
+        invite: {
+          modelName: "custom_invite",
+          fields: {
+            token: "custom_token", // token was the original name, but was changed to custom_token
+            createdAt: "created_at",
+            expiresAt: "expires_at",
+            maxUses: "max_uses",
+            createdByUserId: "creator_id",
+            redirectToAfterUpgrade: "redirect_url",
+            shareInviterName: "share_name",
+            email: "invite_email",
+            role: "invite_role",
+          }
+        },
+        inviteUse: {
+          modelName: "customInviteUse",
+          fields: {
+            inviteId: "invite_id",
+            usedAt: "usedAt",
+            usedByUserId: "used_by_user_id"
+          }
+        }
+      }
+    })
+  }
+});
+```
+
+# Fallbacks
+
+The invite plugin includes several fallback mechanisms to ensure smooth operation even if certain options are missing or misconfigured.
+
+Here's an example:
+- **Token Generator:**  
+  If you set `tokenType` to `"custom"` but don't provide a `generateToken` function, the plugin falls back to the default `"token"` generator. This ensures that invites are always created with a valid, secure token.
+
+# Optional Session
+
+The `activateInvite` route uses `optionalSessionMiddleware`, which allows invites to be activated whether or not the user is logged in:
+
+- **If you are logged in:**  
+  The invite is immediately applied, and your role is upgraded according to the invite.
+
+- **If you are not logged in:**  
+  Before redirecting you to the sign-in/sign-up page, the plugin creates a temporary **invite cookie** in your browser.  
+  This cookie stores the invite token securely, so once you complete the login or registration process, a hook automatically reads the cookie and upgrades your role.  
+
+# Rate Limit
+
+You can configure rate limiting for the invite plugin routes using the `rateLimit` option in `betterAuth`.
+
+```ts
+import { betterAuth } from "better-auth";
+
+export const auth = betterAuth({
+    //...other options
+    rateLimit: {
+        window: 60, // time window in seconds
+        max: 100, // max requests in the window
+        customRules: {
+            "/invite/activate": {
+                window: 10,
+                max: 3,
+            },
+            "/invite/create": {
+                window: 10,
+                max: 3,
+            },
+            // ... other custom rules
+        },
+    },
+})
+```
+
+For more details, see [Better Auth Rate Limit Documentation](https://www.better-auth.com/docs/concepts/rate-limit).

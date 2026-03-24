@@ -1,0 +1,15 @@
+{
+	"pages": [
+		"[Sparkles][Showcase](/showcase)",
+		"[FileText][Blog](/blog)",
+		"---Get Started---",
+		"...(get-started)",
+		"---Core---",
+		"...core",
+		"---Reference---",
+		"...reference",
+		"---For LLMs---",
+		"[Leaf][llms.txt](https://better-invite.vercel.app/llms.txt)",
+		"[Brain][llms-full.txt](https://better-invite.vercel.app/llms-full.txt)"
+	]
+}
