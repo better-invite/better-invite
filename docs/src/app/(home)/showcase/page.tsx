@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { createMetadata } from "@/lib/metadata";
 
 const description =
-	"See a real example of the Better Auth Invite Plugin — from invite creation to signup.";
+	"See a real example of the Better Invite — from invite creation to signup.";
 
 const image = {
 	url: "/showcase.png",

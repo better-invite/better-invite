@@ -3,4 +3,4 @@ Allow: /
 
 Disallow: /showcase/
 
-Sitemap: https://better-auth-invite.vercel.app/sitemap.xml
+Sitemap: https://www.better-invite.com/sitemap.xml

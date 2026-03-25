@@ -61,14 +61,10 @@ export default function HomePage() {
 							</span>
 						</code>
 						<div className="flex gap-2 items-center">
-							<NpmButton
-								packageName="better-auth-invite-plugin"
-								label=""
-								noExternalIcon
-							/>
+							<NpmButton packageName="better-invite" label="" noExternalIcon />
 							<GithubButton
-								username="0-Sandy"
-								repository="better-auth-invite-plugin"
+								username="better-invite"
+								repository="better-invite"
 								label=""
 								noExternalIcon
 							/>

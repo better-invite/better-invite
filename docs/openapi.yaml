@@ -1,8 +1,8 @@
 openapi: 3.1.1
 info:
-  title: Better Auth Invite Plugin API
+  title: Better Invite API
   description: |
-    OpenAPI schema for the Better Auth Invite Plugin.
+    OpenAPI schema for the Better Invite.
 
     This plugin adds invitation-based onboarding flows on top of Better Auth.
   version: 1.0.0

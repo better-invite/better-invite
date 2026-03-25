@@ -11,7 +11,7 @@
 <p align="center">
   A plugin for <a href="https://www.better-auth.com">Better Auth</a> that adds an invitation system, allowing you to create, send, and manage invites for user sign-ups or role upgrades.
   <br />
-  <a href="https://better-invite.vercel.app"><strong>Learn More »</strong></a>
+  <a href="https://www.better-invite.com"><strong>Learn More »</strong></a>
 </p>
 
 <p align="center">
@@ -177,7 +177,7 @@ console.log("Invite activated successfully.");
 - The cookie is cleared after the invite is consumed.
 - The user is redirected to `defaultRedirectAfterUpgrade` to see their new role or welcome page.
 
-**Read the [documentation](https://better-invite.vercel.app/docs/introduction) to learn more.**
+**Read the [documentation](https://www.better-invite.com/docs/introduction) to learn more.**
 
 ## Acknowledgements
 

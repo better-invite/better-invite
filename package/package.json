@@ -13,7 +13,7 @@
 		"type": "git",
 		"url": "git+https://github.com/better-invite/better-invite.git"
 	},
-	"homepage": "https://better-invite.vercel.app",
+	"homepage": "https://better-invite.com",
 	"keywords": [
 		"better-auth",
 		"invite",
