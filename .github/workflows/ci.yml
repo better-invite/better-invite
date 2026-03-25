@@ -140,4 +140,4 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm --filter ./package dlx semantic-release
+        run: pnpm --filter ./package exec semantic-release

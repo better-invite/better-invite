@@ -7,9 +7,6 @@ import localFont from "next/font/local";
 import { baseUrl, createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
-	verification: {
-		google: "2_Rk36ZAi2agX8jVuzvGnG_mgC_4NSyeeQlTfyXoIdA",
-	},
 	title: {
 		default: "Better Invite",
 		template: "%s | Better Invite",
