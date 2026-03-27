@@ -7,7 +7,6 @@ body:
         This template is used for reporting a issue with better-invite.
 
         Feature requests should be opened in [here](https://github.com/better-invite/better-invite/discussions/new?category=feature-request).
-        Documentation errors should be reported in [here](https://github.com/better-invite/better-invite-docs/issues/new)
 
         Before opening a new issue, please do a [search](https://github.com/better-invite/better-invite/issues) of existing issues and :+1: upvote the existing issue instead. This will result in a quicker resolution.
   - type: textarea

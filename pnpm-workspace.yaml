@@ -4,3 +4,4 @@ onlyBuiltDependencies:
 packages:
   - package
   - docs
+  - demo
