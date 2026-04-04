@@ -1,12 +1,13 @@
 {
 	"name": "@better-invite/root",
 	"private": true,
-	"packageManager": "pnpm@10.28.0",
+	"packageManager": "pnpm@10.33.0",
 	"scripts": {
 		"build": "pnpm --filter ./package build",
+		"coverage": "pnpm --filter ./package coverage",
 		"test": "pnpm --filter ./package test",
 		"typecheck": "tsc --noEmit",
-		"format": "pnpm --filter ./package format",
+		"format": "biome format . --write",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --fix --unsafe"
 	},

@@ -1,4 +1,4 @@
-import type { AuthContext, DBAdapter } from "better-auth";
+import type { AuthContext, DBAdapter, Where } from "better-auth";
 import type { UserWithRole } from "better-auth/plugins";
 import type { CreateInvite } from "./routes/create-invite";
 import type {
@@ -103,6 +103,11 @@ export const getInviteAdapter = (
 					},
 				],
 			}),
+		countInvitations: (data?: { where?: Where[] }) =>
+			baseAdapter.count({
+				model: inviteTable,
+				...data,
+			}),
 		deleteInviteUses: (inviteId: string) =>
 			baseAdapter.deleteMany({
 				model: inviteUseTable,
@@ -110,6 +115,17 @@ export const getInviteAdapter = (
 					{
 						field: "inviteId",
 						value: inviteId,
+					},
+				],
+			}),
+		deleteInvitations: (ids: string[]) =>
+			baseAdapter.deleteMany({
+				model: inviteTable,
+				where: [
+					{
+						field: "id",
+						value: ids,
+						operator: "in",
 					},
 				],
 			}),
@@ -125,6 +141,19 @@ export const getInviteAdapter = (
 				update: {
 					status,
 				},
+			}),
+		listInvitations: (data?: {
+			limit?: number;
+			offset?: number;
+			sortBy?: {
+				field: string;
+				direction: "asc" | "desc";
+			};
+			where?: Where[];
+		}) =>
+			baseAdapter.findMany<InviteTypeWithId>({
+				model: inviteTable,
+				...data,
 			}),
 	};
 };

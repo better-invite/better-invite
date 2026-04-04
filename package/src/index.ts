@@ -10,8 +10,9 @@ import {
 	getInvite,
 	rejectInvite,
 } from "./routes";
+import { listInvites } from "./routes/list-invites";
 import { schema } from "./schema";
-import type { InviteOptions } from "./types";
+import type { InviteOptions, InviteType } from "./types";
 import { resolveInviteOptions } from "./utils";
 
 export const invite = <O extends InviteOptions>(opts: O) => {
@@ -26,12 +27,16 @@ export const invite = <O extends InviteOptions>(opts: O) => {
 			cancelInvite: cancelInvite(options),
 			getInvite: getInvite(options),
 			rejectInvite: rejectInvite(options),
+			listInvites: listInvites(options),
 		},
 		hooks: {
 			...invitesHooks(options),
 		},
 		$ERROR_CODES: ERROR_CODES,
 		schema: mergeSchema(schema, opts.schema),
+		$Infer: {
+			InviteType: {} as InviteType,
+		},
 	} satisfies BetterAuthPlugin;
 };
 

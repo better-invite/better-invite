@@ -77,7 +77,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Test
-        run: pnpm test
+        run: pnpm coverage
   build:
     name: Build
     runs-on: ubuntu-latest

@@ -20,13 +20,13 @@ yarn-error.log*
 /build
 /out
 .next
-/docs/.next
-/docs/out
 /package/dist
 /package/coverage
 coverage
 .source
 *.tsbuildinfo
+
+/demo/migrations
 
 # misc
 .DS_Store

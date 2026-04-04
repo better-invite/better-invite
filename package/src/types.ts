@@ -359,4 +359,9 @@ export type Permissions = {
 	permissions: string[];
 };
 
-export type InvitationStatus = "pending" | "rejected" | "canceled" | "used";
+export type InvitationStatus =
+	| "pending"
+	| "rejected"
+	| "canceled"
+	| "used"
+	| "expired";
