@@ -289,6 +289,115 @@ paths:
                     type: string
                   errorCode:
                     type: string
+  /invite/list:
+    get:
+      tags: [Invites]
+      summary: List invitations
+      operationId: listInvites
+      description: List all (private) invitations for the current user.
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: searchValue
+          in: query
+          required: false
+          description: The value to search for.
+          schema:
+            type: string
+
+        - name: searchField
+          in: query
+          required: false
+          description: The field to search in, defaults to email. Can be `email`, `name` or `domainWhitelist`.
+          schema:
+            type: string
+            enum: [name, email, domainWhitelist]
+
+        - name: searchOperator
+          in: query
+          required: false
+          description: The operator to use for the search. Can be `contains`, `starts_with` or `ends_with`.
+          schema:
+            type: string
+            enum: [contains, starts_with, ends_with]
+
+        - name: limit
+          in: query
+          required: false
+          description: The numbers of invitations to return.
+          schema:
+            type: integer
+
+        - name: offset
+          in: query
+          required: false
+          description: The offset to start from.
+          schema:
+            type: integer
+
+        - name: sortBy
+          in: query
+          required: false
+          description: The field to sort by.
+          schema:
+            type: string
+
+        - name: sortDirection
+          in: query
+          required: false
+          description: The direction to sort by.
+          schema:
+            type: string
+            enum: [asc, desc]
+
+        - name: filterField
+          in: query
+          required: false
+          description: The field to filter by.
+          schema:
+            type: string
+
+        - name: filterValue
+          in: query
+          required: false
+          description: The value to filter by.
+          schema:
+            oneOf:
+              - type: string
+              - type: number
+              - type: boolean
+
+        - name: filterOperator
+          in: query
+          required: false
+          description: The operator to use for the filter. Can be `eq`, `ne`, `lt`, `lte`, `gt` or `gte`.
+          schema:
+            type: string
+            enum: [eq, ne, lt, lte, gt, gte]
+
+      responses:
+        "200":
+          description: List of all issued invitations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invitations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/InviteType"
+                  total:
+                    type: number
+                  limit:
+                    type:
+                      - number
+                      - "null"
+                  offset:
+                    type:
+                      - number
+                      - "null"
+                required: [invitations, total]
 
 components:
   securitySchemes:

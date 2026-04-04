@@ -11,70 +11,100 @@ export const listInvites = (options: NewInviteOptions) => {
 			method: "GET",
 			use: [sessionMiddleware],
 			query: z.object({
+				/**
+				 * The value to search for
+				 */
 				searchValue: z
 					.string()
 					.meta({
-						description: "The value to search for",
+						description: "The value to search for.",
 					})
 					.optional(),
+				/**
+				 * The field to search in, defaults to email. Can be `email`, `name` or `domainWhitelist`
+				 */
 				searchField: z
 					.enum(["name", "email", "domainWhitelist"])
 					.meta({
 						description:
-							"The field to search in, defaults to email. Can be `email`, `name` or `domainWhitelist`",
+							"The field to search in, defaults to email. Can be `email`, `name` or `domainWhitelist`.",
 					})
 					.optional(),
+				/**
+				 * The operator to use for the search. Can be `contains`, `starts_with` or `ends_with`
+				 */
 				searchOperator: z
 					.enum(["contains", "starts_with", "ends_with"])
 					.meta({
 						description:
-							"The operator to use for the search. Can be `contains`, `starts_with` or `ends_with`",
+							"The operator to use for the search. Can be `contains`, `starts_with` or `ends_with`.",
 					})
 					.optional(),
+				/**
+				 * The numbers of invitations to return
+				 */
 				limit: z.coerce
 					.number()
 					.int()
 					.meta({
-						description: "The numbers of invitations to return",
+						description: "The numbers of invitations to return.",
 					})
 					.optional(),
+				/**
+				 * The offset to start from
+				 */
 				offset: z.coerce
 					.number()
 					.int()
 					.meta({
-						description: "The offset to start from",
+						description: "The offset to start from.",
 					})
 					.optional(),
+				/**
+				 * The field to sort by
+				 */
 				sortBy: z
 					.string()
 					.meta({
-						description: "The field to sort by",
+						description: "The field to sort by.",
 					})
 					.optional(),
+				/**
+				 * The direction to sort by. Can be `asc` or `desc`
+				 */
 				sortDirection: z
 					.enum(["asc", "desc"])
 					.meta({
-						description: "The direction to sort by",
+						description: "The direction to sort by.",
 					})
 					.optional(),
+				/**
+				 * The field to filter by
+				 */
 				filterField: z
 					.string()
 					.meta({
-						description: "The field to filter by",
+						description: "The field to filter by.",
 					})
 					.optional(),
+				/**
+				 * The value to filter by
+				 */
 				filterValue: z
 					.string()
 					.or(z.number())
 					.or(z.boolean())
 					.meta({
-						description: "The value to filter by",
+						description: "The value to filter by.",
 					})
 					.optional(),
+				/**
+				 * The operator to use for the filter. Can be `eq`, `ne`, `lt`, `lte`, `gt` or `gte`
+				 */
 				filterOperator: z
 					.enum(["eq", "ne", "lt", "lte", "gt", "gte"])
 					.meta({
-						description: "The operator to use for the filter",
+						description: "The operator to use for the filter.",
 					})
 					.optional(),
 			}),
@@ -126,9 +156,7 @@ export const listInvites = (options: NewInviteOptions) => {
 				where.push({
 					field:
 						// Replace `email` with `emails` if searchField is `email`, to search in the emails array field
-						ctx.query.searchField === "email"
-							? "emails"
-							: (ctx.query.searchField ?? "emails"),
+						replaceEmailField(ctx.query.searchField) ?? "emails",
 					operator: ctx.query.searchOperator || "contains",
 					value: ctx.query.searchValue,
 				});
@@ -139,7 +167,8 @@ export const listInvites = (options: NewInviteOptions) => {
 				ctx.query.filterField !== "createdByUserId"
 			) {
 				where.push({
-					field: ctx.query.filterField || "email",
+					// Replace `email` with `emails` if filterField is `email`, to filter the emails array field
+					field: replaceEmailField(ctx.query.filterField) ?? "emails",
 					operator: ctx.query.filterOperator || "eq",
 					value: ctx.query.filterValue,
 				});
@@ -195,4 +224,11 @@ export const listInvites = (options: NewInviteOptions) => {
 			}
 		},
 	);
+};
+
+const replaceEmailField = (field?: string) => {
+	if (field === "email") {
+		return "emails";
+	}
+	return field;
 };

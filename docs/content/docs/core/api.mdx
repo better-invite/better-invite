@@ -181,3 +181,54 @@ type getInvite = {
 }
 ```
 </APIMethod>
+
+# List Invites
+
+List all (private) invitations for the current user
+
+<APIMethod path="/invite/list" method="GET" requireSession note="Only lists PRIVATE invitations for the current user.">
+```ts
+type listInvites = {
+	/**
+	 * The value to search for
+	 */
+	searchValue?: string
+	/**
+	 * The field to search in, defaults to email. Can be `email`, `name` or `domainWhitelist`
+	 */
+	searchField?: "name" | "email" | "domainWhitelist"
+	/**
+	 * The operator to use for the search. Can be `contains`, `starts_with` or `ends_with`
+	 */
+	searchOperator?: "contains" | "starts_with" | "ends_with"
+	/**
+	 * The numbers of invitations to return
+	 */
+	limit?: number
+	/**
+	 * The offset to start from
+	 */
+	offset?: number
+	/**
+	 * The field to sort by
+	 */
+	sortBy?: string
+	/**
+	 * The direction to sort by. Can be `asc` or `desc`
+	 */
+	sortDirection?: "asc" | "desc"
+	/**
+	 * The field to filter by
+	 */
+	filterField?: string
+	/**
+	 * The value to filter by
+	 */
+	filterValue?: string | number | boolean
+	/**
+	 * The operator to use for the filter. Can be `eq`, `ne`, `lt`, `lte`, `gt` or `gte`
+	 */
+	filterOperator?: "eq" | "ne" | "lt" | "lte" | "gt" | "gte"
+}
+```
+</APIMethod>

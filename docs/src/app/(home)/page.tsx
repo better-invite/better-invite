@@ -22,20 +22,20 @@ export default function HomePage() {
 					<span className="font-semibold">
 						Better Auth Invite Plugin is now called <b>Better Invite</b>!
 					</span>
-					{/*<span className="text-zinc-400 hidden md:block">|</span>
-          <Link
-            href="/blog/better-invite"
-            className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 hidden dark:hover:text-blue-300 transition-colors md:block"
-          >
-            Go see the blog →
-          </Link>*/}
+					<span className="text-zinc-400 hidden md:block">|</span>
+					<Link
+						href="/docs/reference/faq#new-name"
+						className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 hidden dark:hover:text-blue-300 transition-colors md:block"
+					>
+						Go see why →
+					</Link>
 				</span>
-				{/*<Link
-          href="/blog/better-invite"
-          className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 text-xs dark:hover:text-blue-300 transition-colors md:hidden"
-        >
-          Go see the blog →
-        </Link>*/}
+				<Link
+					href="/docs/reference/faq#new-name"
+					className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 text-xs dark:hover:text-blue-300 transition-colors md:hidden"
+				>
+					Go see why →
+				</Link>
 			</Banner>
 			<div className="flex flex-col justify-center text-center flex-1">
 				<h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -79,7 +79,7 @@ export default function HomePage() {
 						Docs
 					</Link>
 					<Link
-						href="/showcase"
+						href="https://demo.better-invite.com"
 						className="inline-flex h-11 items-center justify-center rounded-xl border px-5 text-md font-medium shadow-sm transition hover:bg-muted"
 					>
 						Showcase

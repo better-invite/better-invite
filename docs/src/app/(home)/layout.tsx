@@ -7,7 +7,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
 			{...baseOptions()}
 			links={[
 				{ text: "Documentation", url: "/docs" },
-				{ text: "Showcase", url: "/showcase" },
+				{ text: "Showcase", url: "https://demo.better-invite.com" },
 				{ text: "Blog", url: "/blog" },
 				{
 					type: "menu",

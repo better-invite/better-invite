@@ -22,6 +22,7 @@ interface Field {
 	isPrimaryKey?: boolean;
 	isForeignKey?: boolean;
 	isOptional?: boolean;
+	deprecated?: boolean;
 }
 
 interface DatabaseTableProps {
@@ -98,7 +99,17 @@ export default function DatabaseTable({ fields }: DatabaseTableProps) {
 								</TooltipProvider>
 							)}
 						</TableCell>
-						<TableCell>{field.description}</TableCell>
+						<TableCell>
+							{field.deprecated && (
+								<Badge
+									variant="destructive"
+									className="mr-2 rounded-sm bg-red-700 uppercase"
+								>
+									Deprecated
+								</Badge>
+							)}
+							{field.description}
+						</TableCell>
 					</TableRow>
 				))}
 			</TableBody>

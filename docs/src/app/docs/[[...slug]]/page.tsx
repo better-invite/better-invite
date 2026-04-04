@@ -1,8 +1,3 @@
-import {
-	createFileSystemGeneratorCache,
-	createGenerator,
-} from "fumadocs-typescript";
-import { AutoTypeTable } from "fumadocs-typescript/ui";
 import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
 import { Callout } from "fumadocs-ui/components/callout";
 import { GithubInfo } from "fumadocs-ui/components/github-info";
@@ -31,11 +26,6 @@ import { onBlockFeedbackAction, onPageFeedbackAction } from "@/lib/github";
 import { createMetadata, getPageImage } from "@/lib/metadata";
 import { source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
-
-const generator = createGenerator({
-	// set a cache, necessary for serverless platform like Vercel
-	cache: createFileSystemGeneratorCache(".next/fumadocs-typescript"),
-});
 
 export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 	const params = await props.params;
@@ -114,9 +104,6 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 						GithubUser,
 						DatabaseTable,
 						Mermaid,
-						AutoTypeTable: (props) => (
-							<AutoTypeTable {...props} generator={generator} />
-						),
 					})}
 				/>
 			</DocsBody>
