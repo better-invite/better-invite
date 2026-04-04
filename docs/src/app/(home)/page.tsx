@@ -8,7 +8,7 @@ export default function HomePage() {
 		<>
 			<Banner
 				variant="rainbow"
-				id="banner-better-invite"
+				id="better-invite"
 				rainbowSpeed="7s"
 				className="flex-col relative z-0"
 				rainbowColors={[
@@ -24,17 +24,17 @@ export default function HomePage() {
 					</span>
 					<span className="text-zinc-400 hidden md:block">|</span>
 					<Link
-						href="/docs/reference/faq#new-name"
+						href="/blog/0-5"
 						className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 hidden dark:hover:text-blue-300 transition-colors md:block"
 					>
-						Go see why →
+						Go see the blog →
 					</Link>
 				</span>
 				<Link
-					href="/docs/reference/faq#new-name"
+					href="/blog/0-5"
 					className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 text-xs dark:hover:text-blue-300 transition-colors md:hidden"
 				>
-					Go see why →
+					Go see the blog →
 				</Link>
 			</Banner>
 			<div className="flex flex-col justify-center text-center flex-1">

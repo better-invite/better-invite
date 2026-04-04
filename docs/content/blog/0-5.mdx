@@ -1,0 +1,97 @@
+---
+title: Better Invite 0.5
+description: Better Invite 0.5 is here with new name, multiple email support, list invites API, and more!
+date: 2026-04-04
+author:
+  name: "Sandy"
+  avatar: "https://avatars.githubusercontent.com/0-Sandy"
+  github: "0-Sandy"
+image: /0-5.png
+---
+
+# Better Invite 0.5 Release
+
+We're excited to announce the release of **Better Invite 0.5**! 🎉
+
+This is a major step forward for invite management, with new features and improvements to make your invite flows even more powerful and flexible.
+
+To upgrade run:
+
+```npm
+npm install better-invite@0.5
+```
+
+Then update your database schema by running one of the following commands:
+
+<Tabs items={["migrate", "generate"]}>
+
+<Tab value="migrate">
+```npm
+npx @better-auth/cli migrate
+```
+</Tab>
+<Tab value="generate">
+```npm
+npx @better-auth/cli generate
+```
+</Tab>
+
+</Tabs>
+
+---
+
+## 🚀 Highlights
+
+### New Name and Branding
+
+As of version 0.5, the package has been renamed from **better-auth-invite-plugin** to **better-invite**. This change makes the plugin name more concise and easier to remember, it also helps to better differentiate it from the core **better-auth** package.
+
+---
+
+### Multiple emails support
+
+You can now send private invites to multiple email addresses in a single request, making it easier to onboard groups of users at once.
+
+---
+
+### List invites
+
+The new list invites API allows you to retrieve all pending (private) invites, with support for filtering by email, status, and pagination.
+
+[👉 See the api of list invites](/docs/core/api#list-invites)
+
+---
+
+### Removed sendUserRoleUpgrade
+
+The `sendUserRoleUpgrade` option has been removed in favor of `sendUserInvitation`. This simplifies the API and reduces confusion, as role upgrades can now be handled through the same invitation flow.
+
+---
+
+### Internal improvements
+
+// Changes: the project is now a monorepo, with the base plugin in /plugin, the demo is now in /demo, and the docs are in /docs
+
+- The plugin is now a monorepo, with the base plugin in `/plugin` and the docs in `/docs`.
+- Added a demo project in `/demo` to showcase the plugin's features.
+
+---
+
+## 🐛 Bug fixes & Improvements
+
+- Fixed test issues and improved reliability
+- Ensured async support for:
+  - `canCreateInvite`
+  - `canAcceptInvite`
+  - `sendUserInvitation`
+- Verified hook execution order and arguments via tests
+- Fixed lefthook error
+- General internal refactors for stability and maintainability
+
+---
+
+Version 0.5 introduces significant improvements to the invite management system, making it more robust and user-friendly.
+
+As always, feedback and contributions are welcome :)
+
+[Check the full changelog](https://github.com/better-invite/better-invite/releases/tag/v0.5.0)

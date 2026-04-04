@@ -52,6 +52,13 @@ export const blog = defineCollections({
 		}),
 		image: z.string(),
 	}),
+	mdxOptions: applyMdxPreset({
+		remarkNpmOptions: {
+			persist: {
+				id: "package-manager",
+			},
+		},
+	}),
 });
 
 export default defineConfig({
