@@ -418,9 +418,9 @@ components:
           example: member
 
         email:
-          type: string
+          type: string | string[]
           format: email
-          description: The email address of the user to send a invitation email to.
+          description: The email address/es of the user/s to send a invitation email to.
           example: user@example.com
           nullable: true
 

@@ -9,6 +9,7 @@
 		"(generated)/activateInviteCallback",
 		"(generated)/rejectInvite",
 		"(generated)/cancelInvite",
-		"(generated)/getInvite"
+		"(generated)/getInvite",
+		"(generated)/listInvites"
 	]
 }
