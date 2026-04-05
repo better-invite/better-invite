@@ -21,8 +21,8 @@ jobs:
 
       - name: Setup git identity
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          git config user.name "0-Sandy"
+          git config user.email "github@sandy00.aleeas.com"
 
       - name: Create subtree branch
         run: |

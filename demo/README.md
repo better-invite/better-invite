@@ -1,4 +1,6 @@
-# Better Invite Starter
+<h1 align="center">
+  Better Invite Starter
+</h1>
 
 <p align="center">
   A template/starter for <a href="https://www.better-invite.com">Better Invite</a>, made with <a href="https://better-auth.com">Better Auth</a>, <a href="https://better-auth-ui.com">Better Auth Ui</a>, <a href="https://nextjs.org">Next.js</a> and <a href="https://ui.shadcn.com">Shadcn</a>.
