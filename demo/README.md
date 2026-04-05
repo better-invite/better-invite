@@ -14,7 +14,7 @@
 
 ---
 
-> Better Invite Starter code is also available a separate [repository](https://github.com/better-invite/better-invite-starter/tree/main)
+> Better Invite Starter code is also available on a separate [repository](https://github.com/better-invite/better-invite-starter/tree/main)
 
 ## Installation
 

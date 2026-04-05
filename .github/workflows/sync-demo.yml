@@ -19,6 +19,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Setup git identity
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
       - name: Create subtree branch
         run: |
           git subtree split --prefix=demo -b demo-branch
