@@ -1,0 +1,28 @@
+name: Sync demo to template repo
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+    paths:
+      - 'demo/**'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create subtree branch
+        run: |
+          git subtree split --prefix=demo -b demo-branch
+
+      - name: Push to template repo (same branch)
+        run: |
+          git remote add template https://x-access-token:${{ secrets.TEMPLATE_REPO_TOKEN }}@github.com/better-invite/better-invite-starter.git
+          git push template demo-branch:${{ github.ref_name }} --force
