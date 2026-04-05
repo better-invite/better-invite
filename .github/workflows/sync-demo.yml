@@ -22,6 +22,15 @@ jobs:
       - name: Create subtree branch
         run: |
           git subtree split --prefix=demo -b demo-branch
+      
+      - name: Update README link
+        run: |
+          git checkout demo-branch
+
+          sed -i 's|> Better Invite Starter code is also available a separate \[repository\](https://github.com/better-invite/better-invite-starter/tree/main)|> Better Invite Starter code is also available on the \[Better Invite monorepo\](https://github.com/better-invite/better-invite/tree/main/demo)|' README.md
+
+          git add README.md
+          git commit --amend --no-edit
 
       - name: Push to template repo (same branch)
         run: |
