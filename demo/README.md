@@ -2,6 +2,18 @@
 
 [Demo](https://demo.better-invite.com)
 
+---
+
+<div align="center">
+  <p>Please consider sponsoring us</p>
+  
+  <a href="https://patreon.better-invite.com/membership">
+    <img src="https://raw.githubusercontent.com/better-invite/.github/refs/heads/main/profile/sponsor-us.svg" alt="Sponsor us :)" />
+  </a>
+</div>
+
+---
+
 ## Installation
 
 First, create a PostgreSQL Database then configure your environment variables.

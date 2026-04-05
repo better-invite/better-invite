@@ -50,6 +50,16 @@
 
 ---
 
+<div align="center">
+  <p>Please consider sponsoring us</p>
+  
+  <a href="https://patreon.better-invite.com/membership">
+    <img src="https://raw.githubusercontent.com/better-invite/.github/refs/heads/main/profile/sponsor-us.svg" alt="Sponsor us :)" />
+  </a>
+</div>
+
+---
+
 ## Installation
 
 > ⚠️ **Requires Better Auth v1.4.13 or newer**
@@ -182,16 +192,6 @@ console.log("Invite activated successfully.");
 ## Acknowledgements
 
  - Inspired in the [invite system](https://github.com/bard/better-auth-invite) from Max.
-
----
-
-<div align="center">
-  <p>Please consider sponsoring us</p>
-  
-  <a href="https://www.patreon.com/cw/betterinvite/membership">
-    <img src="https://raw.githubusercontent.com/better-invite/.github/refs/heads/main/profile/sponsor-us.svg" alt="Sponsor us :)" />
-  </a>
-</div>
 
 ---
 

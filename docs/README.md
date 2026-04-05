@@ -1,4 +1,16 @@
-# better-auth-invite-docs
+# Better Invite Docs
+
+---
+
+<div align="center">
+  <p>Please consider sponsoring us</p>
+  
+  <a href="https://patreon.better-invite.com/membership">
+    <img src="https://raw.githubusercontent.com/better-invite/.github/refs/heads/main/profile/sponsor-us.svg" alt="Sponsor us :)" />
+  </a>
+</div>
+
+---
 
 This is a Next.js application generated with
 [Create Fumadocs](https://github.com/fuma-nama/fumadocs).
