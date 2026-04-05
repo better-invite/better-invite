@@ -1,6 +1,10 @@
 # Better Invite Starter
 
-[Demo](https://demo.better-invite.com)
+<p align="center">
+  A template/starter for <a href="https://www.better-invite.com">Better Invite</a>, made with <a href="https://better-auth.com">Better Auth</a>, <a href="https://better-auth-ui.com">Better Auth Ui</a>, <a href="https://nextjs.org">Next.js</a> and <a href="https://ui.shadcn.com">Shadcn</a>.
+  <br />
+  <a href="https://demo.better-invite.com" align="center"><strong>Demo »</strong></a>
+</p>
 
 ---
 
