@@ -14,6 +14,8 @@
 
 ---
 
+> Better Invite Starter code is in the [Better Invite Monorepo](https://github.com/better-invite/better-invite/tree/main/demo) and in a separate [Better Invite Starter Repo](https://github.com/better-invite/better-invite-starter/tree/main)
+
 ## Installation
 
 First, create a PostgreSQL Database then configure your environment variables.
