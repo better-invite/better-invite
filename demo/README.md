@@ -14,7 +14,11 @@
   <p>Please consider sponsoring us</p>
   
   <a href="https://patreon.better-invite.com/membership">
-    <img src="https://raw.githubusercontent.com/better-invite/.github/refs/heads/main/profile/sponsor-us.svg" alt="Sponsor us :)" />
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/better-invite/.github/refs/heads/main/profile/sponsor-us-dark.svg" />
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/better-invite/.github/refs/heads/main/profile/sponsor-us.svg" />
+      <img alt="Sponsor us :)" src="https://raw.githubusercontent.com/better-invite/.github/refs/heads/main/profile/sponsor-us.svg" />
+    </picture>
   </a>
 </div>
 
