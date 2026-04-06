@@ -39,6 +39,11 @@ jobs:
           # Create .github files
           mkdir -p .github
 
+          # Copy files from monorepo
+          git --work-tree=. checkout main -- demo/.github/FUNDING.yml
+          git --work-tree=. checkout main -- demo/.github/CODEOWNERS
+
+          # Copy files from monorepo
           cp ../.github/FUNDING.yml .github/FUNDING.yml
           cp ../.github/CODEOWNERS .github/CODEOWNERS
 
