@@ -36,7 +36,14 @@ jobs:
           # Update README
 
           # Update separate repository reference
-          sed -i 's|> ℹ️ Better Invite Starter code is also available on a separate \[repository\](https://github.com/better-invite/better-invite-starter/tree/main)|> ℹ️ This template was automatically generated from the \[Better Invite monorepo\](https://github.com/better-invite/better-invite/tree/main/demo)  \n> ⚠️ Please open any issues or pull requests on the \[Better Invite monorepo\](https://github.com/better-invite/better-invite)|' README.md
+          # We replace the text "Better Invite Starter code is also available..." with new text
+          # We also add an image showing how to use the template from the GitHub UI
+          sed -i '
+          s|> ℹ️ Better Invite Starter code is also available.*|> ℹ️ This template was automatically generated from the [Better Invite monorepo](https://github.com/better-invite/better-invite/tree/main/demo)  \
+          > ⚠️ Please open any issues or pull requests on the [Better Invite monorepo](https://github.com/better-invite/better-invite)  \
+          \
+          <img width="1542" height="853" alt="Use as template" src="https://github.com/user-attachments/assets/ad1bac20-675b-4df1-9829-449ca5be3578" />|
+          ' README.md
           
           # Update title
           perl -0777 -pe 's|<h1 align="center">\s*Better Invite Starter\s*</h1>|<h1 align="center">\n  Better Invite Starter Template\n</h1>|s' README.md > README.tmp && mv README.tmp README.md
