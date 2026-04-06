@@ -40,7 +40,6 @@ jobs:
           mkdir -p .github
 
           # Copy files from monorepo
-          git --work-tree=. checkout main -- .github/FUNDING.yml
           git --work-tree=. checkout main -- .github/CODEOWNERS
 
           # Commit changes
