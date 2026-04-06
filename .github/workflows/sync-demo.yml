@@ -39,8 +39,8 @@ jobs:
           # Create .github files
           mkdir -p .github
 
-          cp ../demo/.github/FUNDING.yml .github/FUNDING.yml
-          cp ../demo/.github/CODEOWNERS .github/CODEOWNERS
+          cp ../.github/FUNDING.yml .github/FUNDING.yml
+          cp ../.github/CODEOWNERS .github/CODEOWNERS
 
           # Commit changes
           git add .
