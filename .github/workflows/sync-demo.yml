@@ -74,7 +74,7 @@ jobs:
 
           # Commit changes
           git add .
-          git commit --amend --no-edit
+          git commit -m "chore: sync demo from monorepo (this is an automated commit)"
 
       - name: Push to template repo
         run: |
