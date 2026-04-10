@@ -1,4 +1,4 @@
-import type { HookEndpointContext, Status, statusCodes } from "better-auth";
+import type { HookEndpointContext } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { expireCookie } from "better-auth/cookies";
 import type { UserWithRole } from "better-auth/plugins";
