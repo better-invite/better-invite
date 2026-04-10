@@ -85,7 +85,7 @@
 			[
 				"@semantic-release/github",
 				{
-					"releaseBodyTemplate": "Test Body\n\n<%= nextRelease.notes %>"
+					"releaseBodyTemplate": "🚀 This version is also available on npm:\n📦 https://www.npmjs.com/package/better-invite/v/<%= nextRelease.version %>\n\n---\n\n<%= nextRelease.notes %>"
 				}
 			]
 		]
