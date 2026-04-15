@@ -9,10 +9,13 @@ import {
 	DocsDescription,
 	DocsPage,
 	DocsTitle,
+	EditOnGitHub,
 	PageLastUpdate,
 } from "fumadocs-ui/layouts/docs/page";
 import { createRelativeLink } from "fumadocs-ui/mdx";
+import { Heart } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LLMCopyButton, ViewOptions } from "@/components/ai/page-actions";
 import { APIMethod } from "@/components/api-method";
@@ -22,6 +25,7 @@ import { GithubButton } from "@/components/github-button";
 import { GithubUser } from "@/components/github-user";
 import { Mermaid } from "@/components/mdx/mermaid";
 import { NpmButton } from "@/components/npm-button";
+import { buttonVariants } from "@/components/ui/button";
 import { onBlockFeedbackAction, onPageFeedbackAction } from "@/lib/github";
 import { createMetadata, getPageImage } from "@/lib/metadata";
 import { source } from "@/lib/source";
@@ -107,7 +111,32 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 					})}
 				/>
 			</DocsBody>
-			<Feedback onSendAction={onPageFeedbackAction} />
+			<Feedback onSendAction={onPageFeedbackAction}>
+				<div className="flex flex-row items-center flex-wrap gap-y-2 gap-x-4">
+					<Link
+						href="https://patreon.better-invite.com"
+						target="_blank"
+						rel="noreferrer noopener"
+						className={buttonVariants({
+							variant: "secondary",
+							className: "group text-foreground text-xs py-1.5 gap-1.5",
+						})}
+					>
+						<Heart
+							className="size-3.5 transition-all duration-300 
+											fill-transparent stroke-current
+											group-hover:fill-red-500 
+											group-hover:stroke-red-500
+											group-hover:scale-110
+											group-hover:drop-shadow-[0_0_6px_rgba(255,0,0,0.7)]"
+						/>
+						Donate
+					</Link>
+					<EditOnGitHub
+						href={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/docs/content/docs/${page.path}`}
+					/>
+				</div>
+			</Feedback>
 			{lastModifiedTime && <PageLastUpdate date={lastModifiedTime} />}
 		</DocsPage>
 	);

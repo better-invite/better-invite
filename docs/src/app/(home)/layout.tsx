@@ -9,6 +9,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
 				{ text: "Documentation", url: "/docs" },
 				{ text: "Showcase", url: "https://demo.better-invite.com" },
 				{ text: "Blog", url: "/blog" },
+				{ text: "Donate", url: "https://patreon.better-invite.com" },
 				{
 					type: "menu",
 					text: "For LLMs",

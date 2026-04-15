@@ -1,6 +1,4 @@
 User-agent: *
 Allow: /
 
-Disallow: /showcase/
-
 Sitemap: https://www.better-invite.com/sitemap.xml

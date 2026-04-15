@@ -84,6 +84,12 @@ export default function HomePage() {
 					>
 						Showcase
 					</Link>
+					<Link
+						href="https://patreon.better-invite.com"
+						className="inline-flex h-11 items-center justify-center rounded-xl border px-5 text-md font-medium shadow-sm transition hover:bg-muted"
+					>
+						Donate
+					</Link>
 				</div>
 			</div>
 		</>

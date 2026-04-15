@@ -56,8 +56,10 @@ const blockFeedbackResult = z.extend(blockFeedback, {
  */
 export function Feedback({
 	onSendAction,
+	children,
 }: {
 	onSendAction: (feedback: PageFeedback) => Promise<ActionResponse>;
+	children?: ReactNode;
 }) {
 	const url = usePathname();
 	const { previous, setPrevious } = useSubmissionStorage(url, (v) => {
@@ -102,53 +104,56 @@ export function Feedback({
 			}}
 			className="border-y py-3"
 		>
-			<div className="flex flex-row items-center gap-2">
-				<p className="text-sm font-medium pe-2">How is this guide?</p>
-				<button
-					type="button"
-					disabled={previous !== null}
-					className={cn(
-						rateButtonVariants({
-							active: activeOpinion === "good",
-						}),
-					)}
-					onClick={() => {
-						setOpinion("good");
-					}}
-				>
-					<ThumbsUp />
-					Good
-				</button>
-				<button
-					type="button"
-					disabled={previous !== null}
-					className={cn(
-						rateButtonVariants({
-							active: activeOpinion === "neutral",
-						}),
-					)}
-					onClick={() => {
-						setOpinion("neutral");
-					}}
-				>
-					<Meh />
-					Meh
-				</button>
-				<button
-					type="button"
-					disabled={previous !== null}
-					className={cn(
-						rateButtonVariants({
-							active: activeOpinion === "bad",
-						}),
-					)}
-					onClick={() => {
-						setOpinion("bad");
-					}}
-				>
-					<ThumbsDown />
-					Bad
-				</button>
+			<div className="flex flex-row flex-wrap-reverse items-center justify-between gap-y-4 gap-x-2">
+				<div className="flex flex-row items-center gap-2">
+					<p className="text-sm font-medium pe-2">How is this guide?</p>
+					<button
+						type="button"
+						disabled={previous !== null}
+						className={cn(
+							rateButtonVariants({
+								active: activeOpinion === "good",
+							}),
+						)}
+						onClick={() => {
+							setOpinion("good");
+						}}
+					>
+						<ThumbsUp />
+						Good
+					</button>
+					<button
+						type="button"
+						disabled={previous !== null}
+						className={cn(
+							rateButtonVariants({
+								active: activeOpinion === "neutral",
+							}),
+						)}
+						onClick={() => {
+							setOpinion("neutral");
+						}}
+					>
+						<Meh />
+						Meh
+					</button>
+					<button
+						type="button"
+						disabled={previous !== null}
+						className={cn(
+							rateButtonVariants({
+								active: activeOpinion === "bad",
+							}),
+						)}
+						onClick={() => {
+							setOpinion("bad");
+						}}
+					>
+						<ThumbsDown />
+						Bad
+					</button>
+				</div>
+				{children}
 			</div>
 			<CollapsibleContent className="mt-3">
 				{previous ? (

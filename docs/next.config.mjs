@@ -39,28 +39,9 @@ const config = {
 				permanent: true,
 			},
 			{
-				source: "/docs/examples",
-				destination: "/docs/examples/create-invite",
-				permanent: true,
-			},
-			{
 				source: "/docs/openapi",
 				destination: "/docs/openapi/createInvite",
 				permanent: true,
-			},
-		];
-	},
-	//! Temporary
-	headers() {
-		return [
-			{
-				source: "/showcase",
-				headers: [
-					{
-						key: "X-Robots-Tag",
-						value: "noindex, nofollow",
-					},
-				],
 			},
 		];
 	},
