@@ -14,7 +14,7 @@ export function Header() {
 
 			<div className="flex items-center gap-2">
 				<Link
-					href="https://github.com/better-invite/better-invite/tree/main/demo"
+					href="https://github.com/better-invite/better-invite-starter"
 					target="_blank"
 				>
 					<Button variant="outline" size="icon" className="size-8 rounded-full">
