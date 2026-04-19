@@ -1,13 +1,19 @@
 import { buttonVariants } from "fumadocs-ui/components/ui/button";
 import { SquareArrowOutUpRight } from "lucide-react";
 import Link from "next/link";
+import type React from "react";
+import { cn } from "@/lib/cn";
 
-export const GithubLogo = () => (
+export const GithubLogo = ({
+	className,
+	...props
+}: React.SVGProps<SVGSVGElement>) => (
 	<svg
 		role="img"
 		viewBox="0 0 24 24"
 		xmlns="http://www.w3.org/2000/svg"
-		className="size-3.5"
+		className={cn("size-3.5", className)}
+		{...props}
 	>
 		<title>GitHub</title>
 		<path
