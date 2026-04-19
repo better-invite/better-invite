@@ -1,8 +1,8 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Banner } from "@/components/banner";
-import { GithubButton, GithubLogo } from "@/components/github-button";
-import { NpmButton } from "@/components/npm-button";
+import { GithubLogo } from "@/components/github-button";
+import { Terminal } from "@/components/terminal";
 
 export default function HomePage() {
 	return (
@@ -87,35 +87,19 @@ export default function HomePage() {
 					</div>
 
 					<div className="flex justify-center mt-7">
-						<div className="flex w-fit px-6 gap-9 py-4 rounded-[10px] border border-white/10 dark:bg-white/5 bg-black/5 shadow-[0_0_30px_#ffffff33] dark:shadow-[0_0_30px_#ffffff40]">
-							<code className="md:text-sm text-xs font-geist flex items-center gap-0.5">
-								<span className="select-none">
-									<span className="text-sky-500">git:</span>
-									<span className="text-red-400">(main)</span>
-									<span> &gt;</span>
-								</span>
-								<span className="dark:text-white text-black">
-									pnpm add
-									<span className="dark:text-fuchsia-300 text-fuchsia-800">
-										{" "}
-										better-invite
-									</span>
-								</span>
-							</code>
-							<div className="flex gap-2 items-center">
-								<NpmButton
-									packageName="better-invite"
-									label=""
-									noExternalIcon
-								/>
-								<GithubButton
-									username="better-invite"
-									repository="better-invite"
-									label=""
-									noExternalIcon
-								/>
-							</div>
-						</div>
+						<Terminal
+							segments={[
+								{
+									text: "pnpm add",
+									className: "text-neutral-600 dark:text-neutral-300",
+								},
+								{
+									text: "better-invite",
+									className:
+										"text-fuchsia-600 dark:text-fuchsia-300 font-semibold",
+								},
+							]}
+						/>
 					</div>
 				</div>
 			</div>
