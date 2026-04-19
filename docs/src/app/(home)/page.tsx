@@ -11,7 +11,7 @@ export default function HomePage() {
 				variant="rainbow"
 				id="better-invite"
 				rainbowSpeed="7s"
-				className="flex-col relative z-0"
+				className="flex-col relative z-1"
 				rainbowColors={[
 					"rgba(20,20,20,0.95)",
 					"rgba(40,40,40,0.9)",
@@ -23,7 +23,9 @@ export default function HomePage() {
 					<span className="font-semibold">
 						Better Auth Invite Plugin is now called <b>Better Invite</b>!
 					</span>
-					<span className="text-zinc-400 hidden md:block">|</span>
+					<span className="text-zinc-600 dark:text-zinc-400 hidden md:block">
+						|
+					</span>
 					<Link
 						href="/blog/0-5"
 						className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 hidden dark:hover:text-blue-300 transition-colors md:block"

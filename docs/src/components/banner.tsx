@@ -66,7 +66,7 @@ export function Banner({
 			className={cn(
 				"sticky top-0 z-40 flex flex-row items-center justify-center px-4 text-center text-sm font-medium",
 				variant === "normal" && "bg-fd-secondary",
-				variant === "rainbow" && "bg-fd-background",
+				variant === "rainbow" && "bg-fd-background/50",
 				!open && "hidden",
 				props.className,
 			)}
