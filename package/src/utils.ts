@@ -148,7 +148,11 @@ export const consumeInvite = async ({
 
 	const usedAt = options.getDate();
 
-	const isLastUse = timesUsed === invitation.maxUses - 1;
+	const isFiniteInvite = !invitation.infinityMaxUses;
+
+	const isLastUse = isFiniteInvite
+		? timesUsed === invitation.maxUses - 1
+		: false;
 	const shouldCleanup = isLastUse && options.cleanupInvitesAfterMaxUses;
 	const shouldCreateInviteUse = !shouldCleanup;
 
