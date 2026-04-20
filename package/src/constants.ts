@@ -17,6 +17,7 @@ export const ERROR_CODES = defineErrorCodes({
 	ADMIN_PLUGIN_IS_NOT_SET_UP: "Admin plugin is not set-up",
 	INVITATION_EMAIL_NOT_ENABLED: "Invitation email is not enabled",
 	INVITE_TOKEN_HAS_ALREADY_BEEN_USED: "Invite token has already been used",
+	INVITATION_NOT_CREATED: "Invitation could not be created",
 });
 
 export const Tokens: TokensType[] = ["token", "code", "custom"];

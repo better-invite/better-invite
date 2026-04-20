@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    typescript:
+      specifier: ^5.9.3
+      version: 5.9.3
+
 importers:
 
   .:
@@ -14,6 +20,9 @@ importers:
       lefthook:
         specifier: ^2.1.0
         version: 2.1.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
   demo:
     dependencies:
@@ -224,7 +233,7 @@ importers:
         specifier: ^4.1.18
         version: 4.2.2
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   package:
@@ -255,7 +264,7 @@ importers:
         specifier: ^0.21.7
         version: 0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.1)(typescript@5.9.3)
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vitest:
         specifier: ^4.0.17

@@ -195,6 +195,13 @@ export const createInvite = (options: NewInviteOptions) => {
 			// If the invite is public, we return the token
 			const invitation = invitations[0];
 
+			if (!invitation) {
+				throw APIError.from(
+					"INTERNAL_SERVER_ERROR",
+					ERROR_CODES.INVITATION_NOT_CREATED,
+				);
+			}
+
 			const redirectTo =
 				senderResponseRedirect === "signUp"
 					? redirectToSignUp
