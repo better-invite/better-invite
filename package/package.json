@@ -27,7 +27,8 @@
 	"scripts": {
 		"test": "vitest",
 		"coverage": "vitest run --coverage",
-		"build": "tsdown"
+		"build": "tsdown",
+		"typecheck": "tsc --project tsconfig.json"
 	},
 	"files": [
 		"dist"
@@ -61,7 +62,7 @@
 		"better-auth": "^1.6.2",
 		"better-sqlite3": "^12.6.0",
 		"tsdown": "^0.21.7",
-		"typescript": "^5.9.3",
+		"typescript": "catalog:",
 		"vitest": "^4.0.17"
 	},
 	"peerDependencies": {
