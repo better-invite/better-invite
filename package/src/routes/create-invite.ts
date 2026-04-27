@@ -155,13 +155,22 @@ export const createInvite = (options: NewInviteOptions) => {
 						);
 					}
 
+					const realBaseURL = new URL(ctx.context.baseURL);
+					const pathname =
+						realBaseURL.pathname === "/" ? "" : realBaseURL.pathname;
+					const basePath = pathname ? "" : ctx.context.options.basePath || "";
+					const url = new URL(
+						`${pathname}${basePath}/${redirectURLEmail}`,
+						realBaseURL.origin,
+					);
+
 					try {
 						await options.sendUserInvitation(
 							{
 								email,
 								name: invitedUser?.user.name,
 								role,
-								url: redirectURLEmail,
+								url: url.toString(),
 								token: invitation.token,
 								newAccount,
 							},
@@ -215,7 +224,7 @@ export const createInvite = (options: NewInviteOptions) => {
 			});
 
 			const returnToken =
-				senderResponse === "token" ? invitation.token : redirectURL;
+				senderResponse === "token" ? invitation.token : redirectURL.toString();
 
 			return ctx.json({
 				status: true,

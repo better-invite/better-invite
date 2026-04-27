@@ -449,8 +449,7 @@ test("returns default api redirect URL when inviteUrlType is api", async ({
 test("returns custom redirect URL when inviteUrlType is custom", async ({
 	createAuth,
 }) => {
-	const customInviteUrl =
-		"https://myapp.com/invite/{token}?redirect={callbackURL}";
+	const customInviteUrl = "/invite/{token}?redirect={callbackURL}";
 
 	const { client, signInWithTestUser } = await createAuth({
 		pluginOptions: {
@@ -480,5 +479,5 @@ test("returns custom redirect URL when inviteUrlType is custom", async ({
 		.replace("{token}", token)
 		.replace("{callbackURL}", "%2Fauth%2Fsign-up");
 
-	expect(data?.message).toBe(expectedURL);
+	expect(data?.message).toBe(`http://localhost:3000/api/auth${expectedURL}`);
 });

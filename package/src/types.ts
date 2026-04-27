@@ -1,4 +1,4 @@
-import type { GenericEndpointContext } from "better-auth";
+import type { Awaitable, GenericEndpointContext } from "better-auth";
 import type { InferOptionSchema, UserWithRole } from "better-auth/plugins";
 import type { InviteSchema } from "./schema";
 
@@ -28,7 +28,7 @@ export type InviteOptions = {
 				};
 				inviterUser: UserWithRole;
 				ctx: GenericEndpointContext;
-		  }) => Promise<boolean> | boolean)
+		  }) => Awaitable<boolean>)
 		| boolean
 		| Permissions;
 	/**
@@ -47,7 +47,7 @@ export type InviteOptions = {
 		| ((data: {
 				invitedUser: UserWithRole;
 				newAccount: boolean;
-		  }) => Promise<boolean> | boolean)
+		  }) => Awaitable<boolean>)
 		| boolean
 		| Permissions;
 	/**
@@ -63,7 +63,7 @@ export type InviteOptions = {
 				inviterUser: UserWithRole;
 				invitation: InviteTypeWithId;
 				ctx: GenericEndpointContext;
-		  }) => Promise<boolean> | boolean)
+		  }) => Awaitable<boolean>)
 		| boolean
 		| Permissions;
 	/**
@@ -79,7 +79,7 @@ export type InviteOptions = {
 				inviteeUser: UserWithRole;
 				invitation: InviteTypeWithId;
 				ctx: GenericEndpointContext;
-		  }) => Promise<boolean> | boolean)
+		  }) => Awaitable<boolean>)
 		| boolean
 		| Permissions;
 	/**
@@ -156,7 +156,7 @@ export type InviteOptions = {
 		 * The request object
 		 */
 		request?: Request,
-	) => Promise<void> | void;
+	) => Awaitable<void>;
 	/**
 	 * Number of seconds the invitation token is
 	 * valid for.
@@ -199,7 +199,7 @@ export type InviteOptions = {
 			newAccount: boolean;
 		},
 		request?: Request,
-	) => Promise<void> | void;
+	) => Awaitable<void>;
 	/**
 	 * Custom schema for the invite plugin
 	 */
@@ -213,14 +213,14 @@ export type InviteOptions = {
 		 */
 		beforeCreateInvite?: (data: {
 			ctx: GenericEndpointContext;
-		}) => Promise<void> | void;
+		}) => Awaitable<void>;
 		/**
 		 * A function that runs after a user creates an invite
 		 */
 		afterCreateInvite?: (data: {
 			ctx: GenericEndpointContext;
 			invitations: InviteTypeWithId[];
-		}) => Promise<void> | void;
+		}) => Awaitable<void>;
 		/**
 		 * A function that runs before a user accepts an invite
 		 *
@@ -241,11 +241,7 @@ export type InviteOptions = {
 		beforeAcceptInvite?: (data: {
 			ctx: GenericEndpointContext;
 			invitedUser: UserWithRole;
-		}) =>
-			| Promise<{ user?: UserWithRole }>
-			| Promise<void>
-			| { user?: UserWithRole }
-			| void;
+		}) => Awaitable<{ user?: UserWithRole }> | Awaitable<void>;
 		/**
 		 * A function that runs after a user accepts an invite
 		 */
@@ -253,35 +249,35 @@ export type InviteOptions = {
 			ctx: GenericEndpointContext;
 			invitation: InviteTypeWithId;
 			invitedUser: UserWithRole;
-		}) => Promise<void> | void;
+		}) => Awaitable<void>;
 		/**
 		 * A function that runs before a user cancels an invite
 		 */
 		beforeCancelInvite?: (data: {
 			ctx: GenericEndpointContext;
 			invitation: InviteTypeWithId;
-		}) => Promise<void> | void;
+		}) => Awaitable<void>;
 		/**
 		 * A function that runs after a user cancels an invite
 		 */
 		afterCancelInvite?: (data: {
 			ctx: GenericEndpointContext;
 			invitation: InviteTypeWithId;
-		}) => Promise<void> | void;
+		}) => Awaitable<void>;
 		/**
 		 * A function that runs before a user rejects an invite
 		 */
 		beforeRejectInvite?: (data: {
 			ctx: GenericEndpointContext;
 			invitation: InviteTypeWithId;
-		}) => Promise<void> | void;
+		}) => Awaitable<void>;
 		/**
 		 * A function that runs after a user rejects an invite
 		 */
 		afterRejectInvite?: (data: {
 			ctx: GenericEndpointContext;
 			invitation: InviteTypeWithId;
-		}) => Promise<void> | void;
+		}) => Awaitable<void>;
 	};
 };
 

@@ -267,13 +267,20 @@ export const createRedirectURL = ({
 	callbackURL: string;
 	customInviteUrl?: string;
 }) => {
-	if (!customInviteUrl) {
-		return `${ctx.context.baseURL}/invite/${invitation.token}?callbackURL=${encodeURIComponent(callbackURL)}`;
-	}
+	const realBaseURL = new URL(ctx.context.baseURL);
+	const pathname = realBaseURL.pathname === "/" ? "" : realBaseURL.pathname;
+	const basePath = pathname ? "" : ctx.context.options.basePath || "";
+	let redirectUrl = `/invite/${invitation.token}?callbackURL=${encodeURIComponent(callbackURL)}`;
 
-	return customInviteUrl
-		.replace("{token}", invitation.token)
-		.replace("{callbackURL}", encodeURIComponent(callbackURL));
+	if (customInviteUrl)
+		redirectUrl = customInviteUrl
+			.replace("{token}", invitation.token)
+			.replace("{callbackURL}", encodeURIComponent(callbackURL));
+
+	return new URL(
+		`${pathname}${basePath}/${redirectUrl.startsWith("/") ? redirectUrl.slice(1) : redirectUrl}`,
+		realBaseURL.origin,
+	);
 };
 
 export const resolveInviteOptions = (
