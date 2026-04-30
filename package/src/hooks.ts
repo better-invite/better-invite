@@ -39,17 +39,38 @@ export const invitesHooks = (options: NewInviteOptions) => {
 
 					if (!invitedUser) return;
 
-					// Read the invite token from the cookie
-					const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
-					const inviteCookie = ctx.context.createAuthCookie(
-						INVITE_COOKIE_NAME,
-						{ maxAge },
-					);
+					// Support two ways of passing the invite token:
+					// 1) old flow: signed cookie
+					// 2) new flow: body.inviteToken
+					const bodyValidation = z
+						.object({
+							inviteToken: z.string().optional(),
+						})
+						.safeParse(ctx.body);
 
-					const inviteToken = await ctx.getSignedCookie(
-						inviteCookie.name,
-						ctx.context.secret,
-					);
+					const inviteTokenFromBody = bodyValidation.success
+						? bodyValidation.data.inviteToken
+						: undefined;
+
+					let inviteToken = inviteTokenFromBody;
+
+					if (!inviteToken) {
+						// Fallback to the legacy cookie-based flow
+						const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
+						const inviteCookie = ctx.context.createAuthCookie(
+							INVITE_COOKIE_NAME,
+							{ maxAge },
+						);
+
+						const cookieValue = await ctx.getSignedCookie(
+							inviteCookie.name,
+							ctx.context.secret,
+						);
+
+						if (!cookieValue) return;
+
+						inviteToken = cookieValue;
+					}
 
 					if (!inviteToken) return;
 
@@ -111,8 +132,15 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						},
 					});
 
-					// Clean up cookie after successful use
-					expireCookie(ctx, inviteCookie);
+					// Clean up the cookie only when the cookie-based flow was used
+					if (!inviteTokenFromBody) {
+						const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
+						const inviteCookie = ctx.context.createAuthCookie(
+							INVITE_COOKIE_NAME,
+							{ maxAge },
+						);
+						expireCookie(ctx, inviteCookie);
+					}
 
 					// Optional hook after accepting
 					await options.inviteHooks?.afterAcceptInvite?.({

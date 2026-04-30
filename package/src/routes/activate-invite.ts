@@ -30,6 +30,13 @@ export const activateInvite = (options: NewInviteOptions) => {
 				 * The invite token.
 				 */
 				token: z.string().describe("The invite token"),
+				/**
+				 * The email address of the user to sign in/up to.
+				 */
+				email: z
+					.email()
+					.optional()
+					.describe("The email address of the user to sign in/up to"),
 			}),
 			metadata: {
 				openapi: {
@@ -52,6 +59,10 @@ export const activateInvite = (options: NewInviteOptions) => {
 											action: {
 												type: "string",
 												example: "SIGN_IN_UP_REQUIRED",
+											},
+											email: {
+												type: "string",
+												example: "user@example.com",
 											},
 											redirectTo: {
 												type: "string",
@@ -100,7 +111,7 @@ export const activateInvite = (options: NewInviteOptions) => {
 export const activateInviteLogic = async (
 	options: NewInviteOptions,
 	ctx: GenericEndpointContext,
-	body: { token: string; callbackURL?: string },
+	body: { token: string; callbackURL?: string; email?: string },
 ) => {
 	const adapter = getInviteAdapter(ctx.context, options);
 
@@ -112,7 +123,6 @@ export const activateInviteLogic = async (
 
 	const maxUses = getMaxUses(invitation);
 	const timesUsed = await adapter.countInvitationUses(invitation.id);
-	const isFiniteInvite = !invitation.infinityMaxUses;
 
 	// Check if the invite was already fully used
 	if (timesUsed >= maxUses) {
@@ -191,5 +201,6 @@ export const activateInviteLogic = async (
 		message: "Please sign in or sign up to continue.",
 		action: "SIGN_IN_UP_REQUIRED",
 		redirectTo: body.callbackURL ?? options.defaultRedirectToSignIn,
+		email: body.email,
 	});
 };

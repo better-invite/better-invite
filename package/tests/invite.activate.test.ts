@@ -1133,3 +1133,66 @@ test("works with old email field in db", async ({ createAuth }) => {
 		redirectTo: "/auth/invited",
 	});
 });
+
+test("private invite includes email in default redirect URL", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: mock.sendUserInvitation,
+		},
+	});
+
+	const email = "test@email.com";
+
+	const { headers } = await signInWithTestUser();
+
+	await client.invite.create({
+		role: "user",
+		email,
+		fetchOptions: { headers },
+	});
+
+	const call = mock.sendUserInvitation.mock.calls[0][0];
+	const url = call.url;
+
+	expect(url).toContain("/invite/");
+	expect(url).toContain("callbackURL=");
+	expect(url).toContain(`email=${encodeURIComponent(email)}`);
+});
+
+test("private invite includes email in custom invite URL", async ({
+	createAuth,
+}) => {
+	const customInviteUrl =
+		"/invite/{token}?redirect={callbackURL}&email={email}";
+
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: mock.sendUserInvitation,
+		},
+	});
+
+	const email = "test@email.com";
+
+	const { headers } = await signInWithTestUser();
+
+	await client.invite.create({
+		role: "user",
+		email,
+		customInviteUrl,
+		fetchOptions: { headers },
+	});
+
+	const call = mock.sendUserInvitation.mock.calls[0][0];
+	const url = call.url;
+
+	expect(url).toContain(`/invite/`);
+	expect(url).toContain(`email=${encodeURIComponent(email)}`);
+
+	expect(url).not.toContain("{email}");
+	expect(url).not.toContain("{token}");
+	expect(url).not.toContain("{callbackURL}");
+});
