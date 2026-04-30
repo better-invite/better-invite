@@ -5,10 +5,15 @@ import { redirectCallback, redirectError } from "../utils";
 import { activateInviteLogic } from "./activate-invite";
 
 /**
- * Only used for invite links
+ * This endpoint is what runs when a user clicks an invite link (from email, for example).
  *
- * If an error occurs, the user is redirected to the provided callbackURL
- * with the query parameters "error" and "message".
+ * It doesn't implement the invite logic itself. Instead, it acts as a bridge:
+ *
+ * - It takes a browser request (GET + query params)
+ * - Calls the core logic (activateInviteLogic)
+ * - Converts the result into a redirect
+ *
+ * Think of it as a "bridge" between JSON responses and browser redirects.
  */
 export const activateInviteCallback = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -24,6 +29,13 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 					.string()
 					.describe("Where to redirect the user after sing in/up")
 					.optional(),
+				/**
+				 * The email address of the user to sign in/up to.
+				 */
+				email: z
+					.email()
+					.optional()
+					.describe("The email address of the user to sign in/up to"),
 			}),
 			metadata: {
 				openapi: {
@@ -70,8 +82,10 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 		async (ctx) => {
 			let res: Awaited<ReturnType<typeof activateInviteLogic>> | null = null;
 			try {
+				// Run the real invite logic
 				res = await activateInviteLogic(options, ctx, ctx.params);
 			} catch (e) {
+				// If something fails, we don't return JSON, we redirect with error info
 				const err = e as
 					| { body?: { code?: string; message?: string } }
 					| undefined;
@@ -84,10 +98,12 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				);
 			}
 
+			// Shouldn't really happen, but just in case
 			if (!res) {
 				return;
 			}
 
+			// User is already logged in => upgrade flow
 			if (res.action === "REDIRECT_TO_AFTER_UPGRADE" && res.redirectTo) {
 				const redirectURL = res.redirectTo?.replace(
 					"{token}",
@@ -96,6 +112,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				return ctx.redirect(redirectError(ctx.context, redirectURL));
 			}
 
+			// User needs to sign in or sign up first
 			if (res.action === "SIGN_IN_UP_REQUIRED")
 				return ctx.redirect(
 					redirectCallback(
@@ -104,7 +121,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 					),
 				);
 
-			// Fallback (unknown error)
+			// Fallback: something unexpected happened
 			redirectError(ctx.context, ctx.query.callbackURL, {
 				message: "Internal server error",
 				error: "SERVER_ERROR",

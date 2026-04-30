@@ -481,3 +481,57 @@ test("returns custom redirect URL when inviteUrlType is custom", async ({
 
 	expect(data?.message).toBe(`http://localhost:3000/api/auth${expectedURL}`);
 });
+
+test("supports multiple emails in a single invite", async ({ createAuth }) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: mock.sendUserInvitation,
+		},
+	});
+
+	const emails = ["a@test.com", "b@test.com", "c@test.com"];
+
+	const { headers } = await signInWithTestUser();
+
+	const { error } = await client.invite.create({
+		role: "user",
+		email: emails,
+		fetchOptions: { headers },
+	});
+
+	expect(error).toBe(null);
+
+	// Only one invite should exist in DB
+	const invites = await db.findMany<InviteTypeWithId>({
+		model: "invite",
+	});
+
+	expect(invites).toHaveLength(1);
+
+	const invite = invites[0];
+
+	// Emails should be stored as an array
+	expect(invite?.emails).toStrictEqual(emails);
+
+	// sendUserInvitation should be called once per email
+	expect(mock.sendUserInvitation).toHaveBeenCalledTimes(emails.length);
+
+	// All calls should use the SAME token
+	const usedTokens = mock.sendUserInvitation.mock.calls.map(
+		(call) => call[0].token,
+	);
+
+	expect(new Set(usedTokens).size).toBe(1);
+
+	// Each email should receive an invite
+	for (const email of emails) {
+		expect(mock.sendUserInvitation).toHaveBeenCalledWith(
+			expect.objectContaining({
+				email,
+				role: "user",
+			}),
+			expect.anything(),
+		);
+	}
+});

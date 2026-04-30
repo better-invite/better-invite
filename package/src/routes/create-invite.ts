@@ -61,11 +61,9 @@ export const createInvite = (options: NewInviteOptions) => {
 				customInviteUrl,
 			} = resolveInvitePayload(ctx.body, options);
 
+			// Normalize the input to always work with an array internally.
 			const emails = normalizeEmails<string[]>(email, []);
 			const isPrivate = emails.length > 0;
-
-			// If the invite is public we use [undefined] so the loop runs once and knows it's as a public invite
-			const targets = isPrivate ? emails : [undefined];
 
 			const invitations: InviteTypeWithId[] = [];
 
@@ -79,7 +77,11 @@ export const createInvite = (options: NewInviteOptions) => {
 				);
 			}
 
-			const basicInvitedUser = { email, role };
+			// Pass the full email list to permission checks when this is a private invite.
+			const basicInvitedUser = {
+				email: isPrivate ? emails : email,
+				role,
+			};
 
 			const canCreateInviteOption =
 				typeof options.canCreateInvite === "function"
@@ -89,6 +91,7 @@ export const createInvite = (options: NewInviteOptions) => {
 							ctx,
 						})
 					: options.canCreateInvite;
+
 			const canCreateInvite =
 				typeof canCreateInviteOption === "object"
 					? await checkPermissions(ctx, canCreateInviteOption)
@@ -105,55 +108,56 @@ export const createInvite = (options: NewInviteOptions) => {
 
 			await options.inviteHooks?.beforeCreateInvite?.({ ctx });
 
-			// Loop for creating and sending invites
-			for (const email of targets) {
-				// If the invite is public (this is where we use the undefined inside targets) we create the invite, but we don't send any email
-				if (!email) {
-					const invitation = await adapter.createInvite(
-						ctx.body,
-						inviterUser,
-						undefined,
-					);
+			// For private invites, resolve each recipient first so we can create one shared invite.
+			const recipients = isPrivate
+				? await Promise.all(
+						emails.map(async (recipientEmail) => {
+							const invitedUser =
+								await ctx.context.internalAdapter.findUserByEmail(
+									recipientEmail,
+									{
+										includeAccounts: true,
+									},
+								);
 
-					invitations.push(invitation);
-					continue;
-				}
+							return {
+								email: recipientEmail,
+								invitedUser,
+								callbackURL: invitedUser ? redirectToSignIn : redirectToSignUp,
+								newAccount: !invitedUser,
+							};
+						}),
+					)
+				: [];
 
-				const invitedUser = await ctx.context.internalAdapter.findUserByEmail(
-					email,
-					{
-						includeAccounts: true,
-					},
-				);
+			// Create a single invitation for all emails.
+			// The invite record stores the full list when this is a private invite.
+			const sharedNewAccount = isPrivate
+				? recipients.every(({ newAccount }) => newAccount)
+					? true
+					: recipients.every(({ newAccount }) => !newAccount)
+						? false
+						: undefined
+				: undefined;
 
-				const callbackURL = invitedUser ? redirectToSignIn : redirectToSignUp;
+			const invitation = await adapter.createInvite(
+				isPrivate ? { ...ctx.body, email: emails } : ctx.body,
+				inviterUser,
+				sharedNewAccount,
+			);
 
-				const newAccount = !invitedUser;
+			invitations.push(invitation);
 
-				const invitation = await adapter.createInvite(
-					{ ...ctx.body, email },
-					inviterUser,
-					newAccount,
-				);
-
-				invitations.push(invitation);
-
-				// If the invite is private, send the user an email
-				if (isPrivate) {
+			// Send one email per recipient, but reuse the same invitation/token.
+			if (isPrivate && options.sendUserInvitation) {
+				for (const recipient of recipients) {
 					const redirectURLEmail = createRedirectURL({
 						ctx,
 						invitation,
-						callbackURL,
+						callbackURL: recipient.callbackURL,
 						customInviteUrl,
+						email: recipient.email,
 					});
-
-					// This should never happen because we check it at the beginning of the function, but we check it again to make TypeScript happy
-					if (!options.sendUserInvitation) {
-						throw APIError.from(
-							"INTERNAL_SERVER_ERROR",
-							ERROR_CODES.INVITATION_EMAIL_NOT_ENABLED,
-						);
-					}
 
 					const realBaseURL = new URL(ctx.context.baseURL);
 					const pathname =
@@ -167,12 +171,12 @@ export const createInvite = (options: NewInviteOptions) => {
 					try {
 						await options.sendUserInvitation(
 							{
-								email,
-								name: invitedUser?.user.name,
+								email: recipient.email,
+								name: recipient.invitedUser?.user.name,
 								role,
 								url: url.toString(),
 								token: invitation.token,
-								newAccount,
+								newAccount: recipient.newAccount,
 							},
 							ctx.request,
 						);
@@ -191,8 +195,8 @@ export const createInvite = (options: NewInviteOptions) => {
 				invitations,
 			});
 
-			// If the invitation is private, we return
-			if (isPrivate)
+			// Private invite: we already sent the emails, so we just return success.
+			if (isPrivate) {
 				return ctx.json({
 					status: true,
 					message:
@@ -200,17 +204,9 @@ export const createInvite = (options: NewInviteOptions) => {
 							? "The invitation was sent"
 							: "The invitations were sent",
 				});
-
-			// If the invite is public, we return the token
-			const invitation = invitations[0];
-
-			if (!invitation) {
-				throw APIError.from(
-					"INTERNAL_SERVER_ERROR",
-					ERROR_CODES.INVITATION_NOT_CREATED,
-				);
 			}
 
+			// Public invite: return the token or the redirect URL.
 			const redirectTo =
 				senderResponseRedirect === "signUp"
 					? redirectToSignUp
@@ -348,7 +344,7 @@ export const createInviteBodySchema = z.object({
 		.optional(),
 	/**
 	 * The user will be redirected here to activate their invite
-	 * Use {token} and {callbackUrl}, this will be replaced with their values
+	 * Use {token}, {callbackUrl} and {email}, this will be replaced with their values
 	 */
 	customInviteUrl: z
 		.string()
