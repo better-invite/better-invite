@@ -261,21 +261,26 @@ export const createRedirectURL = ({
 	invitation,
 	callbackURL,
 	customInviteUrl,
+	email,
 }: {
 	ctx: GenericEndpointContext;
 	invitation: InviteTypeWithId;
 	callbackURL: string;
 	customInviteUrl?: string;
+	email?: string;
 }) => {
 	const realBaseURL = new URL(ctx.context.baseURL);
 	const pathname = realBaseURL.pathname === "/" ? "" : realBaseURL.pathname;
 	const basePath = pathname ? "" : ctx.context.options.basePath || "";
-	let redirectUrl = `/invite/${invitation.token}?callbackURL=${encodeURIComponent(callbackURL)}`;
+	// Default redirect URL with query parameters
+	// For private invites, we also include the email in the query params to pre-fill the sign-in/up form
+	let redirectUrl = `/invite/${invitation.token}?callbackURL=${encodeURIComponent(callbackURL)}${invitation.emails && invitation.emails.length > 0 ? `&email=${encodeURIComponent(email ?? "")}` : ""}`;
 
 	if (customInviteUrl)
 		redirectUrl = customInviteUrl
 			.replace("{token}", invitation.token)
-			.replace("{callbackURL}", encodeURIComponent(callbackURL));
+			.replace("{callbackURL}", encodeURIComponent(callbackURL))
+			.replace("{email}", encodeURIComponent(email ?? ""));
 
 	return new URL(
 		`${pathname}${basePath}/${redirectUrl.startsWith("/") ? redirectUrl.slice(1) : redirectUrl}`,
