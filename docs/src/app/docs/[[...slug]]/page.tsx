@@ -68,7 +68,13 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 	const MDX = page.data.body;
 
 	return (
-		<DocsPage toc={page.data.toc} full={page.data.full}>
+		<DocsPage
+			toc={page.data.toc}
+			full={page.data.full}
+			tableOfContent={{
+				style: "clerk",
+			}}
+		>
 			{version.slug === "beta" && <BetaBanner version={version} />}
 			<DocsTitle>{page.data.title}</DocsTitle>
 			<DocsDescription className="mb-0">

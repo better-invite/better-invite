@@ -118,10 +118,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      
-      - name: Create local tag (force beta.1)
-        run: |
-          git tag -f v0.6.0-beta.1
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -145,4 +141,4 @@ jobs:
         working-directory: package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm dlx semantic-release --no-ci
+        run: pnpm dlx semantic-release

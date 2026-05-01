@@ -1,10 +1,14 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
 import { Banner } from "@/components/banner";
 import { GithubLogo } from "@/components/github-logo";
+import { NpmLogo } from "@/components/npm-button";
 import { Terminal } from "@/components/terminal";
+import { formatCount, getCommunityStats } from "@/lib/community-stats";
 
-export default function HomePage() {
+export default async function HomePage() {
+	const communityStats = await getCommunityStats();
+
 	return (
 		<div className="relative grow overflow-hidden">
 			<Banner
@@ -100,6 +104,36 @@ export default function HomePage() {
 								},
 							]}
 						/>
+					</div>
+					<div className="flex items-center justify-center gap-2 mt-7">
+						{communityStats.npmDownloads > 0 && (
+							<a
+								href="https://www.npmjs.com/package/better-invite"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								<div className="flex items-center gap-1.5 px-2.5 hover:bg-foreground/4 rounded-sm transition-colors text-foreground/50 dark:text-foreground/50">
+									<NpmLogo color />
+									<span className="text-xs font-mono">
+										{formatCount(communityStats.npmDownloads)} / week
+									</span>
+								</div>
+							</a>
+						)}
+						{communityStats.githubStars > 0 && (
+							<a
+								href="https://github.com/better-invite/better-invite"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								<div className="flex items-center gap-1.5 px-2.5 hover:bg-foreground/4 rounded-sm transition-colors text-foreground/50 dark:text-foreground/50">
+									<Star className="size-3.5" />
+									<span className="text-xs font-mono">
+										{formatCount(communityStats.githubStars)} stars
+									</span>
+								</div>
+							</a>
+						)}
 					</div>
 				</div>
 			</div>
