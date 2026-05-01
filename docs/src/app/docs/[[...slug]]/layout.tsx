@@ -17,34 +17,38 @@ export default async function Layout({
 	const { version } = resolveVersionFromSlug(slug ?? []);
 	const src = getSourceFor(version.slug);
 
+	const hasMultipleVersions = docsVersions.length > 1;
+
+	const tabs = hasMultipleVersions
+		? docsVersions.map((v) => {
+				const cleanSlug = (slug ?? []).slice(version.slug ? 1 : 0);
+				const targetHref = versionedDocsHref(
+					`/docs/${cleanSlug?.join("/")}`,
+					v,
+				);
+
+				return {
+					title: v.label,
+					url: targetHref,
+					icon:
+						v === latestVersion ? (
+							<GitCommitVertical
+								size="16"
+								className="h-full justify-self-center"
+							/>
+						) : (
+							<GitBranch size="16" className="h-full justify-self-center" />
+						),
+				};
+			})
+		: undefined;
+
 	return (
 		<DocsLayout
 			tree={src.getPageTree()}
 			{...baseOptions()}
 			sidebar={{
-				tabs: [
-					...docsVersions.map((v) => {
-						const cleanSlug = (slug ?? []).slice(version.slug ? 1 : 0);
-						const targetHref = versionedDocsHref(
-							`/docs/${cleanSlug?.join("/")}`,
-							v,
-						);
-
-						return {
-							title: v.label,
-							url: targetHref,
-							icon:
-								v === latestVersion ? (
-									<GitCommitVertical
-										size="16"
-										className="h-full justify-self-center"
-									/>
-								) : (
-									<GitBranch size="16" className="h-full justify-self-center" />
-								),
-						};
-					}),
-				],
+				tabs,
 			}}
 		>
 			{children}
