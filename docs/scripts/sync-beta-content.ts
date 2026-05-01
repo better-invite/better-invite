@@ -1,3 +1,4 @@
+// See https://github.com/better-auth/better-auth/blob/main/docs/scripts/sync-beta-content.ts
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
