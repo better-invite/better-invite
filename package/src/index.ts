@@ -6,6 +6,7 @@ import {
 	acceptInvite,
 	acceptInviteCallback,
 	activateInvite,
+	activateInviteCallback,
 	cancelInvite,
 	createInvite,
 	getInvite,
@@ -25,6 +26,7 @@ export const invite = <O extends InviteOptions>(opts: O) => {
 			createInvite: createInvite(options),
 			activateInvite: activateInvite(options), //! Deprecated
 			acceptInvite: acceptInvite(options),
+			activateInviteCallback: activateInviteCallback(options), //! Deprecated
 			acceptInviteCallback: acceptInviteCallback(options),
 			cancelInvite: cancelInvite(options),
 			getInvite: getInvite(options),

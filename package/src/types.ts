@@ -2,6 +2,7 @@ import type { Awaitable, GenericEndpointContext } from "better-auth";
 import type { InferOptionSchema, UserWithRole } from "better-auth/plugins";
 import type { Tokens } from "./constants";
 import type { InviteSchema } from "./schema";
+import type { resolveInviteOptions } from "./utils";
 
 export type InviteOptions = {
 	/**
@@ -284,23 +285,7 @@ export type InviteOptions = {
 	};
 };
 
-type MakeRequired<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
-
-export type NewInviteOptions = MakeRequired<
-	InviteOptions,
-	| "getDate"
-	| "invitationTokenExpiresIn"
-	| "defaultShareInviterName"
-	| "defaultSenderResponse"
-	| "defaultSenderResponseRedirect"
-	| "defaultTokenType"
-	| "defaultRedirectToSignIn"
-	| "defaultRedirectToSignUp"
-	| "canCreateInvite"
-	| "canAcceptInvite"
-	| "canCancelInvite"
-	| "canRejectInvite"
->;
+export type NewInviteOptions = ReturnType<typeof resolveInviteOptions>;
 
 export type InviteType = {
 	token: string;
@@ -316,7 +301,6 @@ export type InviteType = {
 	email?: string;
 	emails?: string[];
 	role: string;
-	newAccount?: boolean; // Only in private invites
 	status: InvitationStatus;
 };
 

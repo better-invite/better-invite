@@ -11,7 +11,7 @@ import type { InviteTypeWithId, NewInviteOptions } from "../types";
 import {
 	checkPermissions,
 	createRedirectURL,
-	normalizeEmails,
+	normalizeArray,
 	resolveInvitePayload,
 } from "../utils";
 
@@ -63,7 +63,7 @@ export const createInvite = (options: NewInviteOptions) => {
 			} = resolveInvitePayload(ctx.body, options);
 
 			// Normalize the input to always work with an array internally.
-			const emails = normalizeEmails(email);
+			const emails = normalizeArray(email);
 			const isPrivate = emails.length > 0;
 
 			const invitations: InviteTypeWithId[] = [];
@@ -132,20 +132,9 @@ export const createInvite = (options: NewInviteOptions) => {
 					)
 				: [];
 
-			// Create a single invitation for all emails.
-			// The invite record stores the full list when this is a private invite.
-			const sharedNewAccount = isPrivate
-				? recipients.every(({ newAccount }) => newAccount)
-					? true
-					: recipients.every(({ newAccount }) => !newAccount)
-						? false
-						: undefined
-				: undefined;
-
 			const invitation = await adapter.createInvite(
 				isPrivate ? { ...ctx.body, email: emails } : ctx.body,
 				inviterUser,
-				sharedNewAccount,
 			);
 
 			invitations.push(invitation);

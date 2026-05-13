@@ -16,7 +16,7 @@ export const schema = {
 			email: { type: "string", required: false }, //! Deprecated
 			emails: { type: "string[]", required: false },
 			role: { type: "string", required: true },
-			newAccount: { type: "boolean", required: false },
+			newAccount: { type: "boolean", required: false }, //! Deprecated
 			status: {
 				type: ["pending", "rejected", "canceled", "used"] as const,
 				required: true,

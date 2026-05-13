@@ -10,7 +10,7 @@ import type {
 } from "./types";
 import {
 	getDate,
-	normalizeEmails,
+	normalizeArray,
 	resolveInvitePayload,
 	resolveTokenGenerator,
 } from "./utils";
@@ -24,15 +24,11 @@ export const getInviteAdapter = (
 	const inviteUseTable = "inviteUse";
 
 	return {
-		createInvite: (
-			invite: CreateInvite,
-			user: UserWithRole,
-			newAccount?: boolean,
-		) => {
+		createInvite: (invite: CreateInvite, user: UserWithRole) => {
 			const payload = resolveInvitePayload(invite, options);
 			const generateToken = resolveTokenGenerator(payload.tokenType, options);
 
-			const emails = normalizeEmails(invite.email);
+			const emails = normalizeArray(invite.email);
 			const isPrivate = emails.length > 0;
 
 			const expiresAt = getDate(payload.expiresIn, "sec");
@@ -54,9 +50,8 @@ export const getInviteAdapter = (
 					maxUses: isUnlimited ? 1 : (maxUses ?? 1),
 					infinityMaxUses: isUnlimited,
 					shareInviterName: payload.shareInviterName,
-					emails: normalizeEmails(invite.email, true),
+					emails: normalizeArray(invite.email, true),
 					role: invite.role,
-					newAccount,
 					status: "pending",
 				},
 			});
@@ -158,6 +153,34 @@ export const getInviteAdapter = (
 				model: inviteTable,
 				...data,
 			}),
+		removeUserByEmail: async (id: string, email: string) => {
+			const invite = await baseAdapter.findOne<InviteTypeWithId>({
+				model: inviteTable,
+				where: [
+					{
+						field: "id",
+						value: id,
+					},
+				],
+			});
+
+			if (!invite) return null;
+
+			const emails = (invite.emails ?? []).filter((e) => e !== email);
+
+			return baseAdapter.update<InviteTypeWithId>({
+				model: inviteTable,
+				where: [
+					{
+						field: "id",
+						value: id,
+					},
+				],
+				update: {
+					emails,
+				},
+			});
+		},
 	};
 };
 

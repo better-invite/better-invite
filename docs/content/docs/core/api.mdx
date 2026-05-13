@@ -100,7 +100,13 @@ type createInvite = {
 
 # Activate Invite
 
-<APIMethod path="/invite/activate" method="POST" optionalSession note="If the user is not logged in, it redirects the user to the callback URL with the token in a cookie.">
+<Callout type="warn" title="Deprecated">
+  This endpoint is deprecated, use accept invite instead
+</Callout>
+
+# Accept Invite
+
+<APIMethod path="/invite/activate" method="POST" requireSession note="If the user is not logged in, it redirects the user to the callback URL with the token in a cookie.">
 ```ts
 type activateInvite = {
 	/**
@@ -128,6 +134,12 @@ type activateInvite = {
 </APIMethod>
 
 # Activate Invite Callback
+
+<Callout type="warn" title="Deprecated">
+  This endpoint is deprecated, use accept invite instead for POST requests
+</Callout>
+
+# Accept Invite Callback
 
 <Callout type="info" title="Note">
   This endpoint is **not recommended** for direct usage. It exists mainly for internal use (e.g. the default link sent in invite emails).
@@ -196,6 +208,21 @@ type cancelInvite = {
 # Get Invite
 
 Get basic information about an invitation.
+
+<Callout type="info" title="Note">
+  This endpoint no longer returns `newAccount`.
+
+  If you need to know whether an invited email will create a new account or upgrade an existing one, you can check whether a user already exists for that email:
+
+  ```ts
+  const invitedUser = await ctx.context.internalAdapter.findUserByEmail(
+    email,
+  );
+  ```
+
+  If `invitedUser` is `undefined`, the user does not exist yet, so the invitation will create a new account.
+  Otherwise, the invitation will upgrade the role of an existing account.
+</Callout>
 
 <APIMethod path="/invite/get" method="GET" optionalSession note="For private invites, the requester must match the invite email.">
 ```ts
