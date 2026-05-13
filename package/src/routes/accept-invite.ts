@@ -22,6 +22,8 @@ export const acceptInvite = (options: NewInviteOptions) => {
 		"/invite/accept",
 		{
 			method: "POST",
+			// Accept invite REQUIRES a session, this is to align it more with reject invite
+			// Only accept invite callback supports optional sessions
 			use: [originCheck((ctx) => ctx.body.callbackUrl), sessionMiddleware],
 			body: z.object({
 				/**

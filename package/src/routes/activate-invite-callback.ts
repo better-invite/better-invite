@@ -5,6 +5,8 @@ import type { NewInviteOptions } from "../types";
 import { redirectCallback, redirectError } from "../utils";
 import { acceptInviteLogic } from "./accept-invite";
 
+let alreadyWarned = false;
+
 /**
  * This endpoint is what runs when a user clicks an invite link (from email, for example).
  *
@@ -15,11 +17,15 @@ import { acceptInviteLogic } from "./accept-invite";
  * - Converts the result into a redirect
  *
  * Think of it as a "bridge" between JSON responses and browser redirects.
+ *
+ * @deprecated Use `acceptInviteCallback` instead. This endpoint will remain available for backward compatibility, but it may be removed in a future release.
  */
-export const acceptInviteCallback = (options: NewInviteOptions) => {
+export const activateInviteCallback = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
-		// Replaces the old activate invite callback, without generating breaking changes
-		"/invite/:token",
+		// This route exists for backwards compatibility with apps still using the old
+		// activate invite callback (which is NOT recommended). New apps should use `acceptInvite` instead.
+		// `/invite/:token` is now handled by the new accept invite flow.
+		"/invite/:token/activate",
 		{
 			method: "GET",
 			use: [
@@ -96,6 +102,14 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
+			if (!alreadyWarned) {
+				ctx.context.logger.warn(
+					"activateInvite callback is deprecated. Use acceptInvite instead.",
+					'This callback should only be triggered from invitation URLs. If you are calling client.invite.[":token"]() directly in your app, migrate to acceptInvite instead.',
+				);
+				alreadyWarned = true;
+			}
+
 			let res: Awaited<ReturnType<typeof acceptInviteLogic>> | null = null;
 			try {
 				// Run the real invite logic

@@ -8,7 +8,7 @@ import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { checkPermissions, normalizeEmails } from "../utils";
+import { checkPermissions, normalizeArray } from "../utils";
 
 export const rejectInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -92,7 +92,7 @@ export const rejectInvite = (options: NewInviteOptions) => {
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 			}
 
-			const emails = normalizeEmails(invitation.emails ?? invitation.email);
+			const emails = normalizeArray(invitation.emails ?? invitation.email);
 			const isPrivate = emails.length > 0;
 
 			// Throws error if the invite is public or if the user email doesn’t match the invite

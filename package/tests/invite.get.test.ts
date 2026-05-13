@@ -57,7 +57,6 @@ test("public invite returns inviter info without session", async ({
 			name: expect.any(String),
 		}),
 		invitation: expect.objectContaining({
-			email: null,
 			emails: [],
 			createdAt: expect.any(Date),
 			role: "user",
@@ -125,11 +124,9 @@ test("private invite returns inviter info only to the correct invitee", async ({
 			name: expect.any(String),
 		}),
 		invitation: expect.objectContaining({
-			email: null,
 			emails: [invitee.email],
 			createdAt: expect.any(Date),
 			role: "admin",
-			newAccount: expect.any(Boolean),
 		}),
 	});
 });
@@ -350,7 +347,6 @@ test("works with old email field in db", async ({ createAuth }) => {
 			emails: [invitee.email],
 			createdAt: expect.any(Date),
 			role: "admin",
-			newAccount: expect.any(Boolean),
 		}),
 	});
 });

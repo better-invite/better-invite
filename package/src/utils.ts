@@ -58,7 +58,7 @@ export const consumeInvite = async ({
 	const { userId, token, timesUsed, newAccount } = meta;
 
 	// Normalize emails and detect private invite
-	const emails = normalizeEmails(invitation.emails ?? invitation.email);
+	const emails = normalizeArray(invitation.emails ?? invitation.email);
 	const isPrivate = emails.length > 0;
 
 	// Validate email for private invites
@@ -124,6 +124,8 @@ export const consumeInvite = async ({
 			usedByUserId: userId,
 			usedAt,
 		});
+
+		await adapter.removeUserByEmail(invitation.id, invitedUser.email);
 	}
 
 	// Fire optional hook
@@ -145,27 +147,27 @@ export function getMaxUses(invitation: InviteTypeWithId) {
 }
 
 /**
- * Converts a single email string or an array of emails into a normalized array format.
+ * Converts a string or a string array into a normalized array format.
  *
- * @returns An array of email strings or a default value if the input is undefined.
+ * @returns A string array strings or a default value if the input is undefined.
  *
  * @example
- * normalizeEmails("test@example.com")
+ * normalizeArray("test@example.com")
  * // => ["test@example.com"]
  *
  * @example
- * normalizeEmails(["a@test.com", "b@test.com"])
+ * normalizeArray(["a@test.com", "b@test.com"])
  * // => ["a@test.com", "b@test.com"]
  *
  * @example
- * normalizeEmails(undefined)
+ * normalizeArray(undefined)
  * // => []
  *
  * @example
- * normalizeEmails(undefined, true)
+ * normalizeArray(undefined, true)
  * // => undefined
  */
-export function normalizeEmails<T extends boolean = false>(
+export function normalizeArray<T extends boolean = false>(
 	email?: string | string[],
 	defaultUndefined?: T,
 	// Returns type string[] if defaultUndefined is false, otherwise returns string[] | undefined
@@ -307,9 +309,7 @@ export const createRedirectURL = ({
 	);
 };
 
-export const resolveInviteOptions = (
-	opts: InviteOptions,
-): NewInviteOptions => ({
+export const resolveInviteOptions = (opts: InviteOptions) => ({
 	getDate: opts.getDate ?? (() => new Date()),
 	invitationTokenExpiresIn: opts.invitationTokenExpiresIn ?? 60 * 60,
 	defaultShareInviterName: opts.defaultShareInviterName ?? true,

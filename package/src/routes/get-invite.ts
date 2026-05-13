@@ -8,7 +8,7 @@ import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { normalizeEmails } from "../utils";
+import { normalizeArray } from "../utils";
 
 export const getInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -91,7 +91,7 @@ export const getInvite = (options: NewInviteOptions) => {
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 			}
 
-			const emails = normalizeEmails(invitation.emails ?? invitation.email);
+			const emails = normalizeArray(invitation.emails ?? invitation.email);
 			const isPrivate = emails.length > 0;
 
 			const session = await getSessionFromCtx(ctx);
@@ -121,11 +121,10 @@ export const getInvite = (options: NewInviteOptions) => {
 					image: inviter.image,
 				},
 				invitation: {
-					email: invitation.email,
 					emails,
 					createdAt: invitation.createdAt,
 					role: invitation.role,
-					newAccount: invitation.newAccount,
+					type: isPrivate ? "private" : "public",
 				},
 			});
 		},
