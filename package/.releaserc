@@ -1,0 +1,20 @@
+{
+	"branches": [
+		"main",
+		{
+			"name": "beta",
+			"prerelease": "beta"
+		}
+	],
+	"plugins": [
+		"@semantic-release/commit-analyzer",
+		"@semantic-release/release-notes-generator",
+		"@semantic-release/npm",
+		[
+			"@semantic-release/github",
+			{
+				"releaseBodyTemplate": "🚀 This version is also available on npm:\n📦 https://www.npmjs.com/package/better-invite/v/<%= nextRelease.version %>\n\n---\n\n<%= nextRelease.notes %>"
+			}
+		]
+	]
+}
