@@ -104,3 +104,13 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm build
+  release:
+    name: Release
+    needs: [lint, typecheck, test, build]
+
+    if: github.event_name == 'push' &&
+        (github.ref == 'refs/heads/main' ||
+        github.ref == 'refs/heads/beta')
+
+    uses: ./.github/workflows/release.yml
+    secrets: inherit

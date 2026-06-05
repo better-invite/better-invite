@@ -1,10 +1,7 @@
 name: Release
 # Runs only after CI workflow completes successfully to publish a new release.
 on:
-  workflow_run:
-   workflows: ["CI"]
-   types:
-     - completed
+  workflow_call:
 
 permissions:
   contents: write
@@ -14,13 +11,6 @@ permissions:
 
 jobs:
   release:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      (
-        github.event.workflow_run.head_branch == 'main' ||
-        github.event.workflow_run.head_branch == 'beta'
-      )
     runs-on: ubuntu-latest
 
     steps:
