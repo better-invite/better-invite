@@ -114,3 +114,11 @@ jobs:
 
     uses: ./.github/workflows/release.yml
     secrets: inherit
+  ci:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test]
+    if: always()
+    steps:
+      - uses: re-actors/alls-green@v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}
