@@ -107,6 +107,11 @@ jobs:
   release:
     name: Release
     needs: [lint, typecheck, test, build]
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
 
     if: github.event_name == 'push' &&
         (github.ref == 'refs/heads/main' ||
