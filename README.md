@@ -73,8 +73,6 @@
 
 ## Installation
 
-> ⚠️ **Requires Better Auth v1.4.13 or newer**
-
 Install the plugin
 
 ```bash
@@ -135,59 +133,6 @@ const client = createClient({
 ```
 
 ---
-
-## Usage/Examples
-
-<h3 id="creating-invites"></h3>
-
-### 1. Creating Invites
-Authenticated users can create invite codes. You can create an invite on the client or on the server.
-
-```ts
-import { authClient } from "@/lib/auth-client";
-
-const { data, error } = await authClient.invite.create({
-  // Here you put the options
-  role: "admin",
-  // The invite is private, because no email is passed when creating the invite
-  senderResponse: "token" // Will receive the invite token
-});
-
-if (error) {
-  console.error("Failed to create invite:", error);
-}
-
-if (data) {
-  // Example response: { status: true, message: "token" }
-  console.log("Invite token:", data.message);
-}
-```
-
-<h3 id="activating-invites"></h3>
-
-### 2. Activating Invites
-
-When a user receives an invite code, he needs to activate it.
-If the user receives an email, the link they receive automatically activates the invite.
-
-You can also activate an invite manually using the api.
-
-```ts
-import { client } from "@/lib/auth-client";
-
-const { data, error } = await client.invite.activate({
-  token,
-});
-
-if (error) {
-  // Handle error (e.g., code invalid, expired, already used)
-  console.error("Failed to activate invite:", error);
-}
-
-// On successful activation, a cookie named (by default) '{your-app-name}.invite-code'
-// is set in the user's browser. This cookie will be used during sign-up.
-console.log("Invite activated successfully.");
-```
 
 #### How it works
 
