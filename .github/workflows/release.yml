@@ -1,7 +1,10 @@
 name: Release
 # Runs only after CI workflow completes successfully to publish a new release.
 on:
-  workflow_call:
+  push:
+    branches:
+      - main
+      - beta
 
 permissions:
   contents: write
@@ -18,7 +21,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
