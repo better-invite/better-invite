@@ -18,7 +18,10 @@ export const invitesHooks = (options: NewInviteOptions) => {
 					context.path === "/sign-in/email" ||
 					context.path === "/sign-in/email-otp" ||
 					context.path === "/callback/:id" ||
-					context.path === "/verify-email",
+					context.path === "/verify-email" ||
+					context.path === "/two-factor/verify-totp" ||
+					context.path === "/two-factor/verify-backup-code" ||
+					context.path === "/two-factor/verify-otp",
 
 				handler: createAuthMiddleware(async (ctx) => {
 					// Make sure we have a new session with a user
