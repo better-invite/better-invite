@@ -60,4 +60,4 @@ jobs:
         working-directory: package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm dlx semantic-release # <- The Run Commnand
+        run: pnpx semantic-release # <- The Run Commnand
