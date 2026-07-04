@@ -58,7 +58,7 @@
 	"devDependencies": {
 		"@types/better-sqlite3": "^7.6.13",
 		"@types/node": "^25.0.8",
-		"@vitest/coverage-v8": "4.0.17",
+		"@vitest/coverage-v8": "4.1.9",
 		"better-auth": "^1.6.11",
 		"better-sqlite3": "^12.11.1",
 		"tsdown": "^0.21.7",
