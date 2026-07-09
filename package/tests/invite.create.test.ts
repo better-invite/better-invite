@@ -446,6 +446,48 @@ test("returns default api redirect URL when inviteUrlType is api", async ({
 	expect(data?.message).toBe(expectedURL);
 });
 
+test("sends correct redirect URL on private invites", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser, db } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: mock.sendUserInvitation,
+		},
+	});
+
+	const invitedUserEmail = "test@email.com";
+
+	const { headers } = await signInWithTestUser();
+
+	const { error, data } = await client.invite.create({
+		role: "user",
+		email: invitedUserEmail,
+		fetchOptions: { headers },
+	});
+
+	expect(error).toBe(null);
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([invitedUserEmail]) }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const token = invite.token;
+
+	const expectedURL = `http://localhost:3000/api/auth/invite/${token}?callbackURL=%2Fauth%2Fsign-up`;
+
+	expect(mock.sendUserInvitation).toHaveBeenCalledWith(
+		expect.objectContaining({
+			url: expectedURL,
+		})
+	);
+});
+
 test("returns custom redirect URL when inviteUrlType is custom", async ({
 	createAuth,
 }) => {

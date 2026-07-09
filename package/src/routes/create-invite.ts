@@ -140,7 +140,7 @@ export const createInvite = (options: NewInviteOptions) => {
 
 				// If the invite is private, send the user an email
 				if (isPrivate) {
-					const redirectURLEmail = createRedirectURL({
+					const redirectURL = createRedirectURL({
 						ctx,
 						invitation,
 						callbackURL,
@@ -155,22 +155,13 @@ export const createInvite = (options: NewInviteOptions) => {
 						);
 					}
 
-					const realBaseURL = new URL(ctx.context.baseURL);
-					const pathname =
-						realBaseURL.pathname === "/" ? "" : realBaseURL.pathname;
-					const basePath = pathname ? "" : ctx.context.options.basePath || "";
-					const url = new URL(
-						`${pathname}${basePath}/${redirectURLEmail}`,
-						realBaseURL.origin,
-					);
-
 					try {
 						await options.sendUserInvitation(
 							{
 								email,
 								name: invitedUser?.user.name,
 								role,
-								url: url.toString(),
+								url: redirectURL.toString(),
 								token: invitation.token,
 								newAccount,
 							},
