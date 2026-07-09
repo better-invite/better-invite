@@ -460,7 +460,7 @@ test("sends correct redirect URL on private invites", async ({
 
 	const { headers } = await signInWithTestUser();
 
-	const { error, data } = await client.invite.create({
+	const { error } = await client.invite.create({
 		role: "user",
 		email: invitedUserEmail,
 		fetchOptions: { headers },
@@ -484,7 +484,8 @@ test("sends correct redirect URL on private invites", async ({
 	expect(mock.sendUserInvitation).toHaveBeenCalledWith(
 		expect.objectContaining({
 			url: expectedURL,
-		})
+		}),
+		expect.any(Request),
 	);
 });
 
