@@ -22,7 +22,7 @@
 		"feed": "^5.2.0",
 		"fumadocs-core": "^16.5.4",
 		"fumadocs-mdx": "^14.2.7",
-		"fumadocs-openapi": "^10.3.5",
+		"fumadocs-openapi": "^11.1.1",
 		"fumadocs-typescript": "^5.1.2",
 		"fumadocs-ui": "^16.5.4",
 		"lucide-react": "^1.24.0",
