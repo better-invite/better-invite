@@ -479,7 +479,7 @@ test("sends correct redirect URL on private invites", async ({
 
 	const token = invite.token;
 
-	const expectedURL = `http://localhost:3000/api/auth/invite/${token}?callbackURL=%2Fauth%2Fsign-up`;
+	const expectedURL = `http://localhost:3000/api/auth/invite/${token}?signInUpUrl=%2Fauth%2Fsign-up&callbackUrl=%2F&email=test%40email.com`;
 
 	expect(mock.sendUserInvitation).toHaveBeenCalledWith(
 		expect.objectContaining({
