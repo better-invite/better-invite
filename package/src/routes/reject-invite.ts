@@ -8,7 +8,11 @@ import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { checkPermissions, normalizeArray } from "../utils";
+import {
+	checkPermissions,
+	normalizeArray,
+	replacePlaceholders,
+} from "../utils";
 
 export const rejectInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -134,7 +138,11 @@ export const rejectInvite = (options: NewInviteOptions) => {
 			await options.inviteHooks?.afterRejectInvite?.({ ctx, invitation });
 
 			if (callbackUrl) {
-				return ctx.redirect(callbackUrl.replace("{token}", token));
+				return ctx.redirect(
+					replacePlaceholders(callbackUrl, {
+						token,
+					}),
+				);
 			}
 
 			return ctx.json({

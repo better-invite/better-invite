@@ -40,6 +40,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 				/**
 				 * Where to redirect the user to sign in/up.
 				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
+				 * {email} will be replaced by the actual email in private invites.
 				 */
 				signInUpUrl: z
 					.string()

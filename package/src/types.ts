@@ -310,6 +310,11 @@ export type InviteTypeWithId = InviteType & {
 
 export type TokensType = (typeof Tokens)[number];
 
+export type InviteCookie = {
+	token?: string;
+	callbackUrl?: string;
+};
+
 export type InviteUseType = {
 	inviteId: string;
 	usedByUserId: string;

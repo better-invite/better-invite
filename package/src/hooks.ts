@@ -6,7 +6,7 @@ import * as z from "zod";
 import { getInviteAdapter } from "./adapter";
 import { ERROR_CODES, INVITE_COOKIE_NAME } from "./constants";
 import type { NewInviteOptions } from "./types";
-import { consumeInvite, redirectError } from "./utils";
+import { consumeInvite, redirectError, replacePlaceholders } from "./utils";
 
 export const invitesHooks = (options: NewInviteOptions) => {
 	return {
@@ -166,7 +166,9 @@ export const invitesHooks = (options: NewInviteOptions) => {
 					});
 
 					// Redirect user after upgrading their role
-					const redirectURL = callbackUrl?.replace("{token}", ctx.params.token);
+					const redirectURL = replacePlaceholders(callbackUrl, {
+						token: ctx.params.token,
+					});
 
 					return ctx.redirect(redirectError(ctx.context, redirectURL));
 				}),

@@ -6,8 +6,8 @@ import {
 import type { UserWithRole } from "better-auth/plugins";
 import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
-import { ERROR_CODES } from "../constants";
-import type { NewInviteOptions } from "../types";
+import { ERROR_CODES, INVITE_COOKIE_NAME } from "../constants";
+import type { InviteCookie, NewInviteOptions } from "../types";
 import { normalizeArray } from "../utils";
 
 export const getInvite = (options: NewInviteOptions) => {
@@ -18,8 +18,9 @@ export const getInvite = (options: NewInviteOptions) => {
 			query: z.object({
 				/**
 				 * The invite token to look up.
+				 * If not provided, the endpoint will search for the invite token in the invite cookie.
 				 */
-				token: z.string().describe("The invite token to look up."),
+				token: z.string().describe("The invite token to look up.").optional(),
 			}),
 			metadata: {
 				openapi: {
@@ -81,9 +82,28 @@ export const getInvite = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
-			const { token } = ctx.query;
+			let { token } = ctx.query;
 
 			const adapter = getInviteAdapter(ctx.context, options);
+
+			if (!token) {
+				const cookie = await ctx.getSignedCookie(
+					INVITE_COOKIE_NAME,
+					ctx.context.secret,
+				);
+
+				if (!cookie) {
+					throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
+				}
+
+				const inviteData = JSON.parse(cookie) as InviteCookie;
+
+				token = inviteData.token;
+			}
+
+			if (!token) {
+				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
+			}
 
 			const invitation = await adapter.findInvitation(token);
 

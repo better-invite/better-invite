@@ -95,11 +95,13 @@ export async function acceptInviteGet(
 		token,
 		callbackUrl,
 		signInUpUrl,
+		email,
 		fetchOptions: customFetchOptions,
 	}: {
 		token: string;
 		callbackUrl?: string;
 		signInUpUrl?: string;
+		email?: string;
 		fetchOptions?: Omit<ClientFetchOption, "params">;
 	},
 ): Promise<{
@@ -114,6 +116,7 @@ export async function acceptInviteGet(
 	path: string | null;
 	data: Record<string, never> | null;
 	params?: URLSearchParams;
+	fullPath?: string;
 }> {
 	let location: string | null = null;
 
@@ -121,6 +124,7 @@ export async function acceptInviteGet(
 		query: {
 			callbackUrl,
 			signInUpUrl,
+			email,
 		},
 		fetchOptions: {
 			...customFetchOptions,
@@ -140,7 +144,7 @@ export async function acceptInviteGet(
 	}
 
 	// biome-ignore lint/style/noNonNullAssertion: it will NOT be undefined
-	const { params, path, allParams } = parseInviteError(location!);
+	const { params, path, allParams, fullPath } = parseInviteError(location!);
 
 	// We have newError because a redirect to a successful page shouldn't be considered an error
 	// newError fixes this
@@ -152,6 +156,7 @@ export async function acceptInviteGet(
 		path,
 		newError,
 		params: allParams,
+		fullPath,
 	};
 }
 
@@ -171,6 +176,7 @@ export async function resolveInviteRedirect(
 	path: string | null;
 	data: Record<string, never> | null;
 	params: URLSearchParams;
+	fullPath: string;
 }> {
 	let location: string | null = null;
 
@@ -190,7 +196,7 @@ export async function resolveInviteRedirect(
 		return res;
 	}
 
-	const { params, path, allParams } = parseInviteError(location);
+	const { params, path, allParams, fullPath } = parseInviteError(location);
 
 	const newError =
 		res.error && !(res.error.status === 302 && !params.error) ? params : null;
@@ -200,6 +206,7 @@ export async function resolveInviteRedirect(
 		path,
 		newError,
 		params: allParams,
+		fullPath,
 	};
 }
 
@@ -214,5 +221,6 @@ function parseInviteError(location: string) {
 		},
 		allParams: params,
 		path,
+		fullPath: location,
 	};
 }

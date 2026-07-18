@@ -147,6 +147,42 @@ export function getMaxUses(invitation: InviteTypeWithId) {
 }
 
 /**
+ * Replaces placeholders in a template string with URL-encoded values.
+ *
+ * Placeholders should be wrapped in curly braces and match the keys provided
+ * in the values object (e.g. `{email}`).
+ *
+ * @param template - The string containing placeholders to replace.
+ * @param values - An object mapping placeholder names to their replacement values.
+ * @returns The template string with all matching placeholders replaced by encoded values,
+ * or `undefined` if the template is undefined.
+ */
+export function replacePlaceholders(
+	template: string,
+	values: Record<string, string | undefined>,
+): string;
+
+export function replacePlaceholders(
+	template: string | undefined,
+	values: Record<string, string | undefined>,
+): string | undefined;
+
+export function replacePlaceholders(
+	template: string | undefined,
+	values: Record<string, string | undefined>,
+) {
+	if (template === undefined) {
+		return undefined;
+	}
+
+	return Object.entries(values).reduce(
+		(result, [key, value]) =>
+			result.replace(`{${key}}`, encodeURIComponent(value ?? "")),
+		template,
+	);
+}
+
+/**
  * Converts a string or a string array into a normalized array format.
  *
  * @returns A string array strings or a default value if the input is undefined.

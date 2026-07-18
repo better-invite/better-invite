@@ -14,8 +14,8 @@ import {
 	fullDefaultRedirectAfterUpgrade,
 	INVITE_COOKIE_NAME,
 } from "../constants";
-import type { NewInviteOptions } from "../types";
-import { consumeInvite, getMaxUses } from "../utils";
+import type { InviteCookie, NewInviteOptions } from "../types";
+import { consumeInvite, getMaxUses, replacePlaceholders } from "../utils";
 
 export const acceptInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -38,6 +38,15 @@ export const acceptInvite = (options: NewInviteOptions) => {
 						"Where to redirect the user after accepting the invite. {token} will be replaced by the actual token in the request body.",
 					)
 					.default(fullDefaultRedirectAfterUpgrade),
+				/**
+				 * Where to redirect the user to sign in/up.
+				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
+				 * {email} will be replaced by the actual email in private invites.
+				 */
+				signInUpUrl: z
+					.string()
+					.describe("The URL of the sign in/up page.")
+					.optional(),
 				/**
 				 * The invite token.
 				 */
@@ -194,7 +203,9 @@ export const acceptInviteLogic = async (
 			status: true,
 			message: "Invite accepted successfully",
 			action: "REDIRECT_TO_AFTER_UPGRADE",
-			redirectTo: body.callbackUrl?.replace("{token}", invitation.token),
+			redirectTo: replacePlaceholders(body.callbackUrl, {
+				token: invitation.token,
+			}),
 		});
 	}
 
@@ -203,16 +214,26 @@ export const acceptInviteLogic = async (
 
 	const cookie = ctx.context.createAuthCookie(INVITE_COOKIE_NAME, { maxAge });
 
+	const cookieValue: InviteCookie = {
+		token: body.token,
+		callbackUrl: body.callbackUrl,
+	};
+
 	await ctx.setSignedCookie(
 		cookie.name,
-		JSON.stringify({ token: body.token, callbackUrl: body.callbackUrl }),
+		JSON.stringify(cookieValue),
 		ctx.context.secret,
 		cookie.attributes,
 	);
 
-	const redirectTo = (
-		body.signInUpUrl ?? options.defaultRedirectToSignIn
-	).replace("{callbackUrl}", body.callbackUrl ?? "");
+	const redirectTo = replacePlaceholders(
+		body.signInUpUrl ?? options.defaultRedirectToSignIn,
+		{
+			callbackUrl: body.callbackUrl,
+			email: body.email,
+		},
+	);
+	console.log(redirectTo);
 
 	return ctx.json({
 		status: true,

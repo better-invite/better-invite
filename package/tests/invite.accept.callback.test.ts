@@ -875,3 +875,64 @@ test("acceptInviteCallback uses custom cookie names", async ({
 
 	expect(path).toBe("http://localhost:3000/");
 });
+
+test("acceptInviteCallback gives callbackUrl and email when signing in", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser, db } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+			defaultRedirectToSignIn:
+				"/auth/sign-in?callbackUrl={callbackUrl}&email={email}",
+		},
+	});
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+
+	// Create a new user
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	// This should be a role upgrade, because user already exists
+	await client.invite.create({
+		role: "owner",
+		email: [invitedUser.email, "other@example.com"],
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [
+			{
+				field: "emails",
+				value: JSON.stringify([invitedUser.email, "other@example.com"]),
+			},
+		],
+	});
+
+	const token = invite?.token;
+
+	if (!token) {
+		throw new Error("Token value is undefined");
+	}
+
+	// We accept the invite while being logged in as the invited user
+	// This represents the URL that would be generated when sending invitation emails.
+	const { fullPath } = await acceptInviteGet(client, {
+		token,
+		email: invitedUser.email,
+	});
+
+	expect(fullPath).toBe(
+		"http://localhost:3000/auth/sign-in?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2F&email=test%40email.com",
+	);
+});
