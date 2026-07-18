@@ -65,7 +65,7 @@ export const blog = defineCollections({
 	type: "doc",
 	dir: "content/blog",
 	schema: pageSchema.extend({
-		date: z.date(),
+		date: z.coerce.date(),
 		author: z.object({
 			name: z.string(),
 			github: z.string().optional(),

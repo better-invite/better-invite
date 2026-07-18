@@ -142,7 +142,7 @@ export const createInvite = (options: NewInviteOptions) => {
 			// Send one email per recipient, but reuse the same invitation/token.
 			if (isPrivate && options.sendUserInvitation) {
 				for (const recipient of recipients) {
-					const redirectURLEmail = createRedirectURL({
+					const redirectURL = createRedirectURL({
 						ctx,
 						invitation,
 						signInUpUrl: recipient.signInUpUrl,
@@ -151,22 +151,13 @@ export const createInvite = (options: NewInviteOptions) => {
 						callbackUrl: recipient.redirectToAfterUpgrade,
 					});
 
-					const realBaseURL = new URL(ctx.context.baseURL);
-					const pathname =
-						realBaseURL.pathname === "/" ? "" : realBaseURL.pathname;
-					const basePath = pathname ? "" : ctx.context.options.basePath || "";
-					const url = new URL(
-						`${pathname}${basePath}/${redirectURLEmail}`,
-						realBaseURL.origin,
-					);
-
 					try {
 						await options.sendUserInvitation(
 							{
 								email: recipient.email,
 								name: recipient.invitedUser?.user.name,
 								role,
-								url: url.toString(),
+								url: redirectURL.toString(),
 								token: invitation.token,
 								newAccount: recipient.newAccount,
 							},
