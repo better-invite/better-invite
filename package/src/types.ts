@@ -112,7 +112,7 @@ export type InviteOptions = {
 	 */
 	defaultRedirectToSignIn?: string;
 	/**
-	 * The URL to redirect the user to after upgrade their role (after accepting the invite).
+	 * The URL to redirect the user to after upgrading their role (after accepting the invite).
 	 * @deprecated Use `redirectToAfterUpgrade` in the request body of `invite.create()` instead.
 	 */
 	defaultRedirectAfterUpgrade?: string;
@@ -127,9 +127,17 @@ export type InviteOptions = {
 	defaultShareInviterName?: boolean;
 	/**
 	 * Max times an invite can be used
+	 * If not defined and maxUsesPerUser is defined, maxUses will be infinite.
 	 * @default 1 on private invites and infinite on public invites
 	 */
 	defaultMaxUses?: number;
+	/**
+	 * Max times an invite can be used by the same user
+	 * Use `Infinity` for unlimited uses per user.
+	 * Only works for private invites, public invites are always unlimited per user.
+	 * @default Infinity
+	 */
+	defaultMaxUsesPerUser?: number;
 	/**
 	 * How should the sender receive the token by default.
 	 * (sender only receives a token if no email is provided)
@@ -187,6 +195,13 @@ export type InviteOptions = {
 	 * @default false
 	 */
 	cleanupInvitesAfterMaxUses?: boolean;
+	/**
+	 * Keep the invite after the last rejection.
+	 * If set to false, the value of `cleanupInvitesOnDecision` will be used to determine if the invite should be deleted or marked as rejected.
+	 *
+	 * @default false
+	 */
+	keepInviteAfterLastRejection?: boolean;
 	/**
 	 * The user will be redirected here to accept their invite
 	 * Use {token}, {callbackUrl} and {email}, this will be replaced with their values
@@ -293,6 +308,7 @@ export type InviteType = {
 	createdAt: Date;
 	expiresAt: Date;
 	maxUses: number;
+	maxUsesPerUser?: number;
 	infinityMaxUses: boolean;
 	shareInviterName: boolean;
 	/**
@@ -301,6 +317,7 @@ export type InviteType = {
 	email?: string;
 	emails?: string[];
 	role: string;
+	callbackUrl?: string;
 	status: InvitationStatus;
 };
 

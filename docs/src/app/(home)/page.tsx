@@ -106,7 +106,7 @@ export default async function HomePage() {
 						/>
 					</div>
 					<div className="flex items-center justify-center gap-2 mt-7">
-						{communityStats.npmDownloads > 0 && (
+						{communityStats.npmDownloads && (
 							<a
 								href="https://www.npmjs.com/package/better-invite"
 								target="_blank"
@@ -120,7 +120,7 @@ export default async function HomePage() {
 								</div>
 							</a>
 						)}
-						{communityStats.githubStars > 0 && (
+						{communityStats.githubStars && (
 							<a
 								href="https://github.com/better-invite/better-invite"
 								target="_blank"

@@ -8,7 +8,7 @@ icon: Route
 
 <APIMethod path="/invite/create" method="POST" requireSession note="All parameters default to the plugin's options defaults, except for role and email.">
 ```ts
-type CreateInvite = {
+type createInvite = {
 	/**
 	 * The role to give the invited user.
 	 */
@@ -40,8 +40,15 @@ type CreateInvite = {
 
 	/**
 	 * The number of times an invitation can be used.
+	 * If not defined and maxUsesPerUser is defined, maxUses will be infinite.
 	 */
 	maxUses?: number
+	/**
+	 * The number of times an invitation can be used by the same user.
+	 * Use `Infinity` for unlimited uses per user.
+	 * Only works for private invites, public invites are always unlimited per user.
+	 */
+	maxUsesPerUser?: number
 
 	/**
 	 * Number of seconds the invitation token is valid for.
@@ -74,7 +81,7 @@ type CreateInvite = {
 
 	/**
 	 * The URL where the user will be redirected to accept their invite.
-	 * Use {token}, {callbackUrl} and {email}, which will be replaced with their values.
+	 * Use {token}, {signInUpUrl}, {callbackUrl}, {email} and {defaultUrlQuery}, which will be replaced with their values.
 	 */
 	customInviteUrl?: string
 }
@@ -98,7 +105,7 @@ type acceptInvite = {
 	 *
 	 * @default http://localhost:3000/
 	*/
-	callbackURL?: string
+	callbackUrl?: string
 	/**
 	 * Where to redirect the user to sign in/up.
 	 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
@@ -126,7 +133,7 @@ type acceptInvite = {
 
 <Callout type="info" title="Note">
   This endpoint is **not recommended** for direct usage. It exists mainly for internal use (e.g. the default link sent in invite emails).
-  The email link opens in the browser and triggers a `GET` request to `/api/auth/invite/{token}?callbackURL=...`.
+  The email link opens in the browser and triggers a `GET` request to `/api/auth/invite/{token}?callbackUrl=...`.
   For most apps, you should use [Accept Invite](#accept-invite) instead.
 </Callout>
 
@@ -139,7 +146,7 @@ type acceptInviteCallback = {
 	 *
 	 * @default http://localhost:3000/
 	*/
-	callbackURL?: string
+	callbackUrl?: string
 	/**
 	 * Where to redirect the user to sign in/up.
 	 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.

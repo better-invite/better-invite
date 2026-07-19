@@ -24,8 +24,7 @@ A private invite can have multiple emails, the invite works the same as a normal
 Internally, the plugin creates **only one invite** for all the users, with the same email, and sends an invite link
 (it's not the same for all users, since it includes a ?email=... query) to all the emails provided.
 But don't worry, if one user accepts or rejects the invite, doesn't mean the invite will be consumed for the other users, only that specific email will
-be marked as having accepted or rejected the invite, and the other emails can still use the invite until they also accept or reject it.
-This is secure because the invite 
+be deleted from the invite, and the other emails can still use the invite until they also accept or reject it.
 </Callout>
 
 If the invite is private, the plugin will send an email to the user (or users) with the invite link (see [Accept Invite Callback](/docs/core/api#accept-invite-callback)).

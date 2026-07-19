@@ -1087,3 +1087,111 @@ test("private invite includes email in custom invite URL", async ({
 	expect(url).not.toContain("{token}");
 	expect(url).not.toContain("{signInUpUrl}");
 });
+
+test("acceptInvite removes user email from private invite when maxUsesPerUser is 1", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+
+	const invitedUser = {
+		email: "test@email.com",
+		role: "user",
+		name: "Test User",
+		password: "12345678",
+	};
+	const invitedUser2 = {
+		email: "test2@email.com",
+		role: "user",
+		name: "Test User 2",
+		password: "12345678",
+	};
+
+	await createUser(invitedUser, db);
+	await createUser(invitedUser2, db);
+
+	// maxUses gets set to infinity because we have maxUsesPerUser defined
+	// and we don't overwrite the value of maxUses when creating the invite
+	await client.invite.create({
+		role: "owner",
+		email: [invitedUser.email, invitedUser2.email],
+		maxUsesPerUser: 1,
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [
+			{
+				field: "emails",
+				value: JSON.stringify([invitedUser.email, invitedUser2.email]),
+			},
+		],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const { headers: newHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+
+	const { error } = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: {
+			headers: newHeaders,
+		},
+	});
+
+	expect(error).toBeNull();
+
+	const updatedInvite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "token", value: invite.token }],
+	});
+
+	if (!updatedInvite) {
+		throw new Error("Updated invite not found");
+	}
+
+	expect(updatedInvite.emails).toEqual([invitedUser2.email]);
+
+	const secondAttempt = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: {
+			headers: newHeaders,
+		},
+	});
+
+	expect(secondAttempt.data).toBeNull();
+	expect(secondAttempt.error).toStrictEqual({
+		code: "INVALID_EMAIL",
+		message: "This token is for a specific email, this is not it",
+		status: 400,
+		statusText: "BAD_REQUEST",
+	});
+
+	const { headers: secondUserHeaders } = await signInWithUser(
+		invitedUser2.email,
+		invitedUser2.password,
+	);
+
+	const secondUserAccept = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: {
+			headers: secondUserHeaders,
+		},
+	});
+
+	expect(secondUserAccept.error).toBeNull();
+});

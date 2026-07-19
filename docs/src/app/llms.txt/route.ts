@@ -18,8 +18,7 @@ function groupPagesByCategory(pages: any[]): Map<string, PageInfo[]> {
 	const grouped = new Map<string, PageInfo[]>();
 
 	for (const page of pages) {
-		// Skip openapi pages
-		console.log(page);
+		// Skip "/examples" page (this doesn't include /examples/...)
 		if (page.slugs[0] === "examples" && !page.slugs[1]) continue;
 
 		const category = getSection(page.slugs[0]);

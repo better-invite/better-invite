@@ -1,13 +1,13 @@
 import { unstable_cache } from "next/cache";
 
 export interface CommunityStats {
-	npmDownloads: number;
-	npmWeeklyHistory: number[];
-	githubStars: number;
+	npmDownloads?: number;
+	npmWeeklyHistory?: number[];
+	githubStars?: number;
 }
 
 // Fetch NPM download stats for the last week
-async function fetchNpmDownloads(): Promise<number> {
+async function fetchNpmDownloads(): Promise<number | undefined> {
 	try {
 		const response = await fetch(
 			"https://api.npmjs.org/downloads/point/last-week/better-invite",
@@ -20,7 +20,7 @@ async function fetchNpmDownloads(): Promise<number> {
 		}
 
 		const data = await response.json();
-		return data.downloads || 800;
+		return data.downloads ?? undefined;
 	} catch (error) {
 		console.error("Error fetching NPM downloads:", error);
 		return 800; // Fallback value
@@ -28,7 +28,7 @@ async function fetchNpmDownloads(): Promise<number> {
 }
 
 // Fetch NPM weekly download history (last 6 months, aggregated by week)
-async function fetchNpmWeeklyHistory(): Promise<number[]> {
+async function fetchNpmWeeklyHistory(): Promise<number[] | undefined> {
 	try {
 		const end = new Date();
 		const start = new Date();
@@ -38,7 +38,7 @@ async function fetchNpmWeeklyHistory(): Promise<number[]> {
 			`https://api.npmjs.org/downloads/range/${fmt(start)}:${fmt(end)}/better-invite`,
 			{ next: { revalidate: 3600 } },
 		);
-		if (!response.ok) return [];
+		if (!response.ok) return undefined;
 		const data = await response.json();
 		const downloads: { day: string; downloads: number }[] = data.downloads;
 		// Aggregate daily into weekly buckets
@@ -62,7 +62,7 @@ const githubHeaders = {
 };
 
 // Fetch GitHub repository stars
-async function fetchGitHubStars(): Promise<number> {
+async function fetchGitHubStars(): Promise<number | undefined> {
 	try {
 		const repoResponse = await fetch(
 			"https://api.github.com/repos/better-invite/better-invite",
@@ -72,10 +72,10 @@ async function fetchGitHubStars(): Promise<number> {
 			},
 		);
 
-		let stars = 27;
+		let stars: number | undefined;
 		if (repoResponse.ok) {
 			const data = await repoResponse.json();
-			stars = data.stargazers_count || 53;
+			stars = data.stargazers_count ?? undefined;
 		} else {
 			console.error("Failed to fetch GitHub repo stats:", repoResponse.status);
 		}

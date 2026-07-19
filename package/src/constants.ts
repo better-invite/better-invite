@@ -24,3 +24,5 @@ export const Tokens = ["token", "code", "custom"] as const;
 export const INVITE_COOKIE_NAME = "invite_token";
 
 export const defaultRedirectAfterUpgrade = "/";
+
+export const defaultMaxUsesPerUser = Infinity;

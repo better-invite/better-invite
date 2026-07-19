@@ -10,7 +10,7 @@
 		"postinstall": "fumadocs-mdx",
 		"predev": "pnpm sync-beta",
 		"prebuild": "pnpm sync-beta",
-		"sync-beta": "node scripts/sync-beta-content.ts"
+		"sync-beta": "node scripts/sync-beta-content.mjs"
 	},
 	"dependencies": {
 		"@radix-ui/react-collapsible": "^1.1.12",

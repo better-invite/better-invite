@@ -14,7 +14,7 @@ import {
 	ERROR_CODES,
 	INVITE_COOKIE_NAME,
 } from "../constants";
-import type { InviteCookie, NewInviteOptions } from "../types";
+import type { NewInviteOptions } from "../types";
 import {
 	consumeInvite,
 	createFullURL,
@@ -220,18 +220,15 @@ export const acceptInviteLogic = async (
 	// If not logged in, store the token and ask the user to sign in/up
 	const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
 
-	const cookie = ctx.context.createAuthCookie(INVITE_COOKIE_NAME, { maxAge });
-
-	const cookieValue: InviteCookie = {
-		token: body.token,
-		callbackUrl,
-	};
+	const inviteCookie = ctx.context.createAuthCookie(INVITE_COOKIE_NAME, {
+		maxAge,
+	});
 
 	await ctx.setSignedCookie(
-		cookie.name,
-		JSON.stringify(cookieValue),
+		inviteCookie.name,
+		body.token,
 		ctx.context.secret,
-		cookie.attributes,
+		inviteCookie.attributes,
 	);
 
 	const redirectTo = replacePlaceholders(

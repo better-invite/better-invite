@@ -63,16 +63,12 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						: undefined;
 
 					const callbackUrlFromBody = bodyValidation.success
-						? validateCallbackUrl(
-								bodyValidation.data.callbackUrl,
-								ctx.request?.url,
-							)
+						? bodyValidation.data.callbackUrl
 						: undefined;
 
 					let inviteToken = inviteTokenFromBody;
-					let callbackUrl = callbackUrlFromBody;
 
-					if (!inviteToken || !callbackUrl) {
+					if (!inviteToken) {
 						// Fallback to the legacy cookie-based flow
 						const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
 						const inviteCookie = ctx.context.createAuthCookie(
@@ -80,23 +76,14 @@ export const invitesHooks = (options: NewInviteOptions) => {
 							{ maxAge },
 						);
 
-						const cookieValueString = await ctx.getSignedCookie(
+						const inviteTokenString = await ctx.getSignedCookie(
 							inviteCookie.name,
 							ctx.context.secret,
 						);
 
-						if (!cookieValueString) return;
+						if (!inviteTokenString) return;
 
-						const cookieValue = JSON.parse(cookieValueString) as {
-							token: string;
-							callbackUrl?: string;
-						};
-
-						inviteToken = cookieValue.token;
-						callbackUrl = validateCallbackUrl(
-							cookieValue.callbackUrl,
-							ctx.request?.url,
-						);
+						inviteToken = inviteTokenString;
 					}
 
 					if (!inviteToken) return;
@@ -134,6 +121,11 @@ export const invitesHooks = (options: NewInviteOptions) => {
 							code: "INTERNAL_SERVER_ERROR",
 						});
 					}
+
+					const callbackUrl = validateCallbackUrl(
+						callbackUrlFromBody ?? invitation.callbackUrl,
+						ctx.request?.url,
+					);
 
 					// Optional hook before accepting the invite
 					const before = await options.inviteHooks?.beforeAcceptInvite?.({

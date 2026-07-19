@@ -7,7 +7,7 @@ import type { UserWithRole } from "better-auth/plugins";
 import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { ERROR_CODES, INVITE_COOKIE_NAME } from "../constants";
-import type { InviteCookie, NewInviteOptions } from "../types";
+import type { NewInviteOptions } from "../types";
 import { normalizeArray } from "../utils";
 
 export const getInvite = (options: NewInviteOptions) => {
@@ -87,18 +87,20 @@ export const getInvite = (options: NewInviteOptions) => {
 			const adapter = getInviteAdapter(ctx.context, options);
 
 			if (!token) {
-				const cookie = await ctx.getSignedCookie(
-					INVITE_COOKIE_NAME,
+				const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
+				const inviteCookie = ctx.context.createAuthCookie(INVITE_COOKIE_NAME, {
+					maxAge,
+				});
+
+				const inviteToken = await ctx.getSignedCookie(
+					inviteCookie.name,
 					ctx.context.secret,
 				);
 
-				if (!cookie) {
+				if (!inviteToken) {
 					throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 				}
-
-				const inviteData = JSON.parse(cookie) as InviteCookie;
-
-				token = inviteData.token;
+				token = inviteToken;
 			}
 
 			if (!token) {

@@ -25,9 +25,7 @@ export const activateInvite = (options: NewInviteOptions) => {
 				 */
 				callbackUrl: z
 					.string()
-					.describe(
-						"Where to redirect the user after activating the invite. {token} will be replaced by the actual token in the request body.",
-					)
+					.describe("Where to redirect the user to sign in/up.")
 					.optional(),
 				/**
 				 * The invite token.

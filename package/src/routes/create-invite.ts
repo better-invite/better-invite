@@ -268,11 +268,22 @@ export const createInviteBodySchema = z.object({
 		.optional(),
 	/**
 	 * The number of times an invitation can be used.
+	 * If not defined and maxUsesPerUser is defined, maxUses will be infinite.
 	 * @default options.defaultMaxUses
 	 */
 	maxUses: z
 		.number()
 		.describe("The number of times an invitation can be used")
+		.optional(),
+	/**
+	 * The number of times an invitation can be used by the same user.
+	 * Use `Infinity` for unlimited uses per user.
+	 * Only works for private invites, public invites are always unlimited per user.
+	 * @default options.defaultMaxUsesPerUser
+	 */
+	maxUsesPerUser: z
+		.number()
+		.describe("The number of times an invitation can be used by the same user")
 		.optional(),
 	/**
 	 * Number of seconds the invitation token is
@@ -333,7 +344,7 @@ export const createInviteBodySchema = z.object({
 		.optional(),
 	/**
 	 * The user will be redirected here to accept their invite
-	 * Use {token}, {callbackUrl} and {email}, this will be replaced with their values
+	 * Use {token}, {signInUpUrl}, {callbackUrl}, {email} and {defaultUrlQuery}, which will be replaced with their values.
 	 */
 	customInviteUrl: z
 		.string()

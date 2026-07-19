@@ -577,3 +577,102 @@ test("works with old email field in db", async ({ createAuth }) => {
 		}),
 	);
 });
+
+test("rejectInvite removes only the rejecting user from a private invite", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const firstInvitee = {
+		email: "invitee1@test.com",
+		role: "user",
+		name: "Invitee 1",
+		password: "12345678",
+	};
+
+	const secondInvitee = {
+		email: "invitee2@test.com",
+		role: "user",
+		name: "Invitee 2",
+		password: "12345678",
+	};
+
+	await createUser(firstInvitee, db);
+	await createUser(secondInvitee, db);
+
+	const { headers: creatorHeaders } = await signInWithTestUser();
+
+	const created = await client.invite.create({
+		role: "admin",
+		email: [firstInvitee.email, secondInvitee.email],
+		fetchOptions: {
+			headers: creatorHeaders,
+		},
+	});
+
+	expect(created.error).toBeNull();
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [
+			{
+				field: "emails",
+				value: JSON.stringify([firstInvitee.email, secondInvitee.email]),
+			},
+		],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const { headers: firstHeaders } = await signInWithUser(
+		firstInvitee.email,
+		firstInvitee.password,
+	);
+
+	const rejected = await client.invite.reject({
+		token: invite.token,
+		fetchOptions: {
+			headers: firstHeaders,
+		},
+	});
+
+	expect(rejected.error).toBeNull();
+
+	const updatedInvite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "token", value: invite.token }],
+	});
+
+	if (!updatedInvite) {
+		throw new Error("Updated invite not found");
+	}
+
+	expect(updatedInvite.emails).toEqual([secondInvitee.email]);
+
+	const { headers: secondHeaders } = await signInWithUser(
+		secondInvitee.email,
+		secondInvitee.password,
+	);
+
+	const accepted = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: {
+			headers: secondHeaders,
+		},
+	});
+
+	expect(accepted.error).toBeNull();
+	expect(accepted.data).toStrictEqual({
+		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
+		message: "Invite accepted successfully",
+		redirectTo: "http://localhost:3000/",
+	});
+});

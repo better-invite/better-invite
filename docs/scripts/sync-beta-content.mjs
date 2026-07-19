@@ -16,7 +16,7 @@ if (process.env.BETA_DOCS_SKIP === "1") {
 	process.exit(0);
 }
 
-function git(args: string[], cwd?: string) {
+function git(args, cwd) {
 	execFileSync("git", args, { stdio: "inherit", cwd });
 }
 

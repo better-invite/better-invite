@@ -125,11 +125,22 @@ export const rejectInvite = (options: NewInviteOptions) => {
 
 			await options.inviteHooks?.beforeRejectInvite?.({ ctx, invitation });
 
-			if (options.cleanupInvitesOnDecision) {
-				await adapter.deleteInviteUses(invitation.id);
-				await adapter.deleteInvitation(token);
-			} else {
-				await adapter.updateInvitation(invitation.id, "rejected");
+			const remainingEmails = emails.filter(
+				(email) => email !== inviteeUser.email,
+			);
+
+			await adapter.removeUserByEmail(invitation.id, inviteeUser.email);
+
+			if (
+				remainingEmails.length === 0 &&
+				!options.keepInviteAfterLastRejection
+			) {
+				if (options.cleanupInvitesOnDecision) {
+					await adapter.deleteInviteUses(invitation.id);
+					await adapter.deleteInvitation(token);
+				} else {
+					await adapter.updateInvitation(invitation.id, "rejected");
+				}
 			}
 
 			await options.inviteHooks?.afterRejectInvite?.({ ctx, invitation });

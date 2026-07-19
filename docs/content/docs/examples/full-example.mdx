@@ -42,7 +42,7 @@ async sendUserInvitation({ email, role, url }) {
 }
 ```
 
-This completely replaces the default URL (`/api/invite/accept`).
+This completely replaces the default URL (`/api/auth/invite/{token}`).
 </Step>
 
 <Step>
@@ -106,7 +106,7 @@ Use the option `redirectToAfterUpgrade` when creating an invite to configure whe
 
 This is different from `customInviteUrl`:
 
-- `customInviteUrl` controls the initial invite URL sent to the user, it contains the redirectToAfterUpgrade as a query parameter.
+- `customInviteUrl` controls the initial invite URL sent to the user, it contains the `redirectToAfterUpgrade` (as `callbackUrl`) as a query parameter.
 - `redirectToAfterUpgrade` controls the final redirect after accepting or rejecting the invite.
 
 <Callout>

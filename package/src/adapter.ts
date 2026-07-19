@@ -1,5 +1,6 @@
 import type { AuthContext, DBAdapter, Where } from "better-auth";
 import type { UserWithRole } from "better-auth/plugins";
+import { defaultMaxUsesPerUser } from "./constants";
 import type { CreateInvite } from "./routes/create-invite";
 import type {
 	InvitationStatus,
@@ -35,10 +36,24 @@ export const getInviteAdapter = (
 			const token = generateToken();
 			const now = options.getDate();
 
-			const maxUses = invite.maxUses ?? options.defaultMaxUses;
+			let maxUsesPerUser: number | undefined =
+				invite.maxUsesPerUser ??
+				options.defaultMaxUsesPerUser ??
+				defaultMaxUsesPerUser;
 
-			const isUnlimited =
-				!isPrivate && (maxUses == null || maxUses === Infinity);
+			if (maxUsesPerUser === Infinity) {
+				maxUsesPerUser = undefined;
+			}
+
+			// If maxUsesPerUser is defined, then maxUses will be infinite unless explicitly set
+			// If not defined, then maxUses will be 1 for private invites and infinite for public invites
+			const defaultMaxUses =
+				maxUsesPerUser != null ? Infinity : isPrivate ? 1 : Infinity;
+
+			const maxUses =
+				invite.maxUses ?? defaultMaxUses ?? options.defaultMaxUses;
+
+			const isUnlimited = maxUses === Infinity;
 
 			return baseAdapter.create<InviteTypeWithId>({
 				model: inviteTable,
@@ -47,11 +62,13 @@ export const getInviteAdapter = (
 					createdByUserId: user.id,
 					createdAt: now,
 					expiresAt,
-					maxUses: isUnlimited ? 1 : (maxUses ?? 1),
+					maxUses: isUnlimited ? 1 : maxUses,
+					maxUsesPerUser,
 					infinityMaxUses: isUnlimited,
 					shareInviterName: payload.shareInviterName,
 					emails: normalizeArray(invite.email, true),
 					role: invite.role,
+					callbackUrl: payload.redirectToAfterUpgrade,
 					status: "pending",
 				},
 			});

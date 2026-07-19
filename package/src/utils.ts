@@ -82,7 +82,6 @@ export const consumeInvite = async ({
 			? await checkPermissions(ctx, canAcceptRaw)
 			: canAcceptRaw;
 
-	console.log(canAccept);
 	if (!canAccept) {
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.CANT_ACCEPT_INVITE);
 	}
@@ -126,7 +125,11 @@ export const consumeInvite = async ({
 			usedAt,
 		});
 
-		await adapter.removeUserByEmail(invitation.id, invitedUser.email);
+		// If maxUsesPerUser is enabled for a private invitation,
+		// remove the user's email so they can't accept it again.
+		if (invitation.maxUsesPerUser !== undefined && isPrivate) {
+			await adapter.removeUserByEmail(invitation.id, invitedUser.email);
+		}
 	}
 
 	// Fire optional hook
@@ -381,7 +384,7 @@ export const validateCallbackUrl = (
 	if (!callbackUrl || !requestUrl) return undefined;
 
 	try {
-		const url = new URL(callbackUrl);
+		const url = new URL(callbackUrl, requestUrl);
 		const requestOrigin = new URL(requestUrl).origin;
 
 		if (url.origin !== requestOrigin) {

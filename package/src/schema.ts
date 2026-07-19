@@ -7,6 +7,7 @@ export const schema = {
 			createdAt: { type: "date" },
 			expiresAt: { type: "date", required: true },
 			maxUses: { type: "number", required: true },
+			maxUsesPerUser: { type: "number", required: false },
 			infinityMaxUses: { type: "boolean", required: true, defaultValue: false },
 			createdByUserId: {
 				type: "string",
@@ -17,6 +18,7 @@ export const schema = {
 			emails: { type: "string[]", required: false },
 			role: { type: "string", required: true },
 			newAccount: { type: "boolean", required: false }, //! Deprecated
+			callbackUrl: { type: "string", required: false },
 			status: {
 				type: ["pending", "rejected", "canceled", "used"] as const,
 				required: true,
