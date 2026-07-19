@@ -156,15 +156,15 @@ if (data) {
 await authClient.invite.create({
   // Here you put the options
   role: "admin",
-  // The invite is private, because no email is passed when creating the invite
-  emails: ["test@email.com"], // A list of users the invite works on (also a list of the users to send an invite email to)
+  // The invite is private, because an email is passed when creating the invite
+  email: ["test@email.com"], // A list of users the invite works on (also a list of the users to send an invite email to)
   redirectToAfterUpgrade: "/auth/invited"
 });
 ```
 
 ### Accepting Invites
 
-When a user receives an invite code, he needs to either accept or reject it.
+When a user receives an invite code, they can accept it, and only private invitees can reject an invite.
 If the user receives an email, the link they receive **automatically accepts the invite**.
 
 But you can also activate an invite manually using the API.
@@ -179,8 +179,8 @@ await client.invite.accept({
 
 ### Rejecting Invites
 
-Rejecting invites works the same as accepting invites, internally it removes the user
-form the invite emails lists, and removes an invite use
+Rejecting an invite marks it as rejected. For private invites with multiple email addresses, only the rejected email is removed from the invite's email list.
+When `cleanupInvitesOnDecision` is enabled, the invite and all associated uses are deleted.
 
 ```ts
 await client.invite.reject({

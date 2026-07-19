@@ -1,6 +1,7 @@
 import {
 	APIError,
 	createAuthEndpoint,
+	originCheck,
 	sessionMiddleware,
 } from "better-auth/api";
 import type { UserWithRole } from "better-auth/plugins";
@@ -19,19 +20,15 @@ export const rejectInvite = (options: NewInviteOptions) => {
 		"/invite/reject",
 		{
 			method: "POST",
-			use: [sessionMiddleware],
+			use: [sessionMiddleware, originCheck((ctx) => ctx.body.callbackUrl)],
 			body: z.object({
 				/**
 				 * The invite token to reject.
-				 * {token} will be replaced by the actual token in the request body.
 				 */
-				token: z
-					.string()
-					.describe(
-						"The invite token to reject. {token} will be replaced by the actual token in the request body.",
-					),
+				token: z.string().describe("The invite token to reject."),
 				/**
-				 * Where to redirect the user after rejecting the invite..
+				 * Where to redirect the user after rejecting the invite.
+				 * {token} will be replaced by the actual token in the request body.
 				 */
 				callbackUrl: z
 					.string()

@@ -1,6 +1,5 @@
 import { createAuthEndpoint, originCheck } from "better-auth/api";
 import * as z from "zod";
-import { fullDefaultRedirectAfterUpgrade } from "../constants";
 import type { NewInviteOptions } from "../types";
 import { redirectCallback, redirectError } from "../utils";
 import { acceptInviteLogic } from "./accept-invite";
@@ -25,6 +24,8 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 		// This route exists for backwards compatibility with apps still using the old
 		// activate invite callback (which is NOT recommended). New apps should use `acceptInvite` instead.
 		// `/invite/:token` is now handled by the new accept invite flow.
+		// This works because when using activateInviteCallback, this route is called,
+		// but when using /invite/:token, the new accept invite callback flow is called.
 		"/invite/:token/activate",
 		{
 			method: "GET",
@@ -37,12 +38,14 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				 * Where to redirect the user after sing in/up
 				 * {token} will be replaced by the actual token in the request body.
 				 *
-				 * @default http://localhost:3000/
+				 * Note: This is called `callbackURL` instead of `callbackUrl` to match the query parameter name used in the old activate invite callback flow.
+				 *
+				 * @default /
 				 */
-				callbackUrl: z
+				callbackURL: z
 					.string()
 					.describe("Where to redirect the user after sing in/up")
-					.default(fullDefaultRedirectAfterUpgrade),
+					.optional(),
 				/**
 				 * Where to redirect the user to sign in/up.
 				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
@@ -61,7 +64,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 			}),
 			metadata: {
 				openapi: {
-					operationId: "acceptInviteCallback",
+					operationId: "activateInviteCallback",
 					description:
 						"Redirects the user to the callback URL with the token in a cookie. If an error occurs, the user is redirected to the callback URL with the query parameters 'error' and 'message'.",
 					parameters: [
@@ -116,6 +119,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				res = await acceptInviteLogic(options, ctx, {
 					...ctx.params,
 					...ctx.query,
+					callbackUrl: ctx.query.callbackURL,
 				});
 			} catch (e) {
 				// If something fails, we don't return JSON, we redirect with error info
@@ -127,7 +131,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				const message = err?.body?.message ?? "Internal server error";
 
 				return ctx.redirect(
-					redirectError(ctx.context, ctx.query.callbackUrl, { message, error }),
+					redirectError(ctx.context, ctx.query.callbackURL, { message, error }),
 				);
 			}
 
@@ -151,7 +155,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				);
 
 			// Fallback: something unexpected happened
-			redirectError(ctx.context, ctx.query.callbackUrl, {
+			redirectError(ctx.context, ctx.query.callbackURL, {
 				message: "Internal server error",
 				error: "SERVER_ERROR",
 			});

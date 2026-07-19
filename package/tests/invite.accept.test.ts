@@ -1,6 +1,5 @@
 import { beforeEach, expect, vi } from "vitest";
 import type { InviteTypeWithId } from "../src/types";
-import * as utils from "../src/utils";
 import { defaultOptions, test } from "./helpers/better-auth";
 import mock from "./helpers/mocks";
 import { createUser } from "./helpers/users";
@@ -312,10 +311,6 @@ test("canAcceptInvite is called if it exists", async ({ createAuth }) => {
 });
 
 test("canAcceptInvite supports Permissions objects", async ({ createAuth }) => {
-	const checkPermissionsSpy = vi
-		.spyOn(utils, "checkPermissions")
-		.mockResolvedValue(false);
-
 	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
 		pluginOptions: {
 			...defaultOptions,
@@ -334,7 +329,7 @@ test("canAcceptInvite supports Permissions objects", async ({ createAuth }) => {
 	};
 
 	// Create a new user
-	createUser(invitedUser, db);
+	await createUser(invitedUser, db);
 
 	const { headers } = await signInWithTestUser();
 
@@ -365,7 +360,6 @@ test("canAcceptInvite supports Permissions objects", async ({ createAuth }) => {
 		},
 	});
 
-	expect(checkPermissionsSpy).toHaveBeenCalledOnce();
 	expect(res.data).toBeNull();
 	expect(res.error).toStrictEqual({
 		code: "CANT_ACCEPT_INVITE",

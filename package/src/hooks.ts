@@ -6,7 +6,12 @@ import * as z from "zod";
 import { getInviteAdapter } from "./adapter";
 import { ERROR_CODES, INVITE_COOKIE_NAME } from "./constants";
 import type { NewInviteOptions } from "./types";
-import { consumeInvite, redirectError, replacePlaceholders } from "./utils";
+import {
+	consumeInvite,
+	redirectError,
+	replacePlaceholders,
+	validateCallbackUrl,
+} from "./utils";
 
 export const invitesHooks = (options: NewInviteOptions) => {
 	return {
@@ -58,7 +63,10 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						: undefined;
 
 					const callbackUrlFromBody = bodyValidation.success
-						? bodyValidation.data.callbackUrl
+						? validateCallbackUrl(
+								bodyValidation.data.callbackUrl,
+								ctx.request?.url,
+							)
 						: undefined;
 
 					let inviteToken = inviteTokenFromBody;
@@ -85,7 +93,10 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						};
 
 						inviteToken = cookieValue.token;
-						callbackUrl = cookieValue.callbackUrl;
+						callbackUrl = validateCallbackUrl(
+							cookieValue.callbackUrl,
+							ctx.request?.url,
+						);
 					}
 
 					if (!inviteToken) return;
@@ -167,7 +178,7 @@ export const invitesHooks = (options: NewInviteOptions) => {
 
 					// Redirect user after upgrading their role
 					const redirectURL = replacePlaceholders(callbackUrl, {
-						token: ctx.params.token,
+						token: inviteToken,
 					});
 
 					return ctx.redirect(redirectError(ctx.context, redirectURL));

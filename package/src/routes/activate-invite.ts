@@ -1,6 +1,5 @@
 import { createAuthEndpoint, originCheck } from "better-auth/api";
 import * as z from "zod";
-import { fullDefaultRedirectAfterUpgrade } from "../constants";
 import type { NewInviteOptions } from "../types";
 import { acceptInviteLogic } from "./accept-invite";
 
@@ -21,24 +20,14 @@ export const activateInvite = (options: NewInviteOptions) => {
 			],
 			body: z.object({
 				/**
-				 * Where to redirect the user after activating the invite.
-				 * {token} will be replaced by the actual token in the request body.
-				 *
-				 * @default http://localhost:3000/
+				 * Where to redirect the user to sign in/up.
+				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
 				 */
 				callbackUrl: z
 					.string()
 					.describe(
 						"Where to redirect the user after activating the invite. {token} will be replaced by the actual token in the request body.",
 					)
-					.default(fullDefaultRedirectAfterUpgrade),
-				/**
-				 * Where to redirect the user to sign in/up.
-				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
-				 */
-				signInUpUrl: z
-					.string()
-					.describe("The URL of the sign in/up page.")
 					.optional(),
 				/**
 				 * The invite token.
@@ -117,7 +106,11 @@ export const activateInvite = (options: NewInviteOptions) => {
 				alreadyWarned = true;
 			}
 
-			return acceptInviteLogic(options, ctx, ctx.body);
+			return acceptInviteLogic(options, ctx, {
+				...ctx.body,
+				signInUpUrl: ctx.body.callbackUrl,
+				callbackUrl: undefined,
+			});
 		},
 	);
 };

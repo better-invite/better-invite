@@ -40,6 +40,7 @@ export async function getLLMText(
 ) {
 	const section = getSection(page.slugs[0]);
 	const category = formatCategoryName(section);
+	const branch = version?.branch ?? "main";
 
 	const processed = (await page.data.getText("processed")).trimStart();
 
@@ -49,7 +50,7 @@ export async function getLLMText(
 
 	return `${versionNote}# ${category}: ${page.data.title}
 URL: ${page.url}
-Source: https://raw.githubusercontent.com/better-invite/better-invite/refs/heads/main/docs/content/docs/${page.path}
+Source: https://raw.githubusercontent.com/better-invite/better-invite/refs/heads/${branch}/docs/content/docs/${page.path}
 
 ${page.data.description}
 

@@ -8,92 +8,75 @@ icon: Route
 
 <APIMethod path="/invite/create" method="POST" requireSession note="All parameters default to the plugin's options defaults, except for role and email.">
 ```ts
-type createInvite = {
+type CreateInvite = {
 	/**
 	 * The role to give the invited user.
 	 */
 	role: string
+
 	/**
-	 * The email address of the user to send a invitation email to.
+	 * The email (or emails) address of the user to send an invitation email to.
+	 * If email is present, the invite is private.
 	 */
-	email?: string // If email is present, the invite is private
+	email?: string | string[]
+
 	/**
-	 * Type of token to use, 24 character token,
-	 * 6 digit code or custom options.generateToken.
-   * @default options.defaultTokenType
+	 * Type of token to use:
+	 * 24 character token, 6 digit code or custom options.generateToken.
 	 */
 	tokenType?: "token" | "code" | "custom"
+
 	/**
 	 * The URL to redirect the user to create their account.
-	 * If the token isn't valid or expired, it'll be redirected with a query parameter
-	 * `?error=INVALID_TOKEN`.
-	 * If the token is valid, it'll be redirected with a query parameter
-	 * `?token=VALID_TOKEN`.
-   * 
-   * @default options.defaultRedirectTo
+	 * {callbackUrl} will be replaced by the actual callback URL.
 	 */
 	redirectToSignUp?: string
+
 	/**
 	 * The URL to redirect the user to upgrade their role.
-   * If the token isn't valid or expired, it'll be redirected with a query parameter
-	 * `?error=INVALID_TOKEN`.
-	 * If the token is valid, it'll be redirected with a query parameter
-	 * `?token=VALID_TOKEN`.
-   * 
-   * @default options.defaultRedirectToSignIn
+	 * {callbackUrl} will be replaced by the actual callback URL.
 	 */
 	redirectToSignIn?: string
-	/**
-	 * The URL to redirect the user to after upgrade their role (after activating the invite).
-	 * @deprecated Use `redirectToAfterUpgrade` in the request body of `invite.create()` instead.
-	 */
-	defaultRedirectAfterUpgrade?: string;
+
 	/**
 	 * The number of times an invitation can be used.
-   * 
-   * @default options.defaultMaxUses
 	 */
 	maxUses?: number
+
 	/**
 	 * Number of seconds the invitation token is valid for.
-   * 
-   * @default options.invitationTokenExpiresIn
 	 */
 	expiresIn?: number
+
+	/**
+	 * The URL to redirect the user to after upgrading their role
+	 * (after accepting the invite).
+	 * {token} will be replaced with the actual invite token.
+	 */
+	redirectToAfterUpgrade?: string
+
 	/**
 	 * Whether the inviter's name should be shared with the invitee.
-	 *
-	 * When enabled, the person receiving the invitation will see
-	 * the name of the user who created the invitation.
-   * 
-   * @default options.defaultShareInviterName
 	 */
 	shareInviterName?: boolean
+
 	/**
 	 * How should the sender receive the token.
-	 * (sender only receives a token if no email is provided)
-   * 
-   * @default options.defaultSenderResponse
+	 * Sender only receives a token if no email is provided.
 	 */
 	senderResponse?: "token" | "url"
+
 	/**
 	 * Where should we redirect the user?
-	 * (only if no email is provided)
-   * 
-   * @default options.defaultSenderResponseRedirect
+	 * Only if no email is provided.
 	 */
 	senderResponseRedirect?: "signUp" | "signIn"
+
 	/**
-	 * If inviteUrlType is set to custom, this will be used
-	 * Use {token} and {callbackUrl}, this will be replaced with their values
+	 * The URL where the user will be redirected to accept their invite.
+	 * Use {token}, {callbackUrl} and {email}, which will be replaced with their values.
 	 */
 	customInviteUrl?: string
-	/**
-	 * The url to send in the email to the user
-	 *
-	 * @default api
-	 */
-	inviteUrlType?: "api" | "custom"
 }
 ```
 </APIMethod>
@@ -106,11 +89,11 @@ type createInvite = {
 
 # Accept Invite
 
-<APIMethod path="/invite/activate" method="POST" requireSession note="If the user is not logged in, it redirects the user to the callback URL with the token in a cookie.">
+<APIMethod path="/invite/accept" method="POST" requireSession note="If the user is not logged in, it returns a message to sign in/up and stores the token in a cookie.">
 ```ts
-type activateInvite = {
+type acceptInvite = {
 	/**
-	 * Where to redirect the user after activating the invite.
+	 * Where to redirect the user after accepting the invite.
 	 * {token} will be replaced by the actual token in the request body.
 	 *
 	 * @default http://localhost:3000/
@@ -136,7 +119,7 @@ type activateInvite = {
 # Activate Invite Callback
 
 <Callout type="warn" title="Deprecated">
-  This endpoint is deprecated, use accept invite instead for POST requests
+  This endpoint is deprecated, use accept invite callback instead.
 </Callout>
 
 # Accept Invite Callback
@@ -144,12 +127,12 @@ type activateInvite = {
 <Callout type="info" title="Note">
   This endpoint is **not recommended** for direct usage. It exists mainly for internal use (e.g. the default link sent in invite emails).
   The email link opens in the browser and triggers a `GET` request to `/api/auth/invite/{token}?callbackURL=...`.
-  For most apps, you should use [Activate Invite](#activate-invite) instead.
+  For most apps, you should use [Accept Invite](#accept-invite) instead.
 </Callout>
 
 <APIMethod path="/invite/:token" clientMethod='invite[":token"]' method="GET" optionalSession fetchOptionsParams="token" note="If the user is not logged in, it redirects the user to the callback URL with the token in a cookie.">
 ```ts
-type activateInviteCallback = {
+type acceptInviteCallback = {
 	/**
 	 * Where to redirect the user after sing in/up
 	 * {token} will be replaced by the actual token in the request body.
@@ -229,8 +212,9 @@ Get basic information about an invitation.
 type getInvite = {
   /**
    * The invite token to look up.
+	 * If not provided, the endpoint will search for the invite token in the invite cookie.
   */
-  token: string
+  token?: string
 }
 ```
 </APIMethod>

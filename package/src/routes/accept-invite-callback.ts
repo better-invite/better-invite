@@ -1,6 +1,5 @@
 import { createAuthEndpoint, originCheck } from "better-auth/api";
 import * as z from "zod";
-import { fullDefaultRedirectAfterUpgrade } from "../constants";
 import type { NewInviteOptions } from "../types";
 import { redirectCallback, redirectError } from "../utils";
 import { acceptInviteLogic } from "./accept-invite";
@@ -18,7 +17,6 @@ import { acceptInviteLogic } from "./accept-invite";
  */
 export const acceptInviteCallback = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
-		// Replaces the old activate invite callback, without generating breaking changes
 		"/invite/:token",
 		{
 			method: "GET",
@@ -31,12 +29,12 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 				 * Where to redirect the user after sing in/up
 				 * {token} will be replaced by the actual token in the request body.
 				 *
-				 * @default http://localhost:3000/
+				 * @default /
 				 */
 				callbackUrl: z
 					.string()
 					.describe("Where to redirect the user after sing in/up")
-					.default(fullDefaultRedirectAfterUpgrade),
+					.optional(),
 				/**
 				 * Where to redirect the user to sign in/up.
 				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
@@ -138,10 +136,12 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 				);
 
 			// Fallback: something unexpected happened
-			redirectError(ctx.context, ctx.query.callbackUrl, {
-				message: "Internal server error",
-				error: "SERVER_ERROR",
-			});
+			return ctx.redirect(
+				redirectError(ctx.context, ctx.query.callbackUrl, {
+					message: "Internal server error",
+					error: "SERVER_ERROR",
+				}),
+			);
 		},
 	);
 };

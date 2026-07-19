@@ -16,14 +16,14 @@ async function fetchNpmDownloads(): Promise<number> {
 
 		if (!response.ok) {
 			console.error("Failed to fetch NPM downloads:", response.status);
-			return 2_000_000; // Fallback value
+			return 800; // Fallback value
 		}
 
 		const data = await response.json();
-		return data.downloads || 2_000_000;
+		return data.downloads || 800;
 	} catch (error) {
 		console.error("Error fetching NPM downloads:", error);
-		return 2_000_000; // Fallback value
+		return 800; // Fallback value
 	}
 }
 
@@ -75,7 +75,7 @@ async function fetchGitHubStars(): Promise<number> {
 		let stars = 27;
 		if (repoResponse.ok) {
 			const data = await repoResponse.json();
-			stars = data.stargazers_count || 27;
+			stars = data.stargazers_count || 53;
 		} else {
 			console.error("Failed to fetch GitHub repo stats:", repoResponse.status);
 		}

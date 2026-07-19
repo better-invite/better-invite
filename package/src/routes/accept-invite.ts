@@ -10,12 +10,17 @@ import type { UserWithRole } from "better-auth/plugins";
 import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import {
+	defaultRedirectAfterUpgrade,
 	ERROR_CODES,
-	fullDefaultRedirectAfterUpgrade,
 	INVITE_COOKIE_NAME,
 } from "../constants";
 import type { InviteCookie, NewInviteOptions } from "../types";
-import { consumeInvite, getMaxUses, replacePlaceholders } from "../utils";
+import {
+	consumeInvite,
+	createFullURL,
+	getMaxUses,
+	replacePlaceholders,
+} from "../utils";
 
 export const acceptInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -30,14 +35,14 @@ export const acceptInvite = (options: NewInviteOptions) => {
 				 * Where to redirect the user after accepting the invite.
 				 * {token} will be replaced by the actual token in the request body.
 				 *
-				 * @default http://localhost:3000/
+				 * @default /
 				 */
 				callbackUrl: z
 					.string()
 					.describe(
 						"Where to redirect the user after accepting the invite. {token} will be replaced by the actual token in the request body.",
 					)
-					.default(fullDefaultRedirectAfterUpgrade),
+					.optional(),
 				/**
 				 * Where to redirect the user to sign in/up.
 				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
@@ -134,11 +139,14 @@ export const acceptInviteLogic = async (
 	ctx: GenericEndpointContext,
 	body: {
 		token: string;
-		callbackUrl: string;
+		callbackUrl?: string;
 		email?: string;
 		signInUpUrl?: string;
 	},
 ) => {
+	const callbackUrl =
+		body.callbackUrl ??
+		createFullURL({ ctx, url: defaultRedirectAfterUpgrade }).toString();
 	const adapter = getInviteAdapter(ctx.context, options);
 
 	// Find the invitation
@@ -203,7 +211,7 @@ export const acceptInviteLogic = async (
 			status: true,
 			message: "Invite accepted successfully",
 			action: "REDIRECT_TO_AFTER_UPGRADE",
-			redirectTo: replacePlaceholders(body.callbackUrl, {
+			redirectTo: replacePlaceholders(callbackUrl, {
 				token: invitation.token,
 			}),
 		});
@@ -216,7 +224,7 @@ export const acceptInviteLogic = async (
 
 	const cookieValue: InviteCookie = {
 		token: body.token,
-		callbackUrl: body.callbackUrl,
+		callbackUrl,
 	};
 
 	await ctx.setSignedCookie(
@@ -229,11 +237,10 @@ export const acceptInviteLogic = async (
 	const redirectTo = replacePlaceholders(
 		body.signInUpUrl ?? options.defaultRedirectToSignIn,
 		{
-			callbackUrl: body.callbackUrl,
+			callbackUrl,
 			email: body.email,
 		},
 	);
-	console.log(redirectTo);
 
 	return ctx.json({
 		status: true,

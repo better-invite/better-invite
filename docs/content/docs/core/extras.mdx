@@ -82,7 +82,7 @@ Here's an example:
 
 # Optional Session
 
-The `activateInvite` route uses an optional session, which allows invites to be activated whether or not the user is logged in:
+The `acceptInvite` route uses an optional session, which allows invites to be accepted whether or not the user is logged in:
 
 - **If you are logged in:**  
   The invite is immediately applied, and your role is upgraded according to the invite.
@@ -104,7 +104,7 @@ export const auth = betterAuth({
         window: 60, // time window in seconds
         max: 100, // max requests in the window
         customRules: {
-            "/invite/activate": {
+            "/invite/accept": {
                 window: 10,
                 max: 3,
             },

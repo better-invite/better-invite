@@ -112,7 +112,7 @@ export type InviteOptions = {
 	 */
 	defaultRedirectToSignIn?: string;
 	/**
-	 * The URL to redirect the user to after upgrade their role (after activating the invite).
+	 * The URL to redirect the user to after upgrade their role (after accepting the invite).
 	 * @deprecated Use `redirectToAfterUpgrade` in the request body of `invite.create()` instead.
 	 */
 	defaultRedirectAfterUpgrade?: string;
@@ -170,7 +170,7 @@ export type InviteOptions = {
 	/**
 	 * Maximum age (in seconds) for the invitation cookie.
 	 * This controls how long users have to complete the login flow
-	 * before activating the token if they are not logged in.
+	 * before accepting the token if they are not logged in.
 	 *
 	 * @default 600 (10 minutes)
 	 */
@@ -188,7 +188,7 @@ export type InviteOptions = {
 	 */
 	cleanupInvitesAfterMaxUses?: boolean;
 	/**
-	 * The user will be redirected here to activate their invite
+	 * The user will be redirected here to accept their invite
 	 * Use {token}, {callbackUrl} and {email}, this will be replaced with their values
 	 */
 	defaultCustomInviteUrl?: string;

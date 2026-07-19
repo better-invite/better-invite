@@ -79,9 +79,10 @@ export const consumeInvite = async ({
 
 	const canAccept =
 		typeof canAcceptRaw === "object"
-			? await exports.checkPermissions(ctx, canAcceptRaw) // fix vitest errors with vi.spyOn (https://github.com/vitest-dev/vitest/issues/6551)
+			? await checkPermissions(ctx, canAcceptRaw)
 			: canAcceptRaw;
 
+	console.log(canAccept);
 	if (!canAccept) {
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.CANT_ACCEPT_INVITE);
 	}
@@ -282,7 +283,7 @@ export const checkPermissions = async (
 	}
 
 	try {
-		return await adminPlugin.endpoints.userHasPermission({
+		const res = await adminPlugin.endpoints.userHasPermission({
 			...ctx,
 			body: {
 				userId: session.user.id,
@@ -290,6 +291,8 @@ export const checkPermissions = async (
 			},
 			returnHeaders: true,
 		});
+
+		return res.response.success;
 	} catch {
 		return false;
 	}
@@ -319,9 +322,6 @@ export const createRedirectURL = ({
 	email?: string;
 	callbackUrl: string;
 }) => {
-	const realBaseURL = new URL(ctx.context.baseURL);
-	const pathname = realBaseURL.pathname === "/" ? "" : realBaseURL.pathname;
-	const basePath = pathname ? "" : ctx.context.options.basePath || "";
 	// Default redirect URL with query parameters
 	// For private invites, we also include the email in the query params to pre-fill the sign-in/up form
 	const emailQuery =
@@ -339,10 +339,59 @@ export const createRedirectURL = ({
 			.replace("{callbackUrl}", encodeURIComponent(callbackUrl))
 			.replace("{defaultUrlQuery}", urlQuery);
 
+	return createFullURL({
+		ctx,
+		url: redirectUrl,
+		includePathname: true,
+	});
+};
+
+export const createFullURL = ({
+	ctx,
+	url,
+	includePathname = false,
+}: {
+	ctx: GenericEndpointContext;
+	url: string;
+	includePathname?: boolean;
+}) => {
+	const realBaseURL = new URL(ctx.context.baseURL);
+
+	const basePath = includePathname
+		? (() => {
+				const pathname =
+					realBaseURL.pathname === "/" ? "" : realBaseURL.pathname;
+				return pathname ? "" : ctx.context.options.basePath || "";
+			})()
+		: "";
+
+	const pathname =
+		includePathname && realBaseURL.pathname !== "/" ? realBaseURL.pathname : "";
+
 	return new URL(
-		`${pathname}${basePath}/${redirectUrl.startsWith("/") ? redirectUrl.slice(1) : redirectUrl}`,
+		`${pathname}${basePath}/${url.startsWith("/") ? url.slice(1) : url}`,
 		realBaseURL.origin,
 	);
+};
+
+export const validateCallbackUrl = (
+	callbackUrl: string | undefined,
+	requestUrl: string | undefined,
+) => {
+	if (!callbackUrl || !requestUrl) return undefined;
+
+	try {
+		const url = new URL(callbackUrl);
+		const requestOrigin = new URL(requestUrl).origin;
+
+		if (url.origin !== requestOrigin) {
+			return undefined;
+		}
+
+		return callbackUrl;
+	} catch {
+		return undefined;
+	}
 };
 
 export const resolveInviteOptions = (opts: InviteOptions) => ({

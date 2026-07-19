@@ -4,9 +4,9 @@ description: A full working example of a custom invite activation flow with a UI
 icon: Zap
 ---
 
-# Custom activate invite
+# Custom accept invite
 
-Instead of relying on `/api/invite/activate`, you can fully control the flow using your own UI.
+Instead of relying on the default simple flow (without any UI), you can fully control the flow using your own UI.
 
 The idea is simple:
 
@@ -23,7 +23,7 @@ The idea is simple:
 
 ## Generate the invite link
 
-Use the option `redirectToAfterUpgrade` to generate a custom URL that includes the token and query parameters.
+Use the option `customInviteUrl` to generate a custom activation URL that includes the token and query parameters.
 
 <Callout>
 `{token}`, `{signInUpUrl}`, `{email}`, `{callbackUrl}` and `{defaultUrlQuery}` will be replaced with their respective values.
@@ -31,10 +31,10 @@ Use the option `redirectToAfterUpgrade` to generate a custom URL that includes t
 </Callout>
 
 ```ts
-redirectToAfterUpgrade: '/invite/{token}?{defaultUrlQuery}',
+customInviteUrl: '/invite/{token}?{defaultUrlQuery}',
 ```
 
-In `sendInvite`, simply send the URL (already customized with redirectToAfterUpgrade) to the user:
+In `sendInvite`, simply send the URL (already customized with `customInviteUrl`) to the user:
 
 ```ts
 async sendUserInvitation({ email, role, url }) {
@@ -42,7 +42,7 @@ async sendUserInvitation({ email, role, url }) {
 }
 ```
 
-This completely replaces the default URL (`/api/invite/activate`).
+This completely replaces the default URL (`/api/invite/accept`).
 </Step>
 
 <Step>
@@ -81,7 +81,7 @@ to prefill the email field (this only works if the invite is private), make sure
 Now that the user is authenticated and clicks **Accept** you can call the activation endpoint:
 
 ```ts
-await authClient.invite.activate({ token, callbackUrl, signInUpUrl });
+await authClient.invite.accept({ token, callbackUrl, signInUpUrl });
 ```
 
 </Step>
@@ -100,7 +100,24 @@ await authClient.invite.reject({ token, callbackUrl });
 
 ## Redirect to after upgrade
 
-Now that the user has accepted or rejected the invite, `invite.activate()` and `invite.reject()` will create a redirect URL using the input `callbackUrl`
+Now that the user has accepted or rejected the invite, `invite.accept()` and `invite.reject()` will create a redirect URL using the input `callbackUrl`
+
+Use the option `redirectToAfterUpgrade` when creating an invite to configure where the user is redirected after the invite action is completed.
+
+This is different from `customInviteUrl`:
+
+- `customInviteUrl` controls the initial invite URL sent to the user, it contains the redirectToAfterUpgrade as a query parameter.
+- `redirectToAfterUpgrade` controls the final redirect after accepting or rejecting the invite.
+
+<Callout>
+`{token}` will be replaced with the actual invite token.
+</Callout>
+
+Example:
+
+```ts
+redirectToAfterUpgrade: '/invited?token={token}',
+```
 
 </Step>
 
@@ -110,7 +127,7 @@ Now that the user has accepted or rejected the invite, `invite.activate()` and `
 - Generate link: `/invite/${token}`
 - Show your custom UI
 - If accepted:
-  - call `invite.activate()`
+  - call `invite.accept()`
   - if auth is required → redirect using `redirectTo`
 - If rejected:
   - call `invite.reject()`

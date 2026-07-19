@@ -111,23 +111,18 @@ test("invite hook deletes invite cookie after sign-up/email", async ({
 
 	const newHeaders = new Headers();
 
-	const { error, data } = await client.invite.activate({
+	const { newError, path: acceptPath } = await acceptInviteGet(client, {
 		token: tokenValue,
 		signInUpUrl: "/auth/sign-in",
 		fetchOptions: {
-			onSuccess(context) {
+			onResponse(context) {
 				setCookieToHeader(newHeaders)(context);
 			},
 		},
 	});
 
-	expect(data).toStrictEqual({
-		status: true,
-		message: "Please sign in or sign up to continue.",
-		action: "SIGN_IN_UP_REQUIRED",
-		redirectTo: "/auth/sign-in",
-	});
-	expect(error).toBe(null);
+	expect(acceptPath).toBe("http://localhost:3000/auth/sign-in");
+	expect(newError).toBe(null);
 
 	const { path } = await resolveInviteRedirect(client.signUp.email, {
 		...invitedUser,
@@ -221,22 +216,18 @@ test("invitesHook runs after sign-up and triggers invite hooks in correct order"
 
 	const newHeaders = new Headers();
 
-	const { data } = await client.invite.activate({
+	const { newError, path: acceptPath } = await acceptInviteGet(client, {
 		token: tokenValue,
 		signInUpUrl: "/auth/sign-in",
 		fetchOptions: {
-			onSuccess(context) {
+			onResponse(context) {
 				setCookieToHeader(newHeaders)(context);
 			},
 		},
 	});
 
-	expect(data).toStrictEqual({
-		status: true,
-		message: "Please sign in or sign up to continue.",
-		action: "SIGN_IN_UP_REQUIRED",
-		redirectTo: "/auth/sign-in",
-	});
+	expect(acceptPath).toBe("http://localhost:3000/auth/sign-in");
+	expect(newError).toBe(null);
 
 	await client.signIn.email({
 		...invitedUser,
@@ -298,6 +289,7 @@ test("invitesHook runs after sign-up and triggers invite hooks in correct order"
 });
 
 // TODO: Add types to client.signin/up.email
+// See: https://github.com/better-auth/better-auth/pull/9618 (waiting for PR to be merged)
 /*
 test("invite hook works with inviteToken via signIn.email", async ({
 	createAuth,

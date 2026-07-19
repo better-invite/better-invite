@@ -14,7 +14,7 @@ Example:
 ```ts
 const res = authClient.invite.create({
 	role: "user",
-	emails: ["test@test.com"], // Since an email is present, the invite is private
+	email: ["test@test.com"], // Since an email is present, the invite is private
   redirectToAfterUpgrade: "/invite/accepted", // Optional: redirect the user to this URL after accepting the invite and upgrading their role or account
 })
 ```
@@ -28,11 +28,11 @@ be marked as having accepted or rejected the invite, and the other emails can st
 This is secure because the invite 
 </Callout>
 
-If the invite is private, the plugin will send an email to the user (or users) with the invite link (see [Activate Invite Callback](/docs/core/api#activate-invite-callback)).
+If the invite is private, the plugin will send an email to the user (or users) with the invite link (see [Accept Invite Callback](/docs/core/api#accept-invite-callback)).
 
-# Activating an invite
+# Accepting an invite
 
-Activating an invite handles two cases depending on the user's session:
+Accepting an invite handles two cases depending on the user's session:
 
 - **If the user is not signed in**, the invite is stored in a temporary cookie and the API returns an action telling you the user must sign in or sign up first.
 - **If the user is already signed in**, the user's role is updated immediately.
@@ -40,7 +40,7 @@ Activating an invite handles two cases depending on the user's session:
 Example:
 
 ```ts
-const res = await authClient.invite.activate({
+const res = await authClient.invite.accept({
   signInUpUrl: "/auth/sign-in-or-sign-up", // The user will be redirected here if they need to sign in or sign up
   callbackUrl: "/invite/accepted", // The user will be redirected here after accepting the invite
   token: "token123",
