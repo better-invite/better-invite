@@ -100,11 +100,8 @@ export const getInvite = (options: NewInviteOptions) => {
 				if (!inviteToken) {
 					throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 				}
-				token = inviteToken;
-			}
 
-			if (!token) {
-				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
+				token = inviteToken;
 			}
 
 			const invitation = await adapter.findInvitation(token);

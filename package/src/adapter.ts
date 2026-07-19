@@ -195,6 +195,9 @@ export const getInviteAdapter = (
 				],
 				update: {
 					emails,
+					...(emails.length === 0 && {
+						status: "used",
+					}),
 				},
 			});
 		},

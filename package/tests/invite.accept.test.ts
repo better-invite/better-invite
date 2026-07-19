@@ -1194,4 +1194,31 @@ test("acceptInvite removes user email from private invite when maxUsesPerUser is
 	});
 
 	expect(secondUserAccept.error).toBeNull();
+
+	const finalInvite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "token", value: invite.token }],
+	});
+
+	if (!finalInvite) {
+		throw new Error("Final invite not found");
+	}
+
+	expect(finalInvite.emails).toEqual([]);
+	expect(finalInvite.status).toBe("used");
+
+	const thirdAttempt = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: {
+			headers: secondUserHeaders,
+		},
+	});
+
+	expect(thirdAttempt.data).toBeNull();
+	expect(thirdAttempt.error).toStrictEqual({
+		code: "INVALID_TOKEN",
+		message: expect.any(String),
+		status: 400,
+		statusText: "BAD_REQUEST",
+	});
 });

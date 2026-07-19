@@ -283,6 +283,9 @@ export const createInviteBodySchema = z.object({
 	 */
 	maxUsesPerUser: z
 		.number()
+		.int()
+		.positive()
+		.or(z.literal(Infinity))
 		.describe("The number of times an invitation can be used by the same user")
 		.optional(),
 	/**
