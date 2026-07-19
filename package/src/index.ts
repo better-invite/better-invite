@@ -11,6 +11,7 @@ import {
 	createInvite,
 	getInvite,
 	rejectInvite,
+	resendInvite,
 } from "./routes";
 import { listInvites } from "./routes/list-invites";
 import { schema } from "./schema";
@@ -32,6 +33,7 @@ export const invite = <O extends InviteOptions>(opts: O) => {
 			getInvite: getInvite(options),
 			rejectInvite: rejectInvite(options),
 			listInvites: listInvites(options),
+			resendInvite: resendInvite(options),
 		},
 		hooks: {
 			...invitesHooks(options),

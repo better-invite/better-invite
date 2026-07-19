@@ -6,3 +6,4 @@ export { cancelInvite } from "./cancel-invite";
 export { createInvite } from "./create-invite";
 export { getInvite } from "./get-invite";
 export { rejectInvite } from "./reject-invite";
+export { resendInvite } from "./resend-invite";
