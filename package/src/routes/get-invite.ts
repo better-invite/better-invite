@@ -6,9 +6,9 @@ import {
 import type { UserWithRole } from "better-auth/plugins";
 import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
-import { ERROR_CODES } from "../constants";
+import { ERROR_CODES, INVITE_COOKIE_NAME } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { normalizeEmails } from "../utils";
+import { normalizeArray } from "../utils";
 
 export const getInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -18,8 +18,9 @@ export const getInvite = (options: NewInviteOptions) => {
 			query: z.object({
 				/**
 				 * The invite token to look up.
+				 * If not provided, the endpoint will search for the invite token in the invite cookie.
 				 */
-				token: z.string().describe("The invite token to look up."),
+				token: z.string().describe("The invite token to look up.").optional(),
 			}),
 			metadata: {
 				openapi: {
@@ -49,12 +50,21 @@ export const getInvite = (options: NewInviteOptions) => {
 											invitation: {
 												type: "object",
 												properties: {
-													email: { type: "string", nullable: true },
-													emails: { type: "string[]" },
-													createdAt: { type: "string", format: "date-time" },
+													emails: {
+														type: "array",
+														items: { type: "string" },
+													},
+													createdAt: {
+														type: "string",
+														format: "date-time",
+													},
 													role: { type: "string" },
-													newAccount: { type: "boolean" },
+													type: {
+														type: "string",
+														enum: ["private", "public"],
+													},
 												},
+												required: ["emails", "createdAt", "role", "type"],
 											},
 										},
 										required: ["status", "inviter", "invitation"],
@@ -81,9 +91,27 @@ export const getInvite = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
-			const { token } = ctx.query;
+			let { token } = ctx.query;
 
 			const adapter = getInviteAdapter(ctx.context, options);
+
+			if (!token) {
+				const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
+				const inviteCookie = ctx.context.createAuthCookie(INVITE_COOKIE_NAME, {
+					maxAge,
+				});
+
+				const inviteToken = await ctx.getSignedCookie(
+					inviteCookie.name,
+					ctx.context.secret,
+				);
+
+				if (!inviteToken) {
+					throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
+				}
+
+				token = inviteToken;
+			}
 
 			const invitation = await adapter.findInvitation(token);
 
@@ -91,10 +119,7 @@ export const getInvite = (options: NewInviteOptions) => {
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 			}
 
-			const emails = normalizeEmails<string[]>(
-				invitation.emails ?? invitation.email,
-				[],
-			);
+			const emails = normalizeArray(invitation.emails ?? invitation.email);
 			const isPrivate = emails.length > 0;
 
 			const session = await getSessionFromCtx(ctx);
@@ -124,11 +149,10 @@ export const getInvite = (options: NewInviteOptions) => {
 					image: inviter.image,
 				},
 				invitation: {
-					email: invitation.email,
 					emails,
 					createdAt: invitation.createdAt,
 					role: invitation.role,
-					newAccount: invitation.newAccount,
+					type: isPrivate ? "private" : "public",
 				},
 			});
 		},

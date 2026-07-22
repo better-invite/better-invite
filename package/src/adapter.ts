@@ -1,5 +1,6 @@
 import type { AuthContext, DBAdapter, Where } from "better-auth";
 import type { UserWithRole } from "better-auth/plugins";
+import { defaultMaxUsesPerUser } from "./constants";
 import type { CreateInvite } from "./routes/create-invite";
 import type {
 	InvitationStatus,
@@ -10,7 +11,7 @@ import type {
 } from "./types";
 import {
 	getDate,
-	normalizeEmails,
+	normalizeArray,
 	resolveInvitePayload,
 	resolveTokenGenerator,
 } from "./utils";
@@ -24,25 +25,42 @@ export const getInviteAdapter = (
 	const inviteUseTable = "inviteUse";
 
 	return {
-		createInvite: (
-			invite: CreateInvite,
-			user: UserWithRole,
-			newAccount?: boolean,
-		) => {
+		createInvite: (invite: CreateInvite, user: UserWithRole) => {
 			const payload = resolveInvitePayload(invite, options);
 			const generateToken = resolveTokenGenerator(payload.tokenType, options);
 
-			const emails = normalizeEmails<string[]>(invite.email, []);
+			const emails = normalizeArray(invite.email);
 			const isPrivate = emails.length > 0;
 
 			const expiresAt = getDate(payload.expiresIn, "sec");
 			const token = generateToken();
 			const now = options.getDate();
 
-			const maxUses = invite.maxUses ?? options.defaultMaxUses;
+			let maxUsesPerUser: number | undefined =
+				invite.maxUsesPerUser ??
+				options.defaultMaxUsesPerUser ??
+				defaultMaxUsesPerUser;
 
-			const isUnlimited =
-				!isPrivate && (maxUses == null || maxUses === Infinity);
+			if (maxUsesPerUser === Infinity) {
+				maxUsesPerUser = undefined;
+			}
+
+			// Multi-email private invites share one invitation row. Without an explicit
+			// maxUsesPerUser, default to 1 use per recipient so later invitees are not
+			// blocked by the private single-use maxUses default after the first accept.
+			if (isPrivate && emails.length > 1 && maxUsesPerUser == null) {
+				maxUsesPerUser = 1;
+			}
+
+			// If maxUsesPerUser is defined, then maxUses will be infinite unless explicitly set
+			// If not defined, then maxUses will be 1 for private invites and infinite for public invites
+			const defaultMaxUses =
+				maxUsesPerUser != null ? Infinity : isPrivate ? 1 : Infinity;
+
+			const maxUses =
+				invite.maxUses ?? defaultMaxUses ?? options.defaultMaxUses;
+
+			const isUnlimited = maxUses === Infinity;
 
 			return baseAdapter.create<InviteTypeWithId>({
 				model: inviteTable,
@@ -51,13 +69,13 @@ export const getInviteAdapter = (
 					createdByUserId: user.id,
 					createdAt: now,
 					expiresAt,
-					maxUses: isUnlimited ? 1 : (maxUses ?? 1),
+					maxUses: isUnlimited ? 1 : maxUses,
+					maxUsesPerUser,
 					infinityMaxUses: isUnlimited,
-					redirectToAfterUpgrade: payload.redirectToAfterUpgrade,
 					shareInviterName: payload.shareInviterName,
-					emails: normalizeEmails(invite.email),
+					emails: normalizeArray(invite.email, true),
 					role: invite.role,
-					newAccount,
+					callbackUrl: payload.redirectToAfterUpgrade,
 					status: "pending",
 				},
 			});
@@ -104,6 +122,20 @@ export const getInviteAdapter = (
 					{
 						field: "inviteId",
 						value: inviteId,
+					},
+				],
+			}),
+		countInvitationUsesByUser: (inviteId: string, userId: string) =>
+			baseAdapter.count({
+				model: inviteUseTable,
+				where: [
+					{
+						field: "inviteId",
+						value: inviteId,
+					},
+					{
+						field: "usedByUserId",
+						value: userId,
 					},
 				],
 			}),
@@ -159,6 +191,37 @@ export const getInviteAdapter = (
 				model: inviteTable,
 				...data,
 			}),
+		removeUserByEmail: async (id: string, email: string) => {
+			const invite = await baseAdapter.findOne<InviteTypeWithId>({
+				model: inviteTable,
+				where: [
+					{
+						field: "id",
+						value: id,
+					},
+				],
+			});
+
+			if (!invite) return null;
+
+			const emails = (invite.emails ?? []).filter((e) => e !== email);
+
+			return baseAdapter.update<InviteTypeWithId>({
+				model: inviteTable,
+				where: [
+					{
+						field: "id",
+						value: id,
+					},
+				],
+				update: {
+					emails,
+					...(emails.length === 0 && {
+						status: "used",
+					}),
+				},
+			});
+		},
 	};
 };
 

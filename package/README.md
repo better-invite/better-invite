@@ -66,8 +66,6 @@
 
 ## Installation
 
-> ⚠️ **Requires Better Auth v1.4.13 or newer**
-
 Install the plugin
 
 ```bash
@@ -98,7 +96,6 @@ export const auth = betterAuth({
             defaultRole: "user",
         }),
         invite({
-            defaultRedirectAfterUpgrade: "/auth/invited",
             async sendUserInvitation({ email, role, url }) {
                 void sendInvitationEmail(role as RoleType, email, url);
             },
@@ -131,65 +128,66 @@ const client = createClient({
 
 ## Usage/Examples
 
-<h3 id="creating-invites"></h3>
-
-### 1. Creating Invites
+### Creating Invites
 Authenticated users can create invite codes. You can create an invite on the client or on the server.
+Invites can be public or private:
+
+## Public Invites
 
 ```ts
-import { authClient } from "@/lib/auth-client";
-
-const { data, error } = await authClient.invite.create({
+const { data } = await client.invite.create({
   // Here you put the options
   role: "admin",
-  // The invite is private, because no email is passed when creating the invite
+  // The invite is public, because no email is passed when creating the invite
   senderResponse: "token" // Will receive the invite token
+  redirectToAfterUpgrade: "/auth/invited"
 });
-
-if (error) {
-  console.error("Failed to create invite:", error);
-}
 
 if (data) {
   // Example response: { status: true, message: "token" }
+  // You can use the token to manually share the invite
   console.log("Invite token:", data.message);
 }
 ```
 
-<h3 id="activating-invites"></h3>
-
-### 2. Activating Invites
-
-When a user receives an invite code, he needs to activate it.
-If the user receives an email, the link they receive automatically activates the invite.
-
-You can also activate an invite manually using the api.
+## Private Invites
 
 ```ts
-import { client } from "@/lib/auth-client";
-
-const { data, error } = await client.invite.activate({
-  token,
+await client.invite.create({
+  // Here you put the options
+  role: "admin",
+  // The invite is private, because an email is passed when creating the invite
+  email: ["test@email.com"], // A list of users the invite works on (also a list of the users to send an invite email to)
+  redirectToAfterUpgrade: "/auth/invited"
 });
-
-if (error) {
-  // Handle error (e.g., code invalid, expired, already used)
-  console.error("Failed to activate invite:", error);
-}
-
-// On successful activation, a cookie named (by default) '{your-app-name}.invite-code'
-// is set in the user's browser. This cookie will be used during sign-up.
-console.log("Invite activated successfully.");
 ```
 
-#### How it works
+### Accepting Invites
 
-- When an invite is activated, the token is saved in the user's browser cookie.
-- A hook runs after key authentication endpoints (like `/sign-up/email`, `/sign-in/email`, `/verify-email`, and social callbacks).
-- The hook validates the token, checks expiration and max uses, and marks the invite as used.
-- The user's role is upgraded if applicable.
-- The cookie is cleared after the invite is consumed.
-- The user is redirected to `defaultRedirectAfterUpgrade` to see their new role or welcome page.
+When a user receives an invite code, they can accept it, and only private invitees can reject an invite.
+If the user receives an email, the link they receive **automatically accepts the invite**.
+
+But you can also activate an invite manually using the API.
+This is useful for making a custom UI with accept and reject buttons
+
+```ts
+await client.invite.accept({
+  token,
+  callbackUrl // The user gets redirected here after accepting the invite
+});
+```
+
+### Rejecting Invites
+
+Rejecting an invite marks it as rejected. For private invites with multiple email addresses, only the rejected email is removed from the invite's email list.
+When `cleanupInvitesOnDecision` is enabled, the invite and all associated uses are deleted.
+
+```ts
+await client.invite.reject({
+  token,
+  callbackUrl // The user gets redirected here after rejecting the invite
+});
+```
 
 **Read the [documentation](https://www.better-invite.com/docs/introduction) to learn more.**
 

@@ -12,75 +12,35 @@ To invite a user to our application, we need to create an invite. We can create 
 
 Example:
 ```ts
-const res = authClient.invite.create({
+const res = await authClient.invite.create({
 	role: "user",
-	email: "test@test.com" // If email is present, the invite is private
+	email: ["test@test.com"], // Since an email is present, the invite is private
+  redirectToAfterUpgrade: "/invite/accepted", // Optional: redirect the user to this URL after accepting the invite and upgrading their role or account
 })
 ```
 
-If the invite is private, the plugin will send an email to the user with the invite link (see [Activate Invite Callback](/docs/core/api#activate-invite-callback)).
-The response from `invite.create()` depends on whether the invite is **public** or **private**:
+<Callout>
+A private invite can include multiple emails. Internally, the plugin creates **one shared invitation** (one token) that stores the full recipient list, and sends each recipient their own invite link
+(links differ because they include a `?email=...` query).
+When one recipient accepts or rejects, only that email is removed from the invite; the others can still use it.
+For multi-email invites, Better Invite defaults to one use per recipient (`maxUsesPerUser: 1`) so the first acceptance does not exhaust the shared invite for everyone else.
+</Callout>
 
-### Public invite
+If the invite is private, the plugin will send an email to the user (or users) with the invite link (see [Accept Invite Callback](/docs/core/api#accept-invite-callback)).
 
-No email is sent, and the API returns the invite **token or URL** (depending on your `senderResponse` config):
+# Accepting an invite
 
-```ts
-{
-  status: true,
-  message: "token", // The invite token or URL
-}
-```
+Accepting an invite depends on how the user arrives:
 
-### Private invite
+- **Email / browser link** → [Accept Invite Callback](/docs/core/api#accept-invite-callback) (`GET /invite/:token`). If the user is not signed in, the invite token is stored in a cookie and they are redirected to sign in or sign up.
+- **Authenticated app UI** → [Accept Invite](/docs/core/api#accept-invite) (`POST /invite/accept`, requires a session). The user's role is updated immediately.
 
-The plugin will send an invite email, and the response will be:
-
-```ts
-{
-  status: true,
-  message: "The invitation was sent",
-}
-```
-
-# Activating an invite
-
-Activating an invite handles two cases depending on the user's session:
-
-- **If the user is not signed in**, the invite is stored in a temporary cookie and the API returns an action telling you the user must sign in or sign up first.
-- **If the user is already signed in**, the user's role is updated immediately.
-
-Example:
+Example (authenticated accept):
 
 ```ts
-const res = await authClient.invite.activate({
-  callbackURL: "/auth/sign-in-or-sign-up", // The user will be redirected here if they need to sign in or sign up
+const res = await authClient.invite.accept({
+  signInUpUrl: "/auth/sign-in-or-sign-up", // Used when calling the callback flow without a session
+  callbackUrl: "/invite/accepted", // The user will be redirected here after accepting the invite
   token: "token123",
 });
-```
-
-## If the user is not signed in
-
-The API returns:
-
-```ts
-{
-  status: true,
-  message: "Invite activated successfully",
-  action: "SIGN_IN_UP_REQUIRED",
-  redirectTo: "/auth/sign-in-or-sign-up",
-}
-```
-
-At this point, redirect the user to `redirectTo` and perform sign in or sign up. After that, the plugin will automatically activate the invite using a hook, reading the invite data from the cookie. **No further response is returned from the hook**—it just completes the activation once the user has a session.
-
-## If the user is already signed in
-
-The API returns:
-
-```ts
-{
-  status: true,
-  message: "Invite activated successfully",
-}
 ```

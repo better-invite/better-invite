@@ -1,0 +1,143 @@
+---
+title: Full Example
+description: A full working example of a custom invite activation flow with a UI.
+icon: Zap
+---
+
+# Custom accept invite
+
+Instead of relying on the default simple flow (without any UI), you can fully control the flow using your own UI.
+
+The idea is simple:
+
+- In `sendUserInvitation`, generate a custom URL using the token
+- Handle everything inside `/invite/[token]`
+- Let the user accept or reject
+- Act based on the response
+
+---
+
+<Steps>
+
+<Step>
+
+## Generate the invite link
+
+Use the option `customInviteUrl` to generate a custom activation URL that includes the token and query parameters.
+
+<Callout>
+`{token}`, `{signInUpUrl}`, `{email}`, `{callbackUrl}` and `{defaultUrlQuery}` will be replaced with their respective values.
+`{defaultUrlQuery}` is a placeholder for the default query parameters (`signInUpUrl`, `callbackUrl` and `email` if it's a private invite).
+
+Relative `customInviteUrl` values are resolved against your application origin (not the Better Auth base path), so `/invite/{token}` reaches your app route.
+</Callout>
+
+```ts
+customInviteUrl: '/invite/{token}?{defaultUrlQuery}',
+```
+
+In `sendUserInvitation`, simply send the URL (already customized with `customInviteUrl`) to the user:
+
+```ts
+async sendUserInvitation({ email, role, url }) {
+  await sendInvitationEmail(role, email, url);
+}
+```
+
+This completely replaces the default URL (`/api/auth/invite/{token}`).
+</Step>
+
+<Step>
+## Create `/invite/[token]` page
+
+This page is where you control the full experience.
+
+You can render a simple UI with:
+
+- **Accept invite**
+- **Reject invite** (private invites only, and only for the authenticated invitee)
+</Step>
+
+<Step>
+## Check for user session
+
+When the page loads, check if the user is already authenticated:
+
+```ts
+const { data: session } = await authClient.getSession();
+const user = session?.user;
+```
+
+- If the user is not authenticated, you redirect them to sign in/up (get it from the query param `signInUpUrl` the page received), with a callback url that points back to the same page (`/invite/[token]`).
+- If the user is authenticated, you can show the accept/reject buttons.
+
+<Callout title="Tip">
+When redirecting the user to the sign in/up page, you can include a custom email query param
+to prefill the email field (this only works if the invite is private), make sure to implement the logic in your UI to support this.
+</Callout>
+
+</Step>
+
+<Step>
+## Accept the invite
+
+Now that the user is authenticated and clicks **Accept** you can call the activation endpoint:
+
+```ts
+await authClient.invite.accept({ token, callbackUrl, signInUpUrl });
+```
+
+</Step>
+
+<Step>
+## Reject the invite
+
+`invite.reject` only works for **private** invites, and only when the authenticated user is one of the invitees.
+
+Fetch invite details first (for example with `invite.get`) and only show Reject when `invitation.type === "private"` and the signed-in user's email is in `invitation.emails`:
+
+```ts
+if (invite.invitation.type === "private" && user?.email && invite.invitation.emails.includes(user.email)) {
+  await authClient.invite.reject({ token, callbackUrl });
+}
+```
+</Step>
+
+<Step>
+
+## Redirect to after upgrade
+
+Now that the user has accepted or rejected the invite, `invite.accept()` and `invite.reject()` will create a redirect URL using the input `callbackUrl`
+
+Use the option `redirectToAfterUpgrade` when creating an invite to configure where the user is redirected after the invite action is completed.
+
+This is different from `customInviteUrl`:
+
+- `customInviteUrl` controls the initial invite URL sent to the user, it contains the `redirectToAfterUpgrade` (as `callbackUrl`) as a query parameter.
+- `redirectToAfterUpgrade` controls the final redirect after accepting or rejecting the invite.
+
+<Callout>
+`{token}` will be replaced with the actual invite token.
+</Callout>
+
+Example:
+
+```ts
+redirectToAfterUpgrade: '/invited?token={token}',
+```
+
+</Step>
+
+<Step>
+## Summary
+
+- Generate link: `/invite/${token}`
+- Show your custom UI
+- If accepted:
+  - call `invite.accept()`
+  - if auth is required → redirect using `redirectTo`
+- If rejected:
+  - call `invite.reject()` only for the authenticated invitee of a private invite
+  - make sure the user is already authenticated, otherwise the API will return an error
+</Step>
+</Steps>

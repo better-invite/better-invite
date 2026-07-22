@@ -6,7 +6,12 @@ import * as z from "zod";
 import { getInviteAdapter } from "./adapter";
 import { ERROR_CODES, INVITE_COOKIE_NAME } from "./constants";
 import type { NewInviteOptions } from "./types";
-import { consumeInvite, redirectError } from "./utils";
+import {
+	consumeInvite,
+	redirectError,
+	replacePlaceholders,
+	validateCallbackUrl,
+} from "./utils";
 
 export const invitesHooks = (options: NewInviteOptions) => {
 	return {
@@ -42,17 +47,44 @@ export const invitesHooks = (options: NewInviteOptions) => {
 
 					if (!invitedUser) return;
 
-					// Read the invite token from the cookie
-					const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
-					const inviteCookie = ctx.context.createAuthCookie(
-						INVITE_COOKIE_NAME,
-						{ maxAge },
-					);
+					// Support two ways of passing the invite token:
+					// 1) old flow: signed cookie
+					// 2) new flow: body.inviteToken
+					const bodyValidation = z
+						.object({
+							inviteToken: z.string().optional(),
+							// Optional callback URL to redirect after accepting the invite
+							callbackUrl: z.string().optional(),
+						})
+						.safeParse(ctx.body);
 
-					const inviteToken = await ctx.getSignedCookie(
-						inviteCookie.name,
-						ctx.context.secret,
-					);
+					const inviteTokenFromBody = bodyValidation.success
+						? bodyValidation.data.inviteToken
+						: undefined;
+
+					const callbackUrlFromBody = bodyValidation.success
+						? bodyValidation.data.callbackUrl
+						: undefined;
+
+					let inviteToken = inviteTokenFromBody;
+
+					if (!inviteToken) {
+						// Fallback to the legacy cookie-based flow
+						const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
+						const inviteCookie = ctx.context.createAuthCookie(
+							INVITE_COOKIE_NAME,
+							{ maxAge },
+						);
+
+						const inviteTokenString = await ctx.getSignedCookie(
+							inviteCookie.name,
+							ctx.context.secret,
+						);
+
+						if (!inviteTokenString) return;
+
+						inviteToken = inviteTokenString;
+					}
 
 					if (!inviteToken) return;
 
@@ -90,6 +122,11 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						});
 					}
 
+					const callbackUrl = validateCallbackUrl(
+						callbackUrlFromBody ?? invitation.callbackUrl,
+						ctx.request?.url,
+					);
+
 					// Optional hook before accepting the invite
 					const before = await options.inviteHooks?.beforeAcceptInvite?.({
 						ctx,
@@ -114,8 +151,15 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						},
 					});
 
-					// Clean up cookie after successful use
-					expireCookie(ctx, inviteCookie);
+					// Clean up the cookie only when the cookie-based flow was used
+					if (!inviteTokenFromBody) {
+						const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
+						const inviteCookie = ctx.context.createAuthCookie(
+							INVITE_COOKIE_NAME,
+							{ maxAge },
+						);
+						expireCookie(ctx, inviteCookie);
+					}
 
 					// Optional hook after accepting
 					await options.inviteHooks?.afterAcceptInvite?.({
@@ -125,10 +169,9 @@ export const invitesHooks = (options: NewInviteOptions) => {
 					});
 
 					// Redirect user after upgrading their role
-					const redirectURL = invitation.redirectToAfterUpgrade?.replace(
-						"{token}",
-						ctx.params.token,
-					);
+					const redirectURL = replacePlaceholders(callbackUrl, {
+						token: inviteToken,
+					});
 
 					return ctx.redirect(redirectError(ctx.context, redirectURL));
 				}),

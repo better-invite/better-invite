@@ -29,6 +29,12 @@ icon: Database
       description: "Maximum number of times this invite can be used",
     },
     {
+      name: "maxUsesPerUser",
+      type: "number",
+      isOptional: true,
+      description: "Maximum number of times each user can use this invite",
+    },
+    {
       name: "createdByUserId",
       type: "string",
       description: "ID of the user who created the invite",
@@ -38,7 +44,9 @@ icon: Database
     {
       name: "redirectToAfterUpgrade",
       type: "string",
-      description: "URL to redirect after the user upgrades",
+      description: "Legacy URL column from before v0.6.0. Prefer callbackUrl. Still read as a fallback for in-flight invites.",
+      deprecated: true,
+      isOptional: true,
     },
     {
       name: "shareInviterName",
@@ -62,6 +70,12 @@ icon: Database
       name: "role",
       type: "string",
       description: "Role assigned when the invite is used",
+    },
+    {
+      name: "callbackUrl",
+      type: "string",
+      isOptional: true,
+      description: "URL to redirect the user to after accepting the invite",
     },
     {
       name: "newAccount",

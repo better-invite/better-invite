@@ -3,12 +3,15 @@ import { mergeSchema } from "better-auth/db";
 import { ERROR_CODES } from "./constants";
 import { invitesHooks } from "./hooks";
 import {
+	acceptInvite,
+	acceptInviteCallback,
 	activateInvite,
 	activateInviteCallback,
 	cancelInvite,
 	createInvite,
 	getInvite,
 	rejectInvite,
+	resendInvite,
 } from "./routes";
 import { listInvites } from "./routes/list-invites";
 import { schema } from "./schema";
@@ -22,12 +25,15 @@ export const invite = <O extends InviteOptions>(opts: O) => {
 		id: "invite",
 		endpoints: {
 			createInvite: createInvite(options),
-			activateInvite: activateInvite(options),
-			activateInviteCallback: activateInviteCallback(options),
+			activateInvite: activateInvite(options), //! Deprecated
+			acceptInvite: acceptInvite(options),
+			activateInviteCallback: activateInviteCallback(options), //! Deprecated
+			acceptInviteCallback: acceptInviteCallback(options),
 			cancelInvite: cancelInvite(options),
 			getInvite: getInvite(options),
 			rejectInvite: rejectInvite(options),
 			listInvites: listInvites(options),
+			resendInvite: resendInvite(options),
 		},
 		hooks: {
 			...invitesHooks(options),

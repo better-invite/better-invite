@@ -1,10 +1,11 @@
 {
 	"pages": [
-		"[Heart][Donate](https://patreon.better-invite.com)",
+		"[Heart][Donate](https://patreon.better-invite.com/membership)",
 		"[Sparkles][Showcase](https://demo.better-invite.com)",
 		"[FileText][Blog](/blog)",
 		"---Get Started---",
 		"...(get-started)",
+		"examples",
 		"---Core---",
 		"...core",
 		"---Reference---",

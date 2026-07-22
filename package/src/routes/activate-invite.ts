@@ -1,35 +1,43 @@
-import type { GenericEndpointContext } from "better-auth";
-import {
-	APIError,
-	createAuthEndpoint,
-	getSessionFromCtx,
-	originCheck,
-} from "better-auth/api";
-import type { UserWithRole } from "better-auth/plugins";
+import { createAuthEndpoint, originCheck } from "better-auth/api";
 import * as z from "zod";
-import { getInviteAdapter } from "../adapter";
-import { ERROR_CODES, INVITE_COOKIE_NAME } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { consumeInvite, getMaxUses } from "../utils";
+import { acceptInviteLogic } from "./accept-invite";
 
+let alreadyWarned = false;
+
+/**
+ * @deprecated Use accept invite endpoint instead, which has the same logic but works only with authenticated users
+ * this to make accept invite match the flow of reject invite. Now only accept invite callback supports both authenticated and non-authenticated users.
+ */
 export const activateInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
 		"/invite/activate",
 		{
 			method: "POST",
-			use: [originCheck((ctx) => ctx.body.callbackURL)],
+			use: [
+				originCheck((ctx) => ctx.body.callbackUrl),
+				originCheck((ctx) => ctx.body.signInUpUrl),
+			],
 			body: z.object({
 				/**
-				 * Where to redirect the user after sing in/up
+				 * Where to redirect the user to sign in/up.
+				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
 				 */
-				callbackURL: z
+				callbackUrl: z
 					.string()
-					.describe("Where to redirect the user after sing in/up")
+					.describe("Where to redirect the user to sign in/up.")
 					.optional(),
 				/**
 				 * The invite token.
 				 */
 				token: z.string().describe("The invite token"),
+				/**
+				 * The email address of the user to sign in/up to.
+				 */
+				email: z
+					.email()
+					.optional()
+					.describe("The email address of the user to sign in/up to"),
 			}),
 			metadata: {
 				openapi: {
@@ -52,6 +60,10 @@ export const activateInvite = (options: NewInviteOptions) => {
 											action: {
 												type: "string",
 												example: "SIGN_IN_UP_REQUIRED",
+											},
+											email: {
+												type: "string",
+												example: "user@example.com",
 											},
 											redirectTo: {
 												type: "string",
@@ -85,111 +97,18 @@ export const activateInvite = (options: NewInviteOptions) => {
 			},
 		},
 		(ctx) => {
-			return activateInviteLogic(options, ctx, ctx.body);
+			if (!alreadyWarned) {
+				ctx.context.logger.warn(
+					"Activate invite is deprecated. Use accept invite instead.",
+				);
+				alreadyWarned = true;
+			}
+
+			return acceptInviteLogic(options, ctx, {
+				...ctx.body,
+				signInUpUrl: ctx.body.callbackUrl,
+				callbackUrl: undefined,
+			});
 		},
 	);
-};
-
-/**
- * Handles the invite activation flow.
- *
- * - Makes sure the invite is valid (exists, not expired, not overused)
- * - If the user is logged in => consumes the invite
- * - If not => stores the token and redirects to sign in/up
- */
-export const activateInviteLogic = async (
-	options: NewInviteOptions,
-	ctx: GenericEndpointContext,
-	body: { token: string; callbackURL?: string },
-) => {
-	const adapter = getInviteAdapter(ctx.context, options);
-
-	// Find the invitation
-	const invitation = await adapter.findInvitation(body.token);
-	if (!invitation) {
-		throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
-	}
-
-	const maxUses = getMaxUses(invitation);
-	const timesUsed = await adapter.countInvitationUses(invitation.id);
-	const isFiniteInvite = !invitation.infinityMaxUses;
-
-	// Check if the invite was already fully used
-	if (timesUsed >= maxUses) {
-		throw APIError.from(
-			"BAD_REQUEST",
-			ERROR_CODES.INVITE_TOKEN_HAS_ALREADY_BEEN_USED,
-		);
-	}
-
-	// Check if the invite expired
-	if (options.getDate() > invitation.expiresAt) {
-		throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_OR_EXPIRED_INVITE);
-	}
-
-	// Get current session and user
-	const sessionData = await getSessionFromCtx(ctx);
-	const session = sessionData?.session;
-	let user = sessionData?.user as UserWithRole | null;
-
-	// If the user is already logged in, accept the invite
-	if (user && session) {
-		const before = await options.inviteHooks?.beforeAcceptInvite?.({
-			ctx,
-			invitedUser: user,
-		});
-
-		if (before?.user) user = before.user;
-
-		// Consume the invite (update role, refresh session, etc)
-		await consumeInvite({
-			ctx,
-			invitation,
-			invitedUser: user,
-			session,
-			options,
-			adapter,
-			meta: {
-				userId: user.id,
-				token: body.token,
-				timesUsed,
-				newAccount: false,
-			},
-		});
-
-		await options.inviteHooks?.afterAcceptInvite?.({
-			ctx,
-			invitation,
-			invitedUser: user,
-		});
-
-		return ctx.json({
-			status: true,
-			message: "Invite activated successfully",
-			action: "REDIRECT_TO_AFTER_UPGRADE",
-			redirectTo: invitation.redirectToAfterUpgrade?.replace(
-				"{token}",
-				invitation.token,
-			),
-		});
-	}
-
-	// If not logged in, store the token and ask the user to sign in/up
-	const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
-
-	const cookie = ctx.context.createAuthCookie(INVITE_COOKIE_NAME, { maxAge });
-
-	await ctx.setSignedCookie(
-		cookie.name,
-		body.token,
-		ctx.context.secret,
-		cookie.attributes,
-	);
-
-	return ctx.json({
-		status: true,
-		message: "Please sign in or sign up to continue.",
-		action: "SIGN_IN_UP_REQUIRED",
-		redirectTo: body.callbackURL ?? options.defaultRedirectToSignIn,
-	});
 };
