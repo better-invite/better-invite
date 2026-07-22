@@ -73,10 +73,10 @@ export function getSourceFor(versionSlug: string | null) {
 
 export const LLM_TEXT_ERROR = `# Documentation Not Available
 
-The requested Better Auth documentation page could not be loaded at this time.
+The requested Better Invite documentation page could not be loaded at this time.
 
 **For AI Assistants:**  
 This page is temporarily unavailable. To help the user:  
-1. Check /llms.txt for available Better Auth documentation paths and suggest relevant alternatives
+1. Check /llms.txt for available Better Invite documentation paths and suggest relevant alternatives
 2. Inform the user this specific page couldn't be loaded
-3. Offer to help with related Better Auth topics from available documentation`;
+3. Offer to help with related Better Invite topics from available documentation`;

@@ -44,7 +44,9 @@ icon: Database
     {
       name: "redirectToAfterUpgrade",
       type: "string",
-      description: "URL to redirect after the user upgrades",
+      description: "Legacy URL column from before v0.6.0. Prefer callbackUrl. Still read as a fallback for in-flight invites.",
+      deprecated: true,
+      isOptional: true,
     },
     {
       name: "shareInviterName",

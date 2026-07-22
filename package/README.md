@@ -129,16 +129,16 @@ const client = createClient({
 ## Usage/Examples
 
 ### Creating Invites
-Authenticated users can create invite codes. You can create a invite on the client or on the server.
+Authenticated users can create invite codes. You can create an invite on the client or on the server.
 Invites can be public or private:
 
 ## Public Invites
 
 ```ts
-const { data } = await authClient.invite.create({
+const { data } = await client.invite.create({
   // Here you put the options
   role: "admin",
-  // The invite is private, because no email is passed when creating the invite
+  // The invite is public, because no email is passed when creating the invite
   senderResponse: "token" // Will receive the invite token
   redirectToAfterUpgrade: "/auth/invited"
 });
@@ -153,7 +153,7 @@ if (data) {
 ## Private Invites
 
 ```ts
-await authClient.invite.create({
+await client.invite.create({
   // Here you put the options
   role: "admin",
   // The invite is private, because an email is passed when creating the invite

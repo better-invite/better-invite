@@ -44,15 +44,6 @@ export const acceptInvite = (options: NewInviteOptions) => {
 					)
 					.optional(),
 				/**
-				 * Where to redirect the user to sign in/up.
-				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
-				 * {email} will be replaced by the actual email in private invites.
-				 */
-				signInUpUrl: z
-					.string()
-					.describe("The URL of the sign in/up page.")
-					.optional(),
-				/**
 				 * The invite token.
 				 */
 				token: z.string().describe("The invite token"),
@@ -144,9 +135,6 @@ export const acceptInviteLogic = async (
 		signInUpUrl?: string;
 	},
 ) => {
-	const callbackUrl =
-		body.callbackUrl ??
-		createFullURL({ ctx, url: defaultRedirectAfterUpgrade }).toString();
 	const adapter = getInviteAdapter(ctx.context, options);
 
 	// Find the invitation
@@ -154,6 +142,18 @@ export const acceptInviteLogic = async (
 	if (!invitation) {
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 	}
+
+	const fallbackCallback =
+		options.defaultRedirectAfterUpgrade ?? defaultRedirectAfterUpgrade;
+	const rawCallbackUrl =
+		body.callbackUrl ?? invitation.callbackUrl ?? fallbackCallback;
+
+	// Keep templates with placeholders intact (URL() would encode `{token}`).
+	// Expand plain relative paths so defaults like `/` become absolute.
+	const callbackUrl =
+		/^https?:\/\//i.test(rawCallbackUrl) || /\{[a-zA-Z]+\}/.test(rawCallbackUrl)
+			? rawCallbackUrl
+			: createFullURL({ ctx, url: rawCallbackUrl }).toString();
 
 	const maxUses = getMaxUses(invitation);
 	const timesUsed = await adapter.countInvitationUses(invitation.id);

@@ -3,7 +3,7 @@ import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { defaultRedirectAfterUpgrade, ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { createRedirectURL, normalizeArray } from "../utils";
+import { createRedirectURL, getMaxUses, normalizeArray } from "../utils";
 
 export const resendInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
@@ -63,6 +63,26 @@ export const resendInvite = (options: NewInviteOptions) => {
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 			}
 
+			if (invitation.status && invitation.status !== "pending") {
+				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
+			}
+
+			if (options.getDate() > invitation.expiresAt) {
+				throw APIError.from(
+					"BAD_REQUEST",
+					ERROR_CODES.INVALID_OR_EXPIRED_INVITE,
+				);
+			}
+
+			const maxUses = getMaxUses(invitation);
+			const timesUsed = await adapter.countInvitationUses(invitation.id);
+			if (timesUsed >= maxUses) {
+				throw APIError.from(
+					"BAD_REQUEST",
+					ERROR_CODES.INVITE_TOKEN_HAS_ALREADY_BEEN_USED,
+				);
+			}
+
 			if (!options.sendUserInvitation) {
 				ctx.context.logger.warn(
 					"Invitation email is not enabled. Pass `sendUserInvitation` to the plugin options to enable it.",
@@ -89,8 +109,9 @@ export const resendInvite = (options: NewInviteOptions) => {
 				options.defaultRedirectAfterUpgrade ??
 				defaultRedirectAfterUpgrade;
 
-			await options.inviteHooks?.beforeCreateInvite?.({
+			await options.inviteHooks?.beforeResendInvite?.({
 				ctx,
+				invitation,
 			});
 
 			const recipients = await Promise.all(
@@ -145,6 +166,11 @@ export const resendInvite = (options: NewInviteOptions) => {
 					);
 				}
 			}
+
+			await options.inviteHooks?.afterResendInvite?.({
+				ctx,
+				invitation,
+			});
 
 			return ctx.json({
 				status: true,

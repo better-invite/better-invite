@@ -45,6 +45,13 @@ export const getInviteAdapter = (
 				maxUsesPerUser = undefined;
 			}
 
+			// Multi-email private invites share one invitation row. Without an explicit
+			// maxUsesPerUser, default to 1 use per recipient so later invitees are not
+			// blocked by the private single-use maxUses default after the first accept.
+			if (isPrivate && emails.length > 1 && maxUsesPerUser == null) {
+				maxUsesPerUser = 1;
+			}
+
 			// If maxUsesPerUser is defined, then maxUses will be infinite unless explicitly set
 			// If not defined, then maxUses will be 1 for private invites and infinite for public invites
 			const defaultMaxUses =
@@ -115,6 +122,20 @@ export const getInviteAdapter = (
 					{
 						field: "inviteId",
 						value: inviteId,
+					},
+				],
+			}),
+		countInvitationUsesByUser: (inviteId: string, userId: string) =>
+			baseAdapter.count({
+				model: inviteUseTable,
+				where: [
+					{
+						field: "inviteId",
+						value: inviteId,
+					},
+					{
+						field: "usedByUserId",
+						value: userId,
 					},
 				],
 			}),

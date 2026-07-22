@@ -71,6 +71,19 @@ export const consumeInvite = async ({
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 	}
 
+	const userUses =
+		invitation.maxUsesPerUser != null && isPrivate
+			? await adapter.countInvitationUsesByUser(invitation.id, userId)
+			: 0;
+
+	if (
+		invitation.maxUsesPerUser != null &&
+		isPrivate &&
+		userUses >= invitation.maxUsesPerUser
+	) {
+		throw APIError.from("BAD_REQUEST", ERROR_CODES.NO_USES_LEFT_FOR_INVITE);
+	}
+
 	// Check permissions
 	const canAcceptRaw =
 		typeof options.canAcceptInvite === "function"
@@ -126,8 +139,12 @@ export const consumeInvite = async ({
 		});
 
 		// If maxUsesPerUser is enabled for a private invitation,
-		// remove the user's email so they can't accept it again.
-		if (invitation.maxUsesPerUser !== undefined && isPrivate) {
+		// remove the user's email once they have reached their per-user limit.
+		if (
+			invitation.maxUsesPerUser != null &&
+			isPrivate &&
+			userUses + 1 >= invitation.maxUsesPerUser
+		) {
 			await adapter.removeUserByEmail(invitation.id, invitedUser.email);
 		}
 	}
@@ -179,9 +196,14 @@ export function replacePlaceholders(
 		return undefined;
 	}
 
-	return Object.entries(values).reduce(
+	const withAliases =
+		"callbackUrl" in values
+			? { ...values, callbackURL: values.callbackUrl }
+			: values;
+
+	return Object.entries(withAliases).reduce(
 		(result, [key, value]) =>
-			result.replace(`{${key}}`, encodeURIComponent(value ?? "")),
+			result.replaceAll(`{${key}}`, encodeURIComponent(value ?? "")),
 		template,
 	);
 }
@@ -334,13 +356,24 @@ export const createRedirectURL = ({
 	const urlQuery = `signInUpUrl=${encodeURIComponent(signInUpUrl)}&callbackUrl=${encodeURIComponent(callbackUrl)}${emailQuery}`;
 	let redirectUrl = `/invite/${invitation.token}?${urlQuery}`;
 
-	if (customInviteUrl)
+	if (customInviteUrl) {
 		redirectUrl = customInviteUrl
-			.replace("{token}", invitation.token)
-			.replace("{signInUpUrl}", encodeURIComponent(signInUpUrl))
-			.replace("{email}", encodeURIComponent(email ?? ""))
-			.replace("{callbackUrl}", encodeURIComponent(callbackUrl))
-			.replace("{defaultUrlQuery}", urlQuery);
+			.replaceAll("{token}", invitation.token)
+			.replaceAll("{signInUpUrl}", encodeURIComponent(signInUpUrl))
+			.replaceAll("{email}", encodeURIComponent(email ?? ""))
+			.replaceAll("{callbackUrl}", encodeURIComponent(callbackUrl))
+			.replaceAll("{callbackURL}", encodeURIComponent(callbackUrl))
+			.replaceAll("{defaultUrlQuery}", urlQuery);
+
+		// Absolute custom URLs bypass the auth base path entirely.
+		if (/^https?:\/\//i.test(redirectUrl)) {
+			return new URL(redirectUrl);
+		}
+
+		// Relative custom URLs target the application origin (e.g. a Next.js
+		// `/invite/[token]` page), not the Better Auth base path.
+		return new URL(redirectUrl, new URL(ctx.context.baseURL).origin);
+	}
 
 	return createFullURL({
 		ctx,

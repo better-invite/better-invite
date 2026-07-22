@@ -251,7 +251,7 @@ export const createInviteBodySchema = z.object({
 	redirectToSignUp: z
 		.string()
 		.describe(
-			"The URL to redirect the user to create their account. {callbackURL} will be replaced by the actual callbackURL in the request body.",
+			"The URL to redirect the user to create their account. {callbackUrl} will be replaced by the actual callbackUrl in the request body.",
 		)
 		.optional(),
 	/**
@@ -263,7 +263,7 @@ export const createInviteBodySchema = z.object({
 	redirectToSignIn: z
 		.string()
 		.describe(
-			"The URL to redirect the user to upgrade their role. {callbackURL} will be replaced by the actual callbackURL in the request body.",
+			"The URL to redirect the user to upgrade their role. {callbackUrl} will be replaced by the actual callbackUrl in the request body.",
 		)
 		.optional(),
 	/**

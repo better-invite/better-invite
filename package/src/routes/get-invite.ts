@@ -50,12 +50,21 @@ export const getInvite = (options: NewInviteOptions) => {
 											invitation: {
 												type: "object",
 												properties: {
-													email: { type: "string", nullable: true },
-													emails: { type: "string[]" },
-													createdAt: { type: "string", format: "date-time" },
+													emails: {
+														type: "array",
+														items: { type: "string" },
+													},
+													createdAt: {
+														type: "string",
+														format: "date-time",
+													},
 													role: { type: "string" },
-													newAccount: { type: "boolean" },
+													type: {
+														type: "string",
+														enum: ["private", "public"],
+													},
 												},
+												required: ["emails", "createdAt", "role", "type"],
 											},
 										},
 										required: ["status", "inviter", "invitation"],

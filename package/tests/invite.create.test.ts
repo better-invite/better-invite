@@ -523,7 +523,7 @@ test("returns custom redirect URL when inviteUrlType is custom", async ({
 		.replace("{token}", token)
 		.replace("{callbackUrl}", "%2Fauth%2Finvited");
 
-	expect(data?.message).toBe(`http://localhost:3000/api/auth${expectedURL}`);
+	expect(data?.message).toBe(`http://localhost:3000${expectedURL}`);
 });
 
 test("supports multiple emails in a single invite", async ({ createAuth }) => {

@@ -26,14 +26,14 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 			],
 			query: z.object({
 				/**
-				 * Where to redirect the user after sing in/up
-				 * {token} will be replaced by the actual token in the request body.
+				 * Where to redirect the user after sign in/up.
+				 * `{token}` will be replaced by the actual token from the URL path.
 				 *
 				 * @default /
 				 */
 				callbackUrl: z
 					.string()
-					.describe("Where to redirect the user after sing in/up")
+					.describe("Where to redirect the user after sign in/up")
 					.optional(),
 				/**
 				 * Where to redirect the user to sign in/up.
@@ -68,10 +68,10 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 							},
 						},
 						{
-							name: "callbackURL",
+							name: "callbackUrl",
 							in: "query",
-							required: true,
-							description: "Where to redirect the user after sing in/up",
+							required: false,
+							description: "Where to redirect the user after sign in/up",
 							schema: {
 								type: "string",
 							},
@@ -95,6 +95,8 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
+			const { callbackUrl } = ctx.query;
+
 			let res: Awaited<ReturnType<typeof acceptInviteLogic>> | null = null;
 			try {
 				// Run the real invite logic
@@ -112,7 +114,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 				const message = err?.body?.message ?? "Internal server error";
 
 				return ctx.redirect(
-					redirectError(ctx.context, ctx.query.callbackUrl, { message, error }),
+					redirectError(ctx.context, callbackUrl, { message, error }),
 				);
 			}
 
@@ -137,7 +139,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 
 			// Fallback: something unexpected happened
 			return ctx.redirect(
-				redirectError(ctx.context, ctx.query.callbackUrl, {
+				redirectError(ctx.context, callbackUrl, {
 					message: "Internal server error",
 					error: "SERVER_ERROR",
 				}),

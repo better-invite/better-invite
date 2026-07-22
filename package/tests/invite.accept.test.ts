@@ -1222,3 +1222,76 @@ test("acceptInvite removes user email from private invite when maxUsesPerUser is
 		statusText: "BAD_REQUEST",
 	});
 });
+
+test("multi-email private invite allows each recipient when maxUsesPerUser is omitted", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+
+	const invitedUser = {
+		email: "multi-a@email.com",
+		role: "user",
+		name: "Multi A",
+		password: "12345678",
+	};
+	const invitedUser2 = {
+		email: "multi-b@email.com",
+		role: "user",
+		name: "Multi B",
+		password: "12345678",
+	};
+
+	await createUser(invitedUser, db);
+	await createUser(invitedUser2, db);
+
+	await client.invite.create({
+		role: "owner",
+		email: [invitedUser.email, invitedUser2.email],
+		fetchOptions: { headers },
+	});
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [
+			{
+				field: "emails",
+				value: JSON.stringify([invitedUser.email, invitedUser2.email]),
+			},
+		],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	expect(invite.maxUsesPerUser).toBe(1);
+	expect(invite.infinityMaxUses).toBe(true);
+
+	const { headers: firstUserHeaders } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+	const { headers: secondUserHeaders } = await signInWithUser(
+		invitedUser2.email,
+		invitedUser2.password,
+	);
+
+	const firstAccept = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: { headers: firstUserHeaders },
+	});
+	expect(firstAccept.error).toBeNull();
+
+	const secondAccept = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: { headers: secondUserHeaders },
+	});
+	expect(secondAccept.error).toBeNull();
+});

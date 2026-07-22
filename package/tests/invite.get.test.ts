@@ -1,7 +1,8 @@
+import { setCookieToHeader } from "better-auth/cookies";
 import { beforeEach, expect, vi } from "vitest";
 import { ERROR_CODES } from "../src/constants";
 import type { InviteTypeWithId } from "../src/types";
-import { defaultOptions, test } from "./helpers/better-auth";
+import { acceptInviteGet, defaultOptions, test } from "./helpers/better-auth";
 import { createUser } from "./helpers/users";
 
 beforeEach(() => {
@@ -60,8 +61,78 @@ test("public invite returns inviter info without session", async ({
 			emails: [],
 			createdAt: expect.any(Date),
 			role: "user",
+			type: "public",
 		}),
 	});
+});
+
+test("getInvite without token and without cookie returns INVALID_TOKEN", async ({
+	createAuth,
+}) => {
+	const { client } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const res = await client.invite.get({
+		query: {},
+	});
+
+	expect(res.data).toBeNull();
+	expect(res.error).toEqual(
+		expect.objectContaining({
+			code: "INVALID_TOKEN",
+			status: 400,
+		}),
+	);
+});
+
+test("getInvite resolves token from invite cookie when query token is omitted", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+	const created = await client.invite.create({
+		role: "user",
+		senderResponse: "token",
+		fetchOptions: { headers },
+	});
+
+	const tokenValue = created.data?.message;
+	if (!tokenValue) {
+		throw new Error("Token value is undefined");
+	}
+
+	const cookieHeaders = new Headers();
+	await acceptInviteGet(client, {
+		token: tokenValue,
+		callbackUrl: "/",
+		signInUpUrl: "/auth/sign-in",
+		fetchOptions: {
+			onResponse(context) {
+				setCookieToHeader(cookieHeaders)(context);
+			},
+		},
+	});
+
+	const res = await client.invite.get({
+		query: {},
+		fetchOptions: { headers: cookieHeaders },
+	});
+
+	expect(res.error).toBeNull();
+	expect(res.data?.invitation).toEqual(
+		expect.objectContaining({
+			role: "user",
+			type: "public",
+		}),
+	);
 });
 
 test("private invite returns inviter info only to the correct invitee", async ({
@@ -127,6 +198,7 @@ test("private invite returns inviter info only to the correct invitee", async ({
 			emails: [invitee.email],
 			createdAt: expect.any(Date),
 			role: "admin",
+			type: "private",
 		}),
 	});
 });
@@ -347,6 +419,7 @@ test("works with old email field in db", async ({ createAuth }) => {
 			emails: [invitee.email],
 			createdAt: expect.any(Date),
 			role: "admin",
+			type: "private",
 		}),
 	});
 });

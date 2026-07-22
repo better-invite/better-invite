@@ -44,4 +44,5 @@ next-env.d.ts
 
 /docs/content/docs-beta/*
 !docs/content/docs-beta/.gitkeep
-.docs/beta-sync-tmp/
+docs/.beta-sync-tmp/
+.beta-sync-tmp/

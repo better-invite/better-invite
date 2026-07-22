@@ -241,6 +241,20 @@ export type InviteOptions = {
 			invitations: InviteTypeWithId[];
 		}) => Awaitable<void>;
 		/**
+		 * A function that runs before invitation emails are resent.
+		 */
+		beforeResendInvite?: (data: {
+			ctx: GenericEndpointContext;
+			invitation: InviteTypeWithId;
+		}) => Awaitable<void>;
+		/**
+		 * A function that runs after invitation emails are resent.
+		 */
+		afterResendInvite?: (data: {
+			ctx: GenericEndpointContext;
+			invitation: InviteTypeWithId;
+		}) => Awaitable<void>;
+		/**
 		 * A function that runs before a user accepts an invite
 		 *
 		 * You can return a user object to override the invited user.

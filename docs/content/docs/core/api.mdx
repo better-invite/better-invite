@@ -91,19 +91,37 @@ type createInvite = {
 # Activate Invite
 
 <Callout type="warn" title="Deprecated">
-  This endpoint is deprecated, use accept invite instead
+  This endpoint is deprecated. Prefer [Accept Invite](#accept-invite) for authenticated acceptance.
 </Callout>
+
+<APIMethod path="/invite/activate" method="POST" optionalSession note="Deprecated. Prefer acceptInvite (session required) or acceptInviteCallback (email links).">
+```ts
+type activateInvite = {
+	/**
+	 * Where to redirect the user after accepting the invite.
+	 * {token} will be replaced by the actual token in the request body.
+	 *
+	 * @default /
+	*/
+	callbackUrl?: string
+	/**
+	 * The invite token
+	*/
+	token: string
+}
+```
+</APIMethod>
 
 # Accept Invite
 
-<APIMethod path="/invite/accept" method="POST" requireSession note="If the user is not logged in, it returns a message to sign in/up and stores the token in a cookie.">
+<APIMethod path="/invite/accept" method="POST" requireSession note="Requires an authenticated session. Unauthenticated email links should use Accept Invite Callback instead.">
 ```ts
 type acceptInvite = {
 	/**
 	 * Where to redirect the user after accepting the invite.
 	 * {token} will be replaced by the actual token in the request body.
 	 *
-	 * @default http://localhost:3000/
+	 * @default /
 	*/
 	callbackUrl?: string
 	/**
@@ -126,25 +144,55 @@ type acceptInvite = {
 # Activate Invite Callback
 
 <Callout type="warn" title="Deprecated">
-  This endpoint is deprecated, use accept invite callback instead.
+  This endpoint is deprecated. Prefer [Accept Invite Callback](#accept-invite-callback).
+  Legacy links used `/invite/:token/activate?callbackURL=...`. New links use `/invite/:token?callbackUrl=...`.
+  The new callback also accepts the legacy `callbackURL` query alias.
 </Callout>
+
+<APIMethod path="/invite/:token/activate" method="GET" optionalSession fetchOptionsParams="token" note="Deprecated. Prefer acceptInviteCallback.">
+```ts
+type activateInviteCallback = {
+	/**
+	 * Where to redirect the user after sign in/up.
+	 * {token} will be replaced by the actual token from the URL path.
+	 *
+	 * @default /
+	*/
+	callbackURL?: string
+	/**
+	 * Where to redirect the user to sign in/up.
+	 * {callbackUrl} will be replaced by the actual callbackUrl.
+	*/
+	signInUpUrl?: string
+	/**
+   * @ignore
+   * The invite token from the URL path
+  */
+  token: string
+	/**
+	 * The email address of the user to sign in/up to.
+	*/
+	email?: string
+}
+```
+</APIMethod>
 
 # Accept Invite Callback
 
 <Callout type="info" title="Note">
   This endpoint is **not recommended** for direct usage. It exists mainly for internal use (e.g. the default link sent in invite emails).
   The email link opens in the browser and triggers a `GET` request to `/api/auth/invite/{token}?callbackUrl=...`.
-  For most apps, you should use [Accept Invite](#accept-invite) instead.
+  For authenticated acceptance in your app UI, use [Accept Invite](#accept-invite) instead.
 </Callout>
 
 <APIMethod path="/invite/:token" clientMethod='invite[":token"]' method="GET" optionalSession fetchOptionsParams="token" note="If the user is not logged in, it redirects the user to the callback URL with the token in a cookie.">
 ```ts
 type acceptInviteCallback = {
 	/**
-	 * Where to redirect the user after sing in/up
-	 * {token} will be replaced by the actual token in the request body.
+	 * Where to redirect the user after sign in/up.
+	 * {token} will be replaced by the actual token from the URL path.
 	 *
-	 * @default http://localhost:3000/
+	 * @default /
 	*/
 	callbackUrl?: string
 	/**
@@ -154,7 +202,7 @@ type acceptInviteCallback = {
 	signInUpUrl?: string
 	/**
    * @ignore
-   * The invite token
+   * The invite token from the URL path
   */
   token: string
 	/**
@@ -171,7 +219,7 @@ type acceptInviteCallback = {
 ```ts
 type rejectInvite = {
 	/**
-	 * Where to redirect the user after rejecting the invite..
+	 * Where to redirect the user after rejecting the invite.
 	*/
 	callbackUrl?: string
   /**

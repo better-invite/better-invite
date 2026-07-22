@@ -22,10 +22,9 @@ let alreadyWarned = false;
 export const activateInviteCallback = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
 		// This route exists for backwards compatibility with apps still using the old
-		// activate invite callback (which is NOT recommended). New apps should use `acceptInvite` instead.
-		// `/invite/:token` is now handled by the new accept invite flow.
-		// This works because when using activateInviteCallback, this route is called,
-		// but when using /invite/:token, the new accept invite callback flow is called.
+		// activate invite callback (which is NOT recommended). New apps should use
+		// `acceptInviteCallback` instead. `/invite/:token` is now handled by the new
+		// accept invite callback flow.
 		"/invite/:token/activate",
 		{
 			method: "GET",
@@ -35,8 +34,8 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 			],
 			query: z.object({
 				/**
-				 * Where to redirect the user after sing in/up
-				 * {token} will be replaced by the actual token in the request body.
+				 * Where to redirect the user after sign in/up
+				 * {token} will be replaced by the actual token from the URL path.
 				 *
 				 * Note: This is called `callbackURL` instead of `callbackUrl` to match the query parameter name used in the old activate invite callback flow.
 				 *
@@ -44,7 +43,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				 */
 				callbackURL: z
 					.string()
-					.describe("Where to redirect the user after sing in/up")
+					.describe("Where to redirect the user after sign in/up")
 					.optional(),
 				/**
 				 * Where to redirect the user to sign in/up.
@@ -81,7 +80,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 							name: "callbackURL",
 							in: "query",
 							required: true,
-							description: "Where to redirect the user after sing in/up",
+							description: "Where to redirect the user after sign in/up",
 							schema: {
 								type: "string",
 							},
@@ -107,8 +106,8 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 		async (ctx) => {
 			if (!alreadyWarned) {
 				ctx.context.logger.warn(
-					"activateInvite callback is deprecated. Use acceptInvite instead.",
-					'This callback should only be triggered from invitation URLs. If you are calling client.invite.[":token"]() directly in your app, migrate to acceptInvite instead.',
+					"activateInviteCallback is deprecated. Use acceptInviteCallback instead.",
+					'This callback should only be triggered from invitation URLs. If you are calling GET client.invite[":token"] directly in your app, migrate to acceptInvite (POST /invite/accept) instead.',
 				);
 				alreadyWarned = true;
 			}
