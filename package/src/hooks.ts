@@ -123,7 +123,9 @@ export const invitesHooks = (options: NewInviteOptions) => {
 					}
 
 					const callbackUrl = validateCallbackUrl(
-						callbackUrlFromBody ?? invitation.callbackUrl,
+						callbackUrlFromBody ??
+							invitation.callbackUrl ??
+							invitation.redirectToAfterUpgrade,
 						ctx.request?.url,
 					);
 

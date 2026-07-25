@@ -59,7 +59,7 @@ export const createInvite = (options: NewInviteOptions) => {
 				senderResponse,
 				senderResponseRedirect,
 				customInviteUrl,
-				redirectToAfterUpgrade,
+				callbackUrl,
 			} = resolveInvitePayload(ctx.body, options);
 
 			// Normalize the input to always work with an array internally.
@@ -125,7 +125,6 @@ export const createInvite = (options: NewInviteOptions) => {
 								email: recipientEmail,
 								invitedUser,
 								signInUpUrl: invitedUser ? redirectToSignIn : redirectToSignUp,
-								redirectToAfterUpgrade,
 								newAccount: !invitedUser,
 							};
 						}),
@@ -148,7 +147,7 @@ export const createInvite = (options: NewInviteOptions) => {
 						signInUpUrl: recipient.signInUpUrl,
 						customInviteUrl,
 						email: recipient.email,
-						callbackUrl: recipient.redirectToAfterUpgrade,
+						callbackUrl,
 					});
 
 					try {
@@ -200,7 +199,7 @@ export const createInvite = (options: NewInviteOptions) => {
 				invitation,
 				signInUpUrl,
 				customInviteUrl,
-				callbackUrl: redirectToAfterUpgrade,
+				callbackUrl,
 			});
 
 			const returnToken =

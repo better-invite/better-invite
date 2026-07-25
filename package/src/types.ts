@@ -220,6 +220,13 @@ export type InviteOptions = {
 		request?: Request,
 	) => Awaitable<void>;
 	/**
+	 * Allow to get private invites, without checking that the emails
+	 * match (useful for getting invites without a session).
+	 *
+	 * @default false
+	 */
+	allowDangerousGetInvite?: boolean;
+	/**
 	 * Custom schema for the invite plugin
 	 */
 	schema?: InferOptionSchema<InviteSchema>;
@@ -331,7 +338,15 @@ export type InviteType = {
 	email?: string;
 	emails?: string[];
 	role: string;
+	/**
+	 * @deprecated
+	 */
+	newAccount?: boolean;
 	callbackUrl?: string;
+	/**
+	 * @deprecated Use callbackUrl
+	 */
+	redirectToAfterUpgrade?: string;
 	status: InvitationStatus;
 };
 

@@ -423,3 +423,84 @@ test("works with old email field in db", async ({ createAuth }) => {
 		}),
 	});
 });
+
+test("getInvite reads the token from the invite cookie when token is omitted", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+			allowDangerousGetInvite: true,
+		},
+	});
+
+	const invitedUser = {
+		email: "cookie@email.com",
+		role: "user",
+		name: "Cookie User",
+		password: "12345678",
+	};
+
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	await client.invite.create({
+		role: "owner",
+		email: invitedUser.email,
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [
+			{
+				field: "emails",
+				value: JSON.stringify([invitedUser.email]),
+			},
+		],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const sessionHeaders = new Headers();
+
+	// No session: stores the invite token in the cookie
+	const { path } = await acceptInviteGet(client, {
+		token: invite.token,
+		fetchOptions: {
+			async onResponse(context) {
+				setCookieToHeader(sessionHeaders)(context);
+			},
+		},
+	});
+
+	expect(path).toBe("http://localhost:3000/auth/sign-in");
+	console.log(sessionHeaders);
+
+	const { data, error } = await client.invite.get({
+		query: {},
+		fetchOptions: {
+			headers: sessionHeaders,
+		},
+	});
+
+	expect(error).toBeNull();
+	expect(data).toMatchObject({
+		status: true,
+		inviter: {
+			email: expect.any(String),
+			name: expect.any(String),
+		},
+		invitation: {
+			emails: [invitedUser.email],
+			role: "owner",
+			type: "private",
+		},
+	});
+});

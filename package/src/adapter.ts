@@ -75,7 +75,7 @@ export const getInviteAdapter = (
 					shareInviterName: payload.shareInviterName,
 					emails: normalizeArray(invite.email, true),
 					role: invite.role,
-					callbackUrl: payload.redirectToAfterUpgrade,
+					callbackUrl: payload.callbackUrl,
 					status: "pending",
 				},
 			});

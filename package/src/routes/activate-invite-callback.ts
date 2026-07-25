@@ -53,13 +53,6 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 					.string()
 					.describe("The URL of the sign in/up page.")
 					.optional(),
-				/**
-				 * The email address of the user to sign in/up to.
-				 */
-				email: z
-					.email()
-					.optional()
-					.describe("The email address of the user to sign in/up to"),
 			}),
 			metadata: {
 				openapi: {

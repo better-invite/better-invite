@@ -103,9 +103,10 @@ export const resendInvite = (options: NewInviteOptions) => {
 			const customInviteUrl =
 				ctx.body.customInviteUrl ?? options.defaultCustomInviteUrl;
 
-			const redirectToAfterUpgrade =
+			const callbackUrl =
 				ctx.body.redirectToAfterUpgrade ??
 				invitation.callbackUrl ??
+				invitation.redirectToAfterUpgrade ??
 				options.defaultRedirectAfterUpgrade ??
 				defaultRedirectAfterUpgrade;
 
@@ -139,7 +140,7 @@ export const resendInvite = (options: NewInviteOptions) => {
 					signInUpUrl: recipient.signInUpUrl,
 					customInviteUrl,
 					email: recipient.email,
-					callbackUrl: redirectToAfterUpgrade,
+					callbackUrl,
 				});
 
 				try {

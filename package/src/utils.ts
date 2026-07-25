@@ -362,6 +362,7 @@ export const createRedirectURL = ({
 			.replaceAll("{signInUpUrl}", encodeURIComponent(signInUpUrl))
 			.replaceAll("{email}", encodeURIComponent(email ?? ""))
 			.replaceAll("{callbackUrl}", encodeURIComponent(callbackUrl))
+			//! Deprecated
 			.replaceAll("{callbackURL}", encodeURIComponent(callbackUrl))
 			.replaceAll("{defaultUrlQuery}", urlQuery);
 
@@ -462,7 +463,7 @@ export const resolveInvitePayload = (
 	senderResponseRedirect:
 		body.senderResponseRedirect ?? options.defaultSenderResponseRedirect,
 	customInviteUrl: body.customInviteUrl ?? options.defaultCustomInviteUrl,
-	redirectToAfterUpgrade:
+	callbackUrl:
 		body.redirectToAfterUpgrade ??
 		options.defaultRedirectAfterUpgrade ??
 		defaultRedirectAfterUpgrade,

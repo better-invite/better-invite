@@ -146,7 +146,10 @@ export const acceptInviteLogic = async (
 	const fallbackCallback =
 		options.defaultRedirectAfterUpgrade ?? defaultRedirectAfterUpgrade;
 	const rawCallbackUrl =
-		body.callbackUrl ?? invitation.callbackUrl ?? fallbackCallback;
+		body.callbackUrl ??
+		invitation.callbackUrl ??
+		invitation.redirectToAfterUpgrade ??
+		fallbackCallback;
 
 	// Keep templates with placeholders intact (URL() would encode `{token}`).
 	// Expand plain relative paths so defaults like `/` become absolute.

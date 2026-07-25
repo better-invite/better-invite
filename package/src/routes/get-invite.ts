@@ -125,11 +125,14 @@ export const getInvite = (options: NewInviteOptions) => {
 			const session = await getSessionFromCtx(ctx);
 			const sessionUser = session?.user as UserWithRole | null;
 
+			const allowDangerousGetInvite = options.allowDangerousGetInvite ?? false;
+			const privateChecks =
+				!allowDangerousGetInvite &&
+				isPrivate &&
+				(!sessionUser || !emails?.includes(sessionUser.email));
+
 			// For private invites, the requester must exist, match the invite email, and the invite must have a creator.
-			if (
-				(isPrivate && (!sessionUser || !emails?.includes(sessionUser.email))) ||
-				!invitation.createdByUserId
-			) {
+			if (privateChecks || !invitation.createdByUserId) {
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 			}
 

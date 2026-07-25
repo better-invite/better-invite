@@ -22,7 +22,7 @@ const res = await authClient.invite.create({
 <Callout>
 A private invite can include multiple emails. Internally, the plugin creates **one shared invitation** (one token) that stores the full recipient list, and sends each recipient their own invite link
 (links differ because they include a `?email=...` query).
-When one recipient accepts or rejects, only that email is removed from the invite; the others can still use it.
+With the default per-recipient limit (`maxUsesPerUser: 1`), when one recipient accepts or rejects, only that email is removed from the invite; if a higher limit is configured, the email remains until its per-user limit is reached.
 For multi-email invites, Better Invite defaults to one use per recipient (`maxUsesPerUser: 1`) so the first acceptance does not exhaust the shared invite for everyone else.
 </Callout>
 
@@ -35,11 +35,10 @@ Accepting an invite depends on how the user arrives:
 - **Email / browser link** → [Accept Invite Callback](/docs/core/api#accept-invite-callback) (`GET /invite/:token`). If the user is not signed in, the invite token is stored in a cookie and they are redirected to sign in or sign up.
 - **Authenticated app UI** → [Accept Invite](/docs/core/api#accept-invite) (`POST /invite/accept`, requires a session). The user's role is updated immediately.
 
-Example (authenticated accept):
+Example:
 
 ```ts
 const res = await authClient.invite.accept({
-  signInUpUrl: "/auth/sign-in-or-sign-up", // Used when calling the callback flow without a session
   callbackUrl: "/invite/accepted", // The user will be redirected here after accepting the invite
   token: "token123",
 });

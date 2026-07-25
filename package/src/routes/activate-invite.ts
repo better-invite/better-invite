@@ -31,13 +31,6 @@ export const activateInvite = (options: NewInviteOptions) => {
 				 * The invite token.
 				 */
 				token: z.string().describe("The invite token"),
-				/**
-				 * The email address of the user to sign in/up to.
-				 */
-				email: z
-					.email()
-					.optional()
-					.describe("The email address of the user to sign in/up to"),
 			}),
 			metadata: {
 				openapi: {
@@ -60,10 +53,6 @@ export const activateInvite = (options: NewInviteOptions) => {
 											action: {
 												type: "string",
 												example: "SIGN_IN_UP_REQUIRED",
-											},
-											email: {
-												type: "string",
-												example: "user@example.com",
 											},
 											redirectTo: {
 												type: "string",

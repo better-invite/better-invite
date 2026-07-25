@@ -36,6 +36,20 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 					.describe("Where to redirect the user after sign in/up")
 					.optional(),
 				/**
+				 * @deprecated Use `callbackUrl`
+				 *
+				 * Where to redirect the user after accepting the invite.
+				 * {token} will be replaced by the actual token in the request body.
+				 *
+				 * @default /
+				 */
+				callbackURL: z
+					.string()
+					.describe(
+						"Where to redirect the user after accepting the invite. {token} will be replaced by the actual token in the request body.",
+					)
+					.optional(),
+				/**
 				 * Where to redirect the user to sign in/up.
 				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
 				 * {email} will be replaced by the actual email in private invites.
@@ -95,7 +109,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
-			const { callbackUrl } = ctx.query;
+			const { callbackUrl, callbackURL } = ctx.query;
 
 			let res: Awaited<ReturnType<typeof acceptInviteLogic>> | null = null;
 			try {
@@ -103,6 +117,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 				res = await acceptInviteLogic(options, ctx, {
 					...ctx.params,
 					...ctx.query,
+					callbackUrl: callbackUrl ?? callbackURL,
 				});
 			} catch (e) {
 				// If something fails, we don't return JSON, we redirect with error info

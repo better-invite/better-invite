@@ -19,6 +19,7 @@ export const schema = {
 			role: { type: "string", required: true },
 			newAccount: { type: "boolean", required: false }, //! Deprecated
 			callbackUrl: { type: "string", required: false },
+			redirectToAfterUpgrade: { type: "string", required: false }, //! Deprecated
 			status: {
 				type: ["pending", "rejected", "canceled", "used"] as const,
 				required: true,

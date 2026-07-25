@@ -7,7 +7,10 @@ import { Terminal } from "@/components/terminal";
 import { formatCount, getCommunityStats } from "@/lib/community-stats";
 
 export default async function HomePage() {
-	const communityStats = await getCommunityStats();
+	const communityStats = await getCommunityStats({
+		npmDownloads: true,
+		githubStars: true,
+	});
 
 	return (
 		<div className="relative grow overflow-hidden">

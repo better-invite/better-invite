@@ -6,6 +6,12 @@ export interface CommunityStats {
 	githubStars?: number;
 }
 
+type CommunityStatsOptions = {
+	npmDownloads?: boolean;
+	npmWeeklyHistory?: boolean;
+	githubStars?: boolean;
+};
+
 // Fetch NPM download stats for the last week
 async function fetchNpmDownloads(): Promise<number | undefined> {
 	try {
@@ -16,14 +22,14 @@ async function fetchNpmDownloads(): Promise<number | undefined> {
 
 		if (!response.ok) {
 			console.error("Failed to fetch NPM downloads:", response.status);
-			return 800; // Fallback value
+			return undefined;
 		}
 
 		const data = await response.json();
 		return data.downloads ?? undefined;
 	} catch (error) {
 		console.error("Error fetching NPM downloads:", error);
-		return 800; // Fallback value
+		return undefined;
 	}
 }
 
@@ -31,8 +37,21 @@ async function fetchNpmDownloads(): Promise<number | undefined> {
 async function fetchNpmWeeklyHistory(): Promise<number[] | undefined> {
 	try {
 		const end = new Date();
-		const start = new Date();
+
+		const start = new Date(end);
+		const day = start.getDate();
+
+		start.setDate(1);
 		start.setMonth(start.getMonth() - 6);
+
+		const lastDayOfTargetMonth = new Date(
+			start.getFullYear(),
+			start.getMonth() + 1,
+			0,
+		).getDate();
+
+		start.setDate(Math.min(day, lastDayOfTargetMonth));
+
 		const fmt = (d: Date) => d.toISOString().slice(0, 10);
 		const response = await fetch(
 			`https://api.npmjs.org/downloads/range/${fmt(start)}:${fmt(end)}/better-invite`,
@@ -49,7 +68,7 @@ async function fetchNpmWeeklyHistory(): Promise<number[] | undefined> {
 		}
 		return weeks;
 	} catch {
-		return [];
+		return undefined;
 	}
 }
 
@@ -83,31 +102,45 @@ async function fetchGitHubStars(): Promise<number | undefined> {
 		return stars;
 	} catch (error) {
 		console.error("Error fetching GitHub stats:", error);
-		return 27;
+		return undefined;
 	}
 }
 
-// Cached function to get all community stats
-export const getCommunityStats = unstable_cache(
-	async (): Promise<CommunityStats> => {
-		const [npmDownloads, npmWeeklyHistory, githubStars] = await Promise.all([
-			fetchNpmDownloads(),
-			fetchNpmWeeklyHistory(),
-			fetchGitHubStars(),
-		]);
+// Cached functions to get stats
 
-		return {
-			npmDownloads,
-			npmWeeklyHistory,
-			githubStars,
-		};
-	},
-	["community-stats"],
-	{
-		revalidate: 3600, // Revalidate every hour
-		tags: ["community-stats"],
-	},
+const getCachedNpmDownloads = unstable_cache(
+	fetchNpmDownloads,
+	["npm-downloads"],
+	{ revalidate: 3600 },
 );
+
+const getCachedNpmWeeklyHistory = unstable_cache(
+	fetchNpmWeeklyHistory,
+	["npm-weekly-history"],
+	{ revalidate: 3600 },
+);
+
+const getCachedGitHubStars = unstable_cache(
+	fetchGitHubStars,
+	["github-stars"],
+	{ revalidate: 3600 },
+);
+
+export async function getCommunityStats(
+	options: CommunityStatsOptions = {},
+): Promise<CommunityStats> {
+	const [npmDownloads, npmWeeklyHistory, githubStars] = await Promise.all([
+		options.npmDownloads ? getCachedNpmDownloads() : undefined,
+		options.npmWeeklyHistory ? getCachedNpmWeeklyHistory() : undefined,
+		options.githubStars ? getCachedGitHubStars() : undefined,
+	]);
+
+	return {
+		npmDownloads,
+		npmWeeklyHistory,
+		githubStars,
+	};
+}
 
 export function formatCount(num: number | null | undefined): string {
 	if (num == null) return "—";

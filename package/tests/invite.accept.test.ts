@@ -1166,6 +1166,8 @@ test("acceptInvite removes user email from private invite when maxUsesPerUser is
 
 	expect(updatedInvite.emails).toEqual([invitedUser2.email]);
 
+	// First user can't accept twice
+
 	const secondAttempt = await client.invite.accept({
 		token: invite.token,
 		fetchOptions: {
@@ -1185,6 +1187,8 @@ test("acceptInvite removes user email from private invite when maxUsesPerUser is
 		invitedUser2.email,
 		invitedUser2.password,
 	);
+
+	// Second user accepts
 
 	const secondUserAccept = await client.invite.accept({
 		token: invite.token,
@@ -1206,6 +1210,8 @@ test("acceptInvite removes user email from private invite when maxUsesPerUser is
 
 	expect(finalInvite.emails).toEqual([]);
 	expect(finalInvite.status).toBe("used");
+
+	// Second user can't accept twice
 
 	const thirdAttempt = await client.invite.accept({
 		token: invite.token,
@@ -1278,20 +1284,136 @@ test("multi-email private invite allows each recipient when maxUsesPerUser is om
 		invitedUser.email,
 		invitedUser.password,
 	);
+
 	const { headers: secondUserHeaders } = await signInWithUser(
 		invitedUser2.email,
 		invitedUser2.password,
 	);
 
+	// First user accepts
 	const firstAccept = await client.invite.accept({
 		token: invite.token,
 		fetchOptions: { headers: firstUserHeaders },
 	});
+
 	expect(firstAccept.error).toBeNull();
 
+	const updatedInvite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "token", value: invite.token }],
+	});
+
+	if (!updatedInvite) {
+		throw new Error("Updated invite not found");
+	}
+
+	expect(updatedInvite.emails).toEqual([invitedUser2.email]);
+
+	// First user can't accept twice
+	const secondAttempt = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: { headers: firstUserHeaders },
+	});
+
+	expect(secondAttempt.data).toBeNull();
+	expect(secondAttempt.error).toStrictEqual({
+		code: "INVALID_EMAIL",
+		message: "This token is for a specific email, this is not it",
+		status: 400,
+		statusText: "BAD_REQUEST",
+	});
+
+	// Second user accepts
 	const secondAccept = await client.invite.accept({
 		token: invite.token,
 		fetchOptions: { headers: secondUserHeaders },
 	});
+
 	expect(secondAccept.error).toBeNull();
+
+	const finalInvite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "token", value: invite.token }],
+	});
+
+	if (!finalInvite) {
+		throw new Error("Final invite not found");
+	}
+
+	expect(finalInvite.emails).toEqual([]);
+	expect(finalInvite.status).toBe("used");
+
+	// No further accepts are allowed
+	const thirdAttempt = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: { headers: secondUserHeaders },
+	});
+
+	expect(thirdAttempt.data).toBeNull();
+	expect(thirdAttempt.error).toStrictEqual({
+		code: "INVALID_TOKEN",
+		message: expect.any(String),
+		status: 400,
+		statusText: "BAD_REQUEST",
+	});
+});
+
+test("acceptInvite uses redirectToAfterUpgrade from the invite record", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const invitedUser = {
+		email: "redirect-upgrade@email.com",
+		role: "user",
+		name: "Redirect Upgrade User",
+		password: "12345678",
+	};
+
+	await createUser(invitedUser, db);
+
+	const { user } = await signInWithTestUser();
+
+	const token = `manual-redirect-token-${Date.now()}`;
+
+	await db.create<InviteTypeWithId>({
+		model: "invite",
+		data: {
+			token,
+			createdAt: new Date(),
+			expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+			maxUses: 1,
+			infinityMaxUses: false,
+			shareInviterName: false,
+			emails: [invitedUser.email],
+			role: "admin",
+			status: "pending",
+			redirectToAfterUpgrade: "/auth/invited",
+			createdByUserId: user.id,
+		},
+	});
+
+	const { headers } = await signInWithUser(
+		invitedUser.email,
+		invitedUser.password,
+	);
+
+	const { error, data } = await client.invite.accept({
+		token,
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	expect(error).toBeNull();
+	expect(data).toStrictEqual({
+		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
+		message: "Invite accepted successfully",
+		redirectTo: "http://localhost:3000/auth/invited",
+	});
 });
