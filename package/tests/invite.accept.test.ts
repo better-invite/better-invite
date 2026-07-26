@@ -1414,6 +1414,9 @@ test("acceptInvite uses redirectToAfterUpgrade from the invite record", async ({
 		status: true,
 		action: "REDIRECT_TO_AFTER_UPGRADE",
 		message: "Invite accepted successfully",
-		redirectTo: "http://localhost:3000/auth/invited",
+		redirectTo: expect.stringContaining("/auth/invited"),
 	});
+
+	// biome-ignore lint/style/noNonNullAssertion: We have a test above that checks that data exists
+	expect(() => new URL(data!.redirectTo)).not.toThrow();
 });

@@ -22,6 +22,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 			method: "GET",
 			use: [
 				originCheck((ctx) => ctx.query.callbackUrl),
+				originCheck((ctx) => ctx.query.callbackURL),
 				originCheck((ctx) => ctx.query.signInUpUrl),
 			],
 			query: z.object({
@@ -129,7 +130,10 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 				const message = err?.body?.message ?? "Internal server error";
 
 				return ctx.redirect(
-					redirectError(ctx.context, callbackUrl, { message, error }),
+					redirectError(ctx.context, callbackUrl ?? callbackURL, {
+						message,
+						error,
+					}),
 				);
 			}
 
@@ -154,7 +158,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 
 			// Fallback: something unexpected happened
 			return ctx.redirect(
-				redirectError(ctx.context, callbackUrl, {
+				redirectError(ctx.context, callbackUrl ?? callbackURL, {
 					message: "Internal server error",
 					error: "SERVER_ERROR",
 				}),

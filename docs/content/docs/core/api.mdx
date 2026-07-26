@@ -242,7 +242,7 @@ Get basic information about an invitation.
   Otherwise, the invitation will upgrade the role of an existing account.
 </Callout>
 
-<APIMethod path="/invite/get" method="GET" optionalSession note="For private invites, the requester must match the invite email.">
+<APIMethod path="/invite/get" method="GET" optionalSession note="For private invites, the requester must match the invite email, unless `allowDangerousGetInvite` is set to true.">
 ```ts
 type getInvite = {
   /**

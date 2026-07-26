@@ -481,7 +481,6 @@ test("getInvite reads the token from the invite cookie when token is omitted", a
 	});
 
 	expect(path).toBe("http://localhost:3000/auth/sign-in");
-	console.log(sessionHeaders);
 
 	const { data, error } = await client.invite.get({
 		query: {},
