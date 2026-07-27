@@ -1,0 +1,26 @@
+{
+	"redirects": [
+		{
+			"source": "/",
+			"has": [
+				{
+					"type": "host",
+					"value": "better-invite-plugin.vercel.app"
+				}
+			],
+			"destination": "/blog/0-5",
+			"permanent": true
+		},
+		{
+			"source": "/:path*",
+			"has": [
+				{
+					"type": "host",
+					"value": "better-invite-plugin.vercel.app"
+				}
+			],
+			"destination": "/:path*",
+			"permanent": true
+		}
+	]
+}
