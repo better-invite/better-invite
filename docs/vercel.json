@@ -1,4 +1,5 @@
 {
+	"$schema": "https://openapi.vercel.sh/vercel.json",
 	"redirects": [
 		{
 			"source": "/",
@@ -8,7 +9,7 @@
 					"value": "better-invite-plugin.vercel.app"
 				}
 			],
-			"destination": "/blog/0-5",
+			"destination": "https://www.better-invite.com/blog/0-5",
 			"permanent": true
 		},
 		{
@@ -19,7 +20,7 @@
 					"value": "better-invite-plugin.vercel.app"
 				}
 			],
-			"destination": "/:path*",
+			"destination": "https://www.better-invite.com/:path*",
 			"permanent": true
 		}
 	]
