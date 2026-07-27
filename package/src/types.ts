@@ -227,6 +227,42 @@ export type InviteOptions = {
 	 */
 	allowDangerousGetInvite?: boolean;
 	/**
+	 * Called when an invite cannot be retrieved. This is especially useful
+	 * when `allowDangerousGetInvite` is enabled and you want to return a
+	 * fallback response (for example, some fake data) instead of revealing
+	 * whether a private invite exists.
+	 */
+	getInviteNotFound?: (
+		data: {
+			token: string;
+			invite: InviteTypeWithId;
+			inviter?: UserWithRole | null;
+			invitation: {
+				emails: string[];
+				createdAt: Date;
+				role: string;
+				type: "private" | "public";
+			};
+		},
+		request?: Request,
+	) => Awaitable<
+		| {
+				status: true;
+				inviter: {
+					email: string;
+					name: string | null;
+					image: string | null;
+				};
+				invitation: {
+					emails: string[];
+					createdAt: Date;
+					role: string;
+					type: "private" | "public";
+				};
+		  }
+		| undefined
+	>;
+	/**
 	 * Custom schema for the invite plugin
 	 */
 	schema?: InferOptionSchema<InviteSchema>;

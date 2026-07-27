@@ -131,14 +131,30 @@ export const getInvite = (options: NewInviteOptions) => {
 				isPrivate &&
 				(!sessionUser || !emails?.includes(sessionUser.email));
 
-			// For private invites, the requester must exist, match the invite email, and the invite must have a creator.
-			if (privateChecks || !invitation.createdByUserId) {
-				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
-			}
-
 			const inviter = (await ctx.context.internalAdapter.findUserById(
 				invitation.createdByUserId,
 			)) as UserWithRole | null;
+
+			// For private invites, the requester must exist, match the invite email, and the invite must have a creator.
+			if (privateChecks || !invitation.createdByUserId) {
+				const returnInvite = options.getInviteNotFound?.({
+					token,
+					invite: invitation,
+					inviter,
+					invitation: {
+						emails,
+						createdAt: invitation.createdAt,
+						role: invitation.role,
+						type: isPrivate ? "private" : "public",
+					},
+				});
+
+				if (returnInvite) {
+					return ctx.json(returnInvite);
+				}
+
+				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
+			}
 
 			if (!inviter) {
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVITER_NOT_FOUND);

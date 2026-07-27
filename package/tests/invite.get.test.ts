@@ -273,6 +273,116 @@ test("private invite returns INVALID_TOKEN for non-invitee", async ({
 	);
 });
 
+test("private invite without session succeeds when allowDangerousGetInvite is enabled", async ({
+	createAuth,
+}) => {
+	const inviteeEmail = "invitee@test.com";
+
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+			allowDangerousGetInvite: true,
+		},
+	});
+
+	const { headers: creatorHeaders } = await signInWithTestUser();
+
+	await client.invite.create({
+		role: "admin",
+		email: inviteeEmail,
+		fetchOptions: { headers: creatorHeaders },
+	});
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([inviteeEmail]) }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const res = await client.invite.get({
+		query: { token: invite.token },
+	});
+
+	expect(res.error).toBeNull();
+	expect(res.data).toMatchObject({
+		status: true,
+		invitation: {
+			emails: [inviteeEmail],
+			role: "admin",
+			type: "private",
+		},
+	});
+});
+
+test("private invite without session calls getInviteNotFound when access is denied", async ({
+	createAuth,
+}) => {
+	const inviteeEmail = "invitee@test.com";
+	const fallbackResponse = {
+		status: true as const,
+		inviter: {
+			email: "fake@example.com",
+			name: "Fake Inviter",
+			image: null,
+		},
+		invitation: {
+			emails: [] as string[],
+			createdAt: new Date("2020-01-01T00:00:00.000Z"),
+			role: "user",
+			type: "public" as const,
+		},
+	};
+	const getInviteNotFound = vi.fn().mockReturnValue(fallbackResponse);
+
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+			getInviteNotFound,
+		},
+	});
+
+	const { headers: creatorHeaders } = await signInWithTestUser();
+
+	await client.invite.create({
+		role: "admin",
+		email: inviteeEmail,
+		fetchOptions: { headers: creatorHeaders },
+	});
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([inviteeEmail]) }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const res = await client.invite.get({
+		query: { token: invite.token },
+	});
+
+	expect(getInviteNotFound).toHaveBeenCalledOnce();
+	expect(getInviteNotFound).toHaveBeenCalledWith(
+		expect.objectContaining({
+			token: invite.token,
+			invite: expect.objectContaining({ id: invite.id }),
+			invitation: expect.objectContaining({
+				emails: [inviteeEmail],
+				role: "admin",
+				type: "private",
+			}),
+		}),
+	);
+	expect(res.error).toBeNull();
+	expect(res.data).toEqual(fallbackResponse);
+});
+
 test("private invite returns INVALID_TOKEN when unauthenticated", async ({
 	createAuth,
 }) => {
