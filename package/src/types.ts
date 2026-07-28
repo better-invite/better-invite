@@ -263,6 +263,12 @@ export type InviteOptions = {
 		| undefined
 	>;
 	/**
+	 * Extend the default hooks URL path matchers
+	 *
+	 * @example ["/sign-in/test"]
+	 */
+	hookPathExtender?: string[];
+	/**
 	 * Custom schema for the invite plugin
 	 */
 	schema?: InferOptionSchema<InviteSchema>;

@@ -13,20 +13,31 @@ import {
 	validateCallbackUrl,
 } from "./utils";
 
+const defaultHookPaths = [
+	"/sign-up/email",
+	"/sign-in/email",
+	"/sign-in/email-otp",
+	"/sign-in/username",
+	"/callback/:id",
+	"/verify-email",
+	"/two-factor/verify-totp",
+	"/two-factor/verify-backup-code",
+	"/two-factor/verify-otp",
+];
+
 export const invitesHooks = (options: NewInviteOptions) => {
 	return {
 		after: [
 			{
 				// Run this after sign in/up and callback endpoints to check for invite tokens
-				matcher: (context: HookEndpointContext) =>
-					context.path === "/sign-up/email" ||
-					context.path === "/sign-in/email" ||
-					context.path === "/sign-in/email-otp" ||
-					context.path === "/callback/:id" ||
-					context.path === "/verify-email" ||
-					context.path === "/two-factor/verify-totp" ||
-					context.path === "/two-factor/verify-backup-code" ||
-					context.path === "/two-factor/verify-otp",
+				matcher: (context: HookEndpointContext) => {
+					const paths = [
+						...defaultHookPaths,
+						...(options.hookPathExtender ?? []),
+					];
+
+					return context.path !== undefined && paths.includes(context.path);
+				},
 
 				handler: createAuthMiddleware(async (ctx) => {
 					// Make sure we have a new session with a user

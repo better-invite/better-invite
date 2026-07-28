@@ -489,9 +489,7 @@ test("sends correct redirect URL on private invites", async ({
 	);
 });
 
-test("returns custom redirect URL when inviteUrlType is custom", async ({
-	createAuth,
-}) => {
+test("returns custom redirect URL", async ({ createAuth }) => {
 	const customInviteUrl = "/invite/{token}?redirect={callbackUrl}";
 
 	const { client, signInWithTestUser } = await createAuth({
