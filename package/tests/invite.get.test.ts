@@ -378,6 +378,7 @@ test("private invite without session calls getInviteNotFound when access is deni
 				type: "private",
 			}),
 		}),
+		expect.any(Request),
 	);
 	expect(res.error).toBeNull();
 	expect(res.data).toEqual(fallbackResponse);

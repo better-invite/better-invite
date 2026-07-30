@@ -379,6 +379,7 @@ test("onInvitationUsed is called with correct payload", async ({
 			}),
 			newAccount: false,
 		}),
+		expect.any(Request),
 	);
 });
 

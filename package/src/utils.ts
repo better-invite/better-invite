@@ -152,11 +152,14 @@ export const consumeInvite = async ({
 	// Fire optional hook
 	if (options.onInvitationUsed) {
 		try {
-			await options.onInvitationUsed({
-				invitedUser,
-				newUser: updatedUser,
-				newAccount,
-			});
+			await options.onInvitationUsed(
+				{
+					invitedUser,
+					newUser: updatedUser,
+					newAccount,
+				},
+				ctx.request,
+			);
 		} catch (e) {
 			ctx.context.logger.error("Error in onInvitationUsed hook", e);
 		}

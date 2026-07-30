@@ -43,7 +43,7 @@ export function createMetadata(override: Metadata): Metadata {
 				"application/rss+xml": [
 					{
 						title: "Better Invite Blog",
-						url: "https://better-invite.vercel.app/blog/rss.xml",
+						url: "https://www.better-invite.com/blog/rss.xml",
 					},
 				],
 			},

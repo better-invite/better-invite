@@ -137,20 +137,25 @@ export const getInvite = (options: NewInviteOptions) => {
 
 			// For private invites, the requester must exist, match the invite email, and the invite must have a creator.
 			if (privateChecks || !invitation.createdByUserId) {
-				const returnInvite = options.getInviteNotFound?.({
-					token,
-					invite: invitation,
-					inviter,
-					invitation: {
-						emails,
-						createdAt: invitation.createdAt,
-						role: invitation.role,
-						type: isPrivate ? "private" : "public",
-					},
-				});
+				if (options.getInviteNotFound) {
+					const returnInvite = await options.getInviteNotFound(
+						{
+							token,
+							invite: invitation,
+							inviter,
+							invitation: {
+								emails,
+								createdAt: invitation.createdAt,
+								role: invitation.role,
+								type: isPrivate ? "private" : "public",
+							},
+						},
+						ctx.request,
+					);
 
-				if (returnInvite) {
-					return ctx.json(returnInvite);
+					if (returnInvite) {
+						return ctx.json(returnInvite);
+					}
 				}
 
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
