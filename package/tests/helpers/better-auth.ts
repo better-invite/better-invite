@@ -20,6 +20,7 @@ export const test = baseTest.extend<{
 	createAuth: (opts: {
 		pluginOptions: InviteOptions;
 		advancedOptions?: BetterAuthAdvancedOptions;
+		baseURL?: string;
 	}) => ReturnType<
 		typeof getTestInstance<{
 			plugins: [InviteClientPlugin, AdminClientPlugin];
@@ -33,12 +34,14 @@ export const test = baseTest.extend<{
 			async ({
 				pluginOptions,
 				advancedOptions,
+				baseURL,
 			}: {
 				pluginOptions: InviteOptions;
 				advancedOptions?: BetterAuthAdvancedOptions;
+				baseURL?: string;
 			}) => {
 				const auth = betterAuth({
-					baseURL: "http://localhost:3000",
+					baseURL: baseURL ?? "http://localhost:3000",
 					database,
 					plugins: [
 						adminPlugin({
@@ -86,19 +89,22 @@ export const test = baseTest.extend<{
 
 export const defaultOptions: InviteOptions = {
 	defaultMaxUses: 1,
-	defaultRedirectAfterUpgrade: "/auth/invited",
 };
 
-export async function activateInviteGet(
+export async function acceptInviteGet(
 	// biome-ignore lint/suspicious/noExplicitAny: client doesn't have a specific type here
 	client: any,
 	{
 		token,
-		callbackURL,
+		callbackUrl,
+		signInUpUrl,
+		email,
 		fetchOptions: customFetchOptions,
 	}: {
 		token: string;
-		callbackURL?: string;
+		callbackUrl?: string;
+		signInUpUrl?: string;
+		email?: string;
 		fetchOptions?: Omit<ClientFetchOption, "params">;
 	},
 ): Promise<{
@@ -113,20 +119,25 @@ export async function activateInviteGet(
 	path: string | null;
 	data: Record<string, never> | null;
 	params?: URLSearchParams;
+	fullPath?: string;
 }> {
 	let location: string | null = null;
 
 	const res = await client.invite[":token"]({
 		query: {
-			callbackURL,
+			callbackUrl,
+			signInUpUrl,
+			email,
 		},
 		fetchOptions: {
 			...customFetchOptions,
 			params: {
 				token,
 			},
-			onResponse({ response }: ResponseContext) {
-				location = response.headers.get("location");
+			onResponse(ctx: ResponseContext) {
+				customFetchOptions?.onResponse?.(ctx);
+
+				location = ctx.response.headers.get("location");
 			},
 		},
 	});
@@ -136,7 +147,7 @@ export async function activateInviteGet(
 	}
 
 	// biome-ignore lint/style/noNonNullAssertion: it will NOT be undefined
-	const { params, path, allParams } = parseInviteError(location!);
+	const { params, path, allParams, fullPath } = parseInviteError(location!);
 
 	// We have newError because a redirect to a successful page shouldn't be considered an error
 	// newError fixes this
@@ -148,6 +159,7 @@ export async function activateInviteGet(
 		path,
 		newError,
 		params: allParams,
+		fullPath,
 	};
 }
 
@@ -167,6 +179,7 @@ export async function resolveInviteRedirect(
 	path: string | null;
 	data: Record<string, never> | null;
 	params: URLSearchParams;
+	fullPath: string;
 }> {
 	let location: string | null = null;
 
@@ -186,7 +199,7 @@ export async function resolveInviteRedirect(
 		return res;
 	}
 
-	const { params, path, allParams } = parseInviteError(location);
+	const { params, path, allParams, fullPath } = parseInviteError(location);
 
 	const newError =
 		res.error && !(res.error.status === 302 && !params.error) ? params : null;
@@ -196,6 +209,7 @@ export async function resolveInviteRedirect(
 		path,
 		newError,
 		params: allParams,
+		fullPath,
 	};
 }
 
@@ -210,5 +224,6 @@ function parseInviteError(location: string) {
 		},
 		allParams: params,
 		path,
+		fullPath: location,
 	};
 }

@@ -4,8 +4,6 @@ import type { NewInviteOptions } from "../types";
 import { redirectCallback, redirectError } from "../utils";
 import { acceptInviteLogic } from "./accept-invite";
 
-let alreadyWarned = false;
-
 /**
  * This endpoint is what runs when a user clicks an invite link (from email, for example).
  *
@@ -16,47 +14,62 @@ let alreadyWarned = false;
  * - Converts the result into a redirect
  *
  * Think of it as a "bridge" between JSON responses and browser redirects.
- *
- * @deprecated Use `acceptInviteCallback` instead. This endpoint will remain available for backward compatibility, but it may be removed in a future release.
  */
-export const activateInviteCallback = (options: NewInviteOptions) => {
+export const acceptInviteCallback = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
-		// This route exists for backwards compatibility with apps still using the old
-		// activate invite callback (which is NOT recommended). New apps should use
-		// `acceptInviteCallback` instead. `/invite/:token` is now handled by the new
-		// accept invite callback flow.
-		"/invite/:token/activate",
+		"/invite/:token",
 		{
 			method: "GET",
 			use: [
+				originCheck((ctx) => ctx.query.callbackUrl),
 				originCheck((ctx) => ctx.query.callbackURL),
 				originCheck((ctx) => ctx.query.signInUpUrl),
 			],
 			query: z.object({
 				/**
-				 * Where to redirect the user after sign in/up
-				 * {token} will be replaced by the actual token from the URL path.
+				 * Where to redirect the user after sign in/up.
+				 * `{token}` will be replaced by the actual token from the URL path.
 				 *
-				 * Note: This is called `callbackURL` instead of `callbackUrl` to match the query parameter name used in the old activate invite callback flow.
+				 * @default /
+				 */
+				callbackUrl: z
+					.string()
+					.describe("Where to redirect the user after sign in/up")
+					.optional(),
+				/**
+				 * @deprecated Use `callbackUrl`
+				 *
+				 * Where to redirect the user after accepting the invite.
+				 * {token} will be replaced by the actual token in the request body.
 				 *
 				 * @default /
 				 */
 				callbackURL: z
 					.string()
-					.describe("Where to redirect the user after sign in/up")
+					.describe(
+						"Where to redirect the user after accepting the invite. {token} will be replaced by the actual token in the request body.",
+					)
 					.optional(),
 				/**
 				 * Where to redirect the user to sign in/up.
 				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
+				 * {email} will be replaced by the actual email in private invites.
 				 */
 				signInUpUrl: z
 					.string()
 					.describe("The URL of the sign in/up page.")
 					.optional(),
+				/**
+				 * The email address of the user to sign in/up to.
+				 */
+				email: z
+					.email()
+					.optional()
+					.describe("The email address of the user to sign in/up to"),
 			}),
 			metadata: {
 				openapi: {
-					operationId: "activateInviteCallback",
+					operationId: "acceptInviteCallback",
 					description:
 						"Redirects the user to the callback URL with the token in a cookie. If an error occurs, the user is redirected to the callback URL with the query parameters 'error' and 'message'.",
 					parameters: [
@@ -70,9 +83,9 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 							},
 						},
 						{
-							name: "callbackURL",
+							name: "callbackUrl",
 							in: "query",
-							required: true,
+							required: false,
 							description: "Where to redirect the user after sign in/up",
 							schema: {
 								type: "string",
@@ -97,13 +110,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
-			if (!alreadyWarned) {
-				ctx.context.logger.warn(
-					"activateInviteCallback is deprecated. Use acceptInviteCallback instead.",
-					'This callback should only be triggered from invitation URLs. If you are calling GET client.invite[":token"] directly in your app, migrate to acceptInvite (POST /invite/accept) instead.',
-				);
-				alreadyWarned = true;
-			}
+			const { callbackUrl, callbackURL } = ctx.query;
 
 			let res: Awaited<ReturnType<typeof acceptInviteLogic>> | null = null;
 			try {
@@ -111,7 +118,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				res = await acceptInviteLogic(options, ctx, {
 					...ctx.params,
 					...ctx.query,
-					callbackUrl: ctx.query.callbackURL,
+					callbackUrl: callbackUrl ?? callbackURL,
 				});
 			} catch (e) {
 				// If something fails, we don't return JSON, we redirect with error info
@@ -123,7 +130,10 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				const message = err?.body?.message ?? "Internal server error";
 
 				return ctx.redirect(
-					redirectError(ctx.context, ctx.query.callbackURL, { message, error }),
+					redirectError(ctx.context, callbackUrl ?? callbackURL, {
+						message,
+						error,
+					}),
 				);
 			}
 
@@ -148,7 +158,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 
 			// Fallback: something unexpected happened
 			return ctx.redirect(
-				redirectError(ctx.context, ctx.query.callbackURL, {
+				redirectError(ctx.context, callbackUrl ?? callbackURL, {
 					message: "Internal server error",
 					error: "SERVER_ERROR",
 				}),

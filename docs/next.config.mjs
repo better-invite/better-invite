@@ -38,11 +38,6 @@ const config = {
 				destination: "/docs/introduction",
 				permanent: true,
 			},
-			{
-				source: "/docs/openapi",
-				destination: "/docs/openapi/createInvite",
-				permanent: true,
-			},
 		];
 	},
 };

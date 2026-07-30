@@ -6,4 +6,7 @@ export default defineConfig({
 	unbundle: true,
 	clean: true,
 	treeshake: true,
+	outputOptions: {
+		comments: false,
+	},
 });

@@ -1,5 +1,4 @@
 import { defineErrorCodes } from "better-auth";
-import type { TokensType } from "./types";
 
 export const ERROR_CODES = defineErrorCodes({
 	USER_NOT_LOGGED_IN: "User must be logged in to create an invite",
@@ -18,8 +17,13 @@ export const ERROR_CODES = defineErrorCodes({
 	INVITATION_EMAIL_NOT_ENABLED: "Invitation email is not enabled",
 	INVITE_TOKEN_HAS_ALREADY_BEEN_USED: "Invite token has already been used",
 	INVITATION_NOT_CREATED: "Invitation could not be created",
+	PRIVATE_INVITES_ONLY: "Resend only works on private invites",
 });
 
-export const Tokens: TokensType[] = ["token", "code", "custom"];
+export const Tokens = ["token", "code", "custom"] as const;
 
 export const INVITE_COOKIE_NAME = "invite_token";
+
+export const defaultRedirectAfterUpgrade = "/";
+
+export const defaultMaxUsesPerUser = Infinity;

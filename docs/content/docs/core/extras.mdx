@@ -57,22 +57,13 @@ const auth = betterAuth({
           modelName: "custom_invite",
           fields: {
             token: "custom_token", // token was the original name, but was changed to custom_token
-            createdAt: "created_at",
-            expiresAt: "expires_at",
-            maxUses: "max_uses",
-            createdByUserId: "creator_id",
-            redirectToAfterUpgrade: "redirect_url",
-            shareInviterName: "share_name",
-            email: "invite_email",
-            role: "invite_role",
+            createdAt: "customtest",
           }
         },
         inviteUse: {
           modelName: "customInviteUse",
           fields: {
-            inviteId: "invite_id",
-            usedAt: "usedAt",
-            usedByUserId: "used_by_user_id"
+            inviteId: "inviteId_test" // This can be whatever you want
           }
         }
       }
@@ -91,7 +82,7 @@ Here's an example:
 
 # Optional Session
 
-The `activateInvite` route uses an optional session, which allows invites to be activated whether or not the user is logged in:
+The `acceptInviteCallback` route uses an optional session, which allows invites to be accepted whether or not the user is logged in:
 
 - **If you are logged in:**  
   The invite is immediately applied, and your role is upgraded according to the invite.
@@ -113,7 +104,7 @@ export const auth = betterAuth({
         window: 60, // time window in seconds
         max: 100, // max requests in the window
         customRules: {
-            "/invite/activate": {
+            "/invite/accept": {
                 window: 10,
                 max: 3,
             },
