@@ -6,7 +6,6 @@ packages:
 catalog:
   typescript: ^5.9.3
 onlyBuiltDependencies:
-  - '@prisma/client'
   - better-sqlite3
   - core-js
   - esbuild
