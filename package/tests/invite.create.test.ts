@@ -489,6 +489,49 @@ test("sends correct redirect URL on private invites", async ({
 	);
 });
 
+test("passes the created invitation to sendUserInvitation", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser, db } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: mock.sendUserInvitation,
+		},
+	});
+
+	const invitedUserEmail = "test@email.com";
+
+	const { headers } = await signInWithTestUser();
+
+	const { error } = await client.invite.create({
+		role: "user",
+		email: invitedUserEmail,
+		fetchOptions: { headers },
+	});
+
+	expect(error).toBe(null);
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([invitedUserEmail]) }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	expect(mock.sendUserInvitation).toHaveBeenCalledWith(
+		expect.objectContaining({
+			invitation: expect.objectContaining({
+				id: invite.id,
+				token: invite.token,
+				expiresAt: invite.expiresAt,
+			}),
+		}),
+		expect.any(Request),
+	);
+});
+
 test("returns custom redirect URL when inviteUrlType is custom", async ({
 	createAuth,
 }) => {
