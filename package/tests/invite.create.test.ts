@@ -525,7 +525,7 @@ test("passes the created invitation to sendUserInvitation", async ({
 			invitation: expect.objectContaining({
 				id: invite.id,
 				token: invite.token,
-				expiresAt: expect.any(Date),
+				expiresAt: invite.expiresAt,
 			}),
 		}),
 		expect.any(Request),
