@@ -531,7 +531,7 @@ test("passes the created invitation to sendUserInvitation", async ({
 		expect.any(Request),
 	);
 });
-	
+
 test("returns custom redirect URL when inviteUrlType is custom", async ({
 	createAuth,
 }) => {
