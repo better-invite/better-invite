@@ -159,6 +159,7 @@ export const createInvite = (options: NewInviteOptions) => {
 								url: redirectURL.toString(),
 								token: invitation.token,
 								newAccount: recipient.newAccount,
+								invitation,
 							},
 							ctx.request,
 						);

@@ -4,6 +4,53 @@ description: Additional features and customization options for the invite plugin
 icon: CirclePlus
 ---
 
+# Sending Invitation Emails
+
+To send private invites, the invite plugin needs a `sendUserInvitation` function. The plugin calls it once for every email in the invite, so you can send the invite link with your own email provider.
+
+- **If `sendUserInvitation` is missing**, creating a private invite fails with `INVITATION_EMAIL_NOT_ENABLED`.
+- **If `sendUserInvitation` throws**, the plugin logs the error and the request fails with `ERROR_SENDING_THE_INVITATION_EMAIL`.
+
+The function receives the following data, plus the request as a second argument:
+
+```ts
+{
+  email: "test@test.com", // The email of the invited user
+  name: "Test User", // The name of the invited user (only if they already have an account)
+  role: "user", // The role the user will get
+  url: "https://...", // The link the user opens to activate the invite
+  token: "token123", // The invite token
+  newAccount: true, // Whether the invited user needs to create an account
+  invitation: { ... }, // The created invite
+}
+```
+
+The `invitation` object has the same fields as the [Invite schema](/docs/core/schema#invite), plus its `id`. It gives you access to details like `expiresAt`, which is useful to tell the user when the invite expires.
+
+Example:
+
+```ts title="auth.ts"
+import { betterAuth } from "better-auth";
+import { invite } from "better-invite";
+
+export const auth = betterAuth({
+  plugins: [
+    invite({
+      async sendUserInvitation({ email, role, url, newAccount, invitation }) {
+        const expiresAt = invitation.expiresAt; // Show the user when the invite expires
+
+        if (newAccount) {
+          await sendInvitationEmail(role, email, url, expiresAt);
+          return;
+        }
+
+        await sendRoleUpgradeEmail(role, email, url, expiresAt);
+      },
+    }),
+  ],
+});
+```
+
 # Cookie Customization
 
 The invite plugin stores the token in an HTTP-only cookie called `{my_app_name}.invite_token` by default. You can customize cookies globally using Better Auth's `advanced` options.

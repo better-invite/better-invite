@@ -163,6 +163,10 @@ export type InviteOptions = {
 			url: string;
 			token: string;
 			newAccount: boolean;
+			/**
+			 * The created invitation. Use `invitation.expiresAt` to show when the invite expires.
+			 */
+			invitation: InviteTypeWithId;
 		},
 		/**
 		 * The request object
