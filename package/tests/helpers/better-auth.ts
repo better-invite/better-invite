@@ -5,7 +5,8 @@ import {
 } from "better-auth";
 import type { ResponseContext } from "better-auth/client";
 import { adminClient } from "better-auth/client/plugins";
-import { generateRandomString, hashPassword } from "better-auth/crypto";
+import { hashPassword } from "better-auth/crypto";
+import { getMigrations } from "better-auth/db/migration";
 import { admin as adminPlugin } from "better-auth/plugins";
 import Database from "better-sqlite3";
 import { test as baseTest } from "vitest";
@@ -40,7 +41,7 @@ export const test = baseTest.extend<{
 				advancedOptions?: BetterAuthAdvancedOptions;
 				baseURL?: string;
 			}) => {
-				const auth = betterAuth({
+				const authOptions = {
 					baseURL: baseURL ?? "http://localhost:3000",
 					database,
 					plugins: [
@@ -53,10 +54,15 @@ export const test = baseTest.extend<{
 					],
 					emailAndPassword: { enabled: true },
 					advanced: advancedOptions,
-				});
+				};
+
+				const { runMigrations } = await getMigrations(authOptions);
+				await runMigrations();
+
+				const auth = betterAuth(authOptions);
 
 				const testInstance = await getTestInstance(auth, {
-					shouldRunMigrations: true,
+					shouldRunMigrations: false,
 					clientOptions: {
 						plugins: [inviteClient(), adminClient()],
 					},
@@ -73,7 +79,7 @@ export const test = baseTest.extend<{
 					model: "account",
 					data: {
 						password: await hashPassword(testUser.password),
-						accountId: generateRandomString(16),
+						accountId: userId,
 						providerId: "credential",
 						userId,
 						createdAt: new Date(),
@@ -123,22 +129,18 @@ export async function acceptInviteGet(
 }> {
 	let location: string | null = null;
 
-	const res = await client.invite[":token"]({
+	const fetcher = client.$fetch ?? client;
+	const res = await fetcher(`/invite/${token}`, {
 		query: {
 			callbackUrl,
 			signInUpUrl,
 			email,
 		},
-		fetchOptions: {
-			...customFetchOptions,
-			params: {
-				token,
-			},
-			onResponse(ctx: ResponseContext) {
-				customFetchOptions?.onResponse?.(ctx);
+		...customFetchOptions,
+		onResponse(ctx: ResponseContext) {
+			customFetchOptions?.onResponse?.(ctx);
 
-				location = ctx.response.headers.get("location");
-			},
+			location = ctx.response.headers.get("location");
 		},
 	});
 

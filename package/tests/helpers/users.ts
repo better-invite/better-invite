@@ -1,5 +1,5 @@
 import type { DBAdapter } from "better-auth";
-import { generateRandomString, hashPassword } from "better-auth/crypto";
+import { hashPassword } from "better-auth/crypto";
 import { createAccessControl } from "better-auth/plugins";
 import {
 	adminAc,
@@ -30,7 +30,7 @@ export const createUser = async (
 		model: "account",
 		data: {
 			password: await hashPassword(user.password),
-			accountId: generateRandomString(16),
+			accountId: userId,
 			providerId: "credential",
 			userId,
 			createdAt: new Date(),
