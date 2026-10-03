@@ -1,16 +1,16 @@
 {
 	"pages": [
-		"[Heart][Donate](https://patreon.better-invite.com)",
+		"[Heart][Donate](https://patreon.better-invite.com/membership)",
 		"[Sparkles][Showcase](https://demo.better-invite.com)",
 		"[FileText][Blog](/blog)",
 		"---Get Started---",
 		"...(get-started)",
+		"examples",
 		"---Core---",
 		"...core",
 		"---Reference---",
 		"...reference",
 		"---For LLMs---",
-		"[Leaf][llms.txt](https://www.better-invite.com/llms.txt)",
-		"[Brain][llms-full.txt](https://www.better-invite.com/llms-full.txt)"
+		"[Brain][llms.txt](https://www.better-invite.com/llms.txt)"
 	]
 }

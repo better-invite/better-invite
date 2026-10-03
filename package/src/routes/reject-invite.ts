@@ -1,6 +1,7 @@
 import {
 	APIError,
 	createAuthEndpoint,
+	originCheck,
 	sessionMiddleware,
 } from "better-auth/api";
 import type { UserWithRole } from "better-auth/plugins";
@@ -8,19 +9,31 @@ import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { ERROR_CODES } from "../constants";
 import type { NewInviteOptions } from "../types";
-import { checkPermissions, normalizeEmails } from "../utils";
+import {
+	checkPermissions,
+	normalizeArray,
+	replacePlaceholders,
+} from "../utils";
 
 export const rejectInvite = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
 		"/invite/reject",
 		{
 			method: "POST",
-			use: [sessionMiddleware],
+			use: [sessionMiddleware, originCheck((ctx) => ctx.body.callbackUrl)],
 			body: z.object({
 				/**
 				 * The invite token to reject.
 				 */
 				token: z.string().describe("The invite token to reject."),
+				/**
+				 * Where to redirect the user after rejecting the invite.
+				 * {token} will be replaced by the actual token in the request body.
+				 */
+				callbackUrl: z
+					.string()
+					.optional()
+					.describe("Where to redirect the user after rejecting the invite."),
 			}),
 			metadata: {
 				openapi: {
@@ -69,7 +82,7 @@ export const rejectInvite = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
-			const { token } = ctx.body;
+			const { token, callbackUrl } = ctx.body;
 			const inviteeUser = ctx.context.session.user as UserWithRole;
 
 			const adapter = getInviteAdapter(ctx.context, options);
@@ -80,10 +93,7 @@ export const rejectInvite = (options: NewInviteOptions) => {
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 			}
 
-			const emails = normalizeEmails<string[]>(
-				invitation.emails ?? invitation.email,
-				[],
-			);
+			const emails = normalizeArray(invitation.emails ?? invitation.email);
 			const isPrivate = emails.length > 0;
 
 			// Throws error if the invite is public or if the user email doesn’t match the invite
@@ -115,14 +125,33 @@ export const rejectInvite = (options: NewInviteOptions) => {
 
 			await options.inviteHooks?.beforeRejectInvite?.({ ctx, invitation });
 
-			if (options.cleanupInvitesOnDecision) {
-				await adapter.deleteInviteUses(invitation.id);
-				await adapter.deleteInvitation(token);
-			} else {
-				await adapter.updateInvitation(invitation.id, "rejected");
+			const remainingEmails = emails.filter(
+				(email) => email !== inviteeUser.email,
+			);
+
+			await adapter.removeUserByEmail(invitation.id, inviteeUser.email);
+
+			if (
+				remainingEmails.length === 0 &&
+				!options.keepInviteAfterLastRejection
+			) {
+				if (options.cleanupInvitesOnDecision) {
+					await adapter.deleteInviteUses(invitation.id);
+					await adapter.deleteInvitation(token);
+				} else {
+					await adapter.updateInvitation(invitation.id, "rejected");
+				}
 			}
 
 			await options.inviteHooks?.afterRejectInvite?.({ ctx, invitation });
+
+			if (callbackUrl) {
+				return ctx.redirect(
+					replacePlaceholders(callbackUrl, {
+						token,
+					}),
+				);
+			}
 
 			return ctx.json({
 				status: true,

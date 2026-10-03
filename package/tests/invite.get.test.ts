@@ -1,7 +1,8 @@
+import { setCookieToHeader } from "better-auth/cookies";
 import { beforeEach, expect, vi } from "vitest";
 import { ERROR_CODES } from "../src/constants";
 import type { InviteTypeWithId } from "../src/types";
-import { defaultOptions, test } from "./helpers/better-auth";
+import { acceptInviteGet, defaultOptions, test } from "./helpers/better-auth";
 import { createUser } from "./helpers/users";
 
 beforeEach(() => {
@@ -57,12 +58,81 @@ test("public invite returns inviter info without session", async ({
 			name: expect.any(String),
 		}),
 		invitation: expect.objectContaining({
-			email: null,
 			emails: [],
 			createdAt: expect.any(Date),
 			role: "user",
+			type: "public",
 		}),
 	});
+});
+
+test("getInvite without token and without cookie returns INVALID_TOKEN", async ({
+	createAuth,
+}) => {
+	const { client } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const res = await client.invite.get({
+		query: {},
+	});
+
+	expect(res.data).toBeNull();
+	expect(res.error).toEqual(
+		expect.objectContaining({
+			code: "INVALID_TOKEN",
+			status: 400,
+		}),
+	);
+});
+
+test("getInvite resolves token from invite cookie when query token is omitted", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+	const created = await client.invite.create({
+		role: "user",
+		senderResponse: "token",
+		fetchOptions: { headers },
+	});
+
+	const tokenValue = created.data?.message;
+	if (!tokenValue) {
+		throw new Error("Token value is undefined");
+	}
+
+	const cookieHeaders = new Headers();
+	await acceptInviteGet(client, {
+		token: tokenValue,
+		callbackUrl: "/",
+		signInUpUrl: "/auth/sign-in",
+		fetchOptions: {
+			onResponse(context) {
+				setCookieToHeader(cookieHeaders)(context);
+			},
+		},
+	});
+
+	const res = await client.invite.get({
+		query: {},
+		fetchOptions: { headers: cookieHeaders },
+	});
+
+	expect(res.error).toBeNull();
+	expect(res.data?.invitation).toEqual(
+		expect.objectContaining({
+			role: "user",
+			type: "public",
+		}),
+	);
 });
 
 test("private invite returns inviter info only to the correct invitee", async ({
@@ -125,11 +195,10 @@ test("private invite returns inviter info only to the correct invitee", async ({
 			name: expect.any(String),
 		}),
 		invitation: expect.objectContaining({
-			email: null,
 			emails: [invitee.email],
 			createdAt: expect.any(Date),
 			role: "admin",
-			newAccount: expect.any(Boolean),
+			type: "private",
 		}),
 	});
 });
@@ -202,6 +271,117 @@ test("private invite returns INVALID_TOKEN for non-invitee", async ({
 			statusText: "BAD_REQUEST",
 		}),
 	);
+});
+
+test("private invite without session succeeds when allowDangerousGetInvite is enabled", async ({
+	createAuth,
+}) => {
+	const inviteeEmail = "invitee@test.com";
+
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+			allowDangerousGetInvite: true,
+		},
+	});
+
+	const { headers: creatorHeaders } = await signInWithTestUser();
+
+	await client.invite.create({
+		role: "admin",
+		email: inviteeEmail,
+		fetchOptions: { headers: creatorHeaders },
+	});
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([inviteeEmail]) }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const res = await client.invite.get({
+		query: { token: invite.token },
+	});
+
+	expect(res.error).toBeNull();
+	expect(res.data).toMatchObject({
+		status: true,
+		invitation: {
+			emails: [inviteeEmail],
+			role: "admin",
+			type: "private",
+		},
+	});
+});
+
+test("private invite without session calls getInviteNotFound when access is denied", async ({
+	createAuth,
+}) => {
+	const inviteeEmail = "invitee@test.com";
+	const fallbackResponse = {
+		status: true as const,
+		inviter: {
+			email: "fake@example.com",
+			name: "Fake Inviter",
+			image: null,
+		},
+		invitation: {
+			emails: [] as string[],
+			createdAt: new Date("2020-01-01T00:00:00.000Z"),
+			role: "user",
+			type: "public" as const,
+		},
+	};
+	const getInviteNotFound = vi.fn().mockReturnValue(fallbackResponse);
+
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+			getInviteNotFound,
+		},
+	});
+
+	const { headers: creatorHeaders } = await signInWithTestUser();
+
+	await client.invite.create({
+		role: "admin",
+		email: inviteeEmail,
+		fetchOptions: { headers: creatorHeaders },
+	});
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([inviteeEmail]) }],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const res = await client.invite.get({
+		query: { token: invite.token },
+	});
+
+	expect(getInviteNotFound).toHaveBeenCalledOnce();
+	expect(getInviteNotFound).toHaveBeenCalledWith(
+		expect.objectContaining({
+			token: invite.token,
+			invite: expect.objectContaining({ id: invite.id }),
+			invitation: expect.objectContaining({
+				emails: [inviteeEmail],
+				role: "admin",
+				type: "private",
+			}),
+		}),
+		expect.any(Request),
+	);
+	expect(res.error).toBeNull();
+	expect(res.data).toEqual(fallbackResponse);
 });
 
 test("private invite returns INVALID_TOKEN when unauthenticated", async ({
@@ -350,7 +530,87 @@ test("works with old email field in db", async ({ createAuth }) => {
 			emails: [invitee.email],
 			createdAt: expect.any(Date),
 			role: "admin",
-			newAccount: expect.any(Boolean),
+			type: "private",
 		}),
+	});
+});
+
+test("getInvite reads the token from the invite cookie when token is omitted", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+			allowDangerousGetInvite: true,
+		},
+	});
+
+	const invitedUser = {
+		email: "cookie@email.com",
+		role: "user",
+		name: "Cookie User",
+		password: "12345678",
+	};
+
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	await client.invite.create({
+		role: "owner",
+		email: invitedUser.email,
+		fetchOptions: {
+			headers,
+		},
+	});
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [
+			{
+				field: "emails",
+				value: JSON.stringify([invitedUser.email]),
+			},
+		],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const sessionHeaders = new Headers();
+
+	// No session: stores the invite token in the cookie
+	const { path } = await acceptInviteGet(client, {
+		token: invite.token,
+		fetchOptions: {
+			async onResponse(context) {
+				setCookieToHeader(sessionHeaders)(context);
+			},
+		},
+	});
+
+	expect(path).toBe("http://localhost:3000/auth/sign-in");
+
+	const { data, error } = await client.invite.get({
+		query: {},
+		fetchOptions: {
+			headers: sessionHeaders,
+		},
+	});
+
+	expect(error).toBeNull();
+	expect(data).toMatchObject({
+		status: true,
+		inviter: {
+			email: expect.any(String),
+			name: expect.any(String),
+		},
+		invitation: {
+			emails: [invitedUser.email],
+			role: "owner",
+			type: "private",
+		},
 	});
 });

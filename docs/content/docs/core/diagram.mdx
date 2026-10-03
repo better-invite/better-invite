@@ -30,15 +30,15 @@ flowchart TD
   J -->|No| M(Return token or redirect URL to inviter)
 ```
 
-# Invite Activation
+# Invite Acceptance
 
-This diagram shows the full invite activation flow, including both logged-in and not logged-in users, with validations, role updates, hook execution, and final redirection.
+This diagram shows the full invite acceptance flow, including both logged-in and not logged-in users, with validations, role updates, hook execution, and final redirection.
 
 ```mermaid
 flowchart TB
-  %% Activation entry points
-  N1(User clicks invite link) --> ACT(activateInviteLogic)
-  N2(Client calls activate API) --> ACT
+  %% Acceptance entry points
+  N1(User clicks invite link) --> ACT(acceptInviteLogic)
+  N2(Client calls accept API) --> ACT
 
   %% Validations
   ACT --> P(Find invite by token in DB)

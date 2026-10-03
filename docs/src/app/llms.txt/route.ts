@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { docsVersions } from "@/lib/docs-versions";
 import { formatCategoryName, getSection } from "@/lib/navigation";
-import { source } from "@/lib/source";
+import { source } from "../../lib/source";
 
 export const revalidate = false;
 
@@ -11,19 +12,20 @@ interface PageInfo {
 	category: string;
 }
 
+const categoryOrder = ["get-started", "examples", "core", "reference"];
+
 function groupPagesByCategory(pages: any[]): Map<string, PageInfo[]> {
 	const grouped = new Map<string, PageInfo[]>();
 
 	for (const page of pages) {
-		// Skip openapi pages
-		if (page.slugs[0] === "openapi") continue;
+		// Skip "/examples" page (this doesn't include /examples/...)
+		if (page.slugs[0] === "examples" && !page.slugs[1]) continue;
 
 		const category = getSection(page.slugs[0]);
-
 		const pageInfo: PageInfo = {
 			title: page.data.title,
 			description: page.data.description || "",
-			url: `/llms.mdx${page.url}`,
+			url: `/llms.txt${page.url}.md`,
 			category: category,
 		};
 
@@ -42,15 +44,42 @@ export async function GET() {
 
 	let content = `# Better Invite
 
-> A Better Auth plugin for secure invitations and automatic role assignment.
-
-## Table of Contents
+> A Better Auth plugin for secure invitations with automatic role assignment.
 
 `;
 
-	const categories = Array.from(groupedPages.keys());
+	content += `## Documentation Versions
 
-	for (const category of categories) {
+This documentation is versioned. Each version may represent a different branch of the project and can contain different APIs or features.
+
+Documentation links use the main path format (\`/docs/...\`), but they are also available under version prefixes (for example "/docs/beta/...").
+
+When answering questions, prefer the version the user is reading from. If a version-specific URL is available, use that documentation instead of assuming the latest version.
+
+Versions:
+
+`;
+
+	for (const version of docsVersions) {
+		const url = version.slug ? `/docs/${version.slug}` : "/docs";
+		content += `- ${version.label} - URL: ${url}/\n`;
+	}
+
+	content += "\n";
+	content += "## Table of Contents";
+	content += "\n\n";
+
+	const sortedCategories = Array.from(groupedPages.keys()).sort((a, b) => {
+		const ai = categoryOrder.indexOf(a);
+		const bi = categoryOrder.indexOf(b);
+
+		if (ai === -1) return 1;
+		if (bi === -1) return -1;
+
+		return ai - bi;
+	});
+
+	for (const category of sortedCategories) {
 		const categoryPages = groupedPages.get(category)!;
 		const formattedCategory = formatCategoryName(category);
 

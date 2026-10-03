@@ -8,7 +8,7 @@ export function createMetadata(override: Metadata): Metadata {
 		openGraph: {
 			title: override.title ?? undefined,
 			description: override.description ?? undefined,
-			url: "https://better-invite.vercel.app",
+			url: "https://www.better-invite.com",
 			images: "/og.png",
 			siteName: "Better Invite",
 			...override.openGraph,
@@ -43,7 +43,7 @@ export function createMetadata(override: Metadata): Metadata {
 				"application/rss+xml": [
 					{
 						title: "Better Invite Blog",
-						url: "https://better-invite.vercel.app/blog/rss.xml",
+						url: "https://www.better-invite.com/blog/rss.xml",
 					},
 				],
 			},

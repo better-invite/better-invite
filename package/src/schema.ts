@@ -7,17 +7,19 @@ export const schema = {
 			createdAt: { type: "date" },
 			expiresAt: { type: "date", required: true },
 			maxUses: { type: "number", required: true },
+			maxUsesPerUser: { type: "number", required: false },
 			infinityMaxUses: { type: "boolean", required: true, defaultValue: false },
 			createdByUserId: {
 				type: "string",
 				references: { model: "user", field: "id", onDelete: "set null" },
 			},
-			redirectToAfterUpgrade: { type: "string", required: false },
 			shareInviterName: { type: "boolean", required: true },
 			email: { type: "string", required: false }, //! Deprecated
 			emails: { type: "string[]", required: false },
 			role: { type: "string", required: true },
-			newAccount: { type: "boolean", required: false },
+			newAccount: { type: "boolean", required: false }, //! Deprecated
+			callbackUrl: { type: "string", required: false },
+			redirectToAfterUpgrade: { type: "string", required: false }, //! Deprecated
 			status: {
 				type: ["pending", "rejected", "canceled", "used"] as const,
 				required: true,

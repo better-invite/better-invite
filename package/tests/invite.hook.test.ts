@@ -1,6 +1,7 @@
 import { setCookieToHeader } from "better-auth/cookies";
 import { beforeEach, expect, vi } from "vitest";
 import {
+	acceptInviteGet,
 	defaultOptions,
 	resolveInviteRedirect,
 	test,
@@ -51,23 +52,18 @@ test("test invite hook after sign-in/email", async ({ createAuth }) => {
 
 	const newHeaders = new Headers();
 
-	const { error, data } = await client.invite.activate({
+	const { newError, path: acceptPath } = await acceptInviteGet(client, {
 		token: tokenValue,
-		callbackURL: "/auth/sign-in",
+		signInUpUrl: "/auth/sign-in",
 		fetchOptions: {
-			onSuccess(context) {
+			onResponse(context) {
 				setCookieToHeader(newHeaders)(context);
 			},
 		},
 	});
 
-	expect(data).toStrictEqual({
-		status: true,
-		message: "Please sign in or sign up to continue.",
-		action: "SIGN_IN_UP_REQUIRED",
-		redirectTo: "/auth/sign-in",
-	});
-	expect(error).toBe(null);
+	expect(acceptPath).toBe("http://localhost:3000/auth/sign-in");
+	expect(newError).toBe(null);
 
 	const { path } = await resolveInviteRedirect(client.signIn.email, {
 		...invitedUser,
@@ -76,7 +72,7 @@ test("test invite hook after sign-in/email", async ({ createAuth }) => {
 		},
 	});
 
-	expect(path).toBe("http://localhost:3000/auth/invited");
+	expect(path).toBe("http://localhost:3000/");
 });
 
 test("invite hook deletes invite cookie after sign-up/email", async ({
@@ -115,23 +111,18 @@ test("invite hook deletes invite cookie after sign-up/email", async ({
 
 	const newHeaders = new Headers();
 
-	const { error, data } = await client.invite.activate({
+	const { newError, path: acceptPath } = await acceptInviteGet(client, {
 		token: tokenValue,
-		callbackURL: "/auth/sign-in",
+		signInUpUrl: "/auth/sign-in",
 		fetchOptions: {
-			onSuccess(context) {
+			onResponse(context) {
 				setCookieToHeader(newHeaders)(context);
 			},
 		},
 	});
 
-	expect(data).toStrictEqual({
-		status: true,
-		message: "Please sign in or sign up to continue.",
-		action: "SIGN_IN_UP_REQUIRED",
-		redirectTo: "/auth/sign-in",
-	});
-	expect(error).toBe(null);
+	expect(acceptPath).toBe("http://localhost:3000/auth/sign-in");
+	expect(newError).toBe(null);
 
 	const { path } = await resolveInviteRedirect(client.signUp.email, {
 		...invitedUser,
@@ -145,7 +136,7 @@ test("invite hook deletes invite cookie after sign-up/email", async ({
 	});
 
 	expect(newHeaders.get("cookie")).toContain("better-auth.invite_token=;");
-	expect(path).toBe("http://localhost:3000/auth/invited");
+	expect(path).toBe("http://localhost:3000/");
 });
 
 test("invite hook doesn't run if no invite cookie is present", async ({
@@ -225,22 +216,18 @@ test("invitesHook runs after sign-up and triggers invite hooks in correct order"
 
 	const newHeaders = new Headers();
 
-	const { data } = await client.invite.activate({
+	const { newError, path: acceptPath } = await acceptInviteGet(client, {
 		token: tokenValue,
-		callbackURL: "/auth/sign-in",
+		signInUpUrl: "/auth/sign-in",
 		fetchOptions: {
-			onSuccess(context) {
+			onResponse(context) {
 				setCookieToHeader(newHeaders)(context);
 			},
 		},
 	});
 
-	expect(data).toStrictEqual({
-		status: true,
-		message: "Please sign in or sign up to continue.",
-		action: "SIGN_IN_UP_REQUIRED",
-		redirectTo: "/auth/sign-in",
-	});
+	expect(acceptPath).toBe("http://localhost:3000/auth/sign-in");
+	expect(newError).toBe(null);
 
 	await client.signIn.email({
 		...invitedUser,
@@ -300,3 +287,112 @@ test("invitesHook runs after sign-up and triggers invite hooks in correct order"
 		}),
 	);
 });
+
+// TODO: Add types to client.signin/up.email
+// See: https://github.com/better-auth/better-auth/pull/9618 (waiting for PR to be merged)
+/*
+test("invite hook works with inviteToken via signIn.email", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const invitedUser = {
+		email: "token-flow@email.com",
+		role: "user",
+		name: "Token Flow User",
+		password: "12345678",
+	};
+	const newRole = "admin";
+
+	await createUser(invitedUser, db);
+
+	const { headers } = await signInWithTestUser();
+
+	// Create invite
+	const tokenRes = await client.invite.create({
+		role: newRole,
+		senderResponse: "token",
+		fetchOptions: { headers },
+	});
+
+	expect(tokenRes.error).toBeNull();
+
+	const token = tokenRes.data?.message;
+	if (!token) throw new Error("Token not found");
+
+	// Sign in using inviteToken
+	const { error } = await client.signIn.email({
+		email: invitedUser.email,
+		password: invitedUser.password,
+		inviteToken: token,
+	});
+
+	expect(error).toBeNull();
+
+	// Verify role upgrade happened
+	const updatedUser = await db.findOne({
+		model: "user",
+		where: [{ field: "email", value: invitedUser.email }],
+	});
+
+	expect(updatedUser).toMatchObject({
+		email: invitedUser.email,
+		role: newRole,
+	});
+});
+
+test("invite hook works with inviteToken via signUp.email", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const newUser = {
+		email: "new-token-flow@email.com",
+		name: "New Token User",
+		password: "12345678",
+	};
+	const newRole = "admin";
+
+	const { headers } = await signInWithTestUser();
+
+	// Create invite for a non-existing user
+	const tokenRes = await client.invite.create({
+		role: newRole,
+		email: newUser.email,
+		senderResponse: "token",
+		fetchOptions: { headers },
+	});
+
+	expect(tokenRes.error).toBeNull();
+
+	const token = tokenRes.data?.message;
+	if (!token) throw new Error("Token not found");
+
+	// Sign up using inviteToken
+	const { error } = await client.signUp.email({
+		...newUser,
+		inviteToken: token,
+	});
+
+	expect(error).toBeNull();
+
+	// Verify user was created with upgraded role
+	const createdUser = await db.findOne({
+		model: "user",
+		where: [{ field: "email", value: newUser.email }],
+	});
+
+	expect(createdUser).toMatchObject({
+		email: newUser.email,
+		role: newRole,
+	});
+});
+*/
