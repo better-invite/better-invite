@@ -946,7 +946,7 @@ test("cannot reuse an invite after it has already been used", async ({
 	expect(secondUse.data).toBeNull();
 	expect(secondUse.error).not.toBeNull();
 
-	// Optional: si tu implementación marca el invite como "used"
+	// Verify that the invite is marked as "used" after reaching its max uses
 	const invite = await db.findOne({
 		model: "invite",
 		where: [{ field: "token", value: tokenValue }],
@@ -1420,4 +1420,64 @@ test("acceptInvite uses redirectToAfterUpgrade from the invite record", async ({
 
 	// biome-ignore lint/style/noNonNullAssertion: We have a test above that checks that data exists
 	expect(() => new URL(data!.redirectTo)).not.toThrow();
+});
+
+test("concurrent accepts do not exceed maxUses", async ({ createAuth }) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+		},
+	});
+
+	const users = Array.from({ length: 20 }, (_, index) => ({
+		email: `concurrent-${index}@test.com`,
+		role: "user",
+		name: `User ${index}`,
+		password: "password123",
+	}));
+
+	await Promise.all(users.map((user) => createUser(user, db)));
+
+	const { headers: adminHeaders } = await signInWithTestUser();
+
+	const created = await client.invite.create({
+		role: "admin",
+		senderResponse: "token",
+		maxUses: 1,
+		fetchOptions: { headers: adminHeaders },
+	});
+
+	expect(created.error).toBeNull();
+
+	const token = created.data?.message;
+	if (!token) throw new Error("Token missing");
+
+	const headers = await Promise.all(
+		users.map(async (user) => {
+			const { headers } = await signInWithUser(user.email, user.password);
+
+			return headers;
+		}),
+	);
+
+	const results = await Promise.all(
+		headers.map((userHeaders) =>
+			client.invite.accept({
+				token,
+				fetchOptions: {
+					headers: userHeaders,
+				},
+			}),
+		),
+	);
+
+	const successes = results.filter((result) => result.error === null);
+	const failures = results.filter((result) => result.error !== null);
+
+	expect(successes).toHaveLength(1);
+	expect(failures).toHaveLength(19);
+
+	for (const failure of failures) {
+		expect(failure.error?.code).toBe("INVITE_TOKEN_HAS_ALREADY_BEEN_USED");
+	}
 });

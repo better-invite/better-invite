@@ -99,21 +99,6 @@ export const consumeInvite = async ({
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.CANT_ACCEPT_INVITE);
 	}
 
-	// Update user role
-	await ctx.context.adapter.update({
-		model: "user",
-		where: [{ field: "id", value: userId }],
-		update: { role: invitation.role },
-	});
-
-	const updatedUser = { ...invitedUser, role: invitation.role };
-
-	// Update session with new role
-	await setSessionCookie(ctx, {
-		session,
-		user: updatedUser,
-	});
-
 	const maxUses = getMaxUses(invitation);
 	const usedAt = options.getDate();
 	const isLastUse = timesUsed === maxUses - 1;
@@ -148,6 +133,21 @@ export const consumeInvite = async ({
 			await adapter.removeUserByEmail(invitation.id, invitedUser.email);
 		}
 	}
+
+	// Update user role
+	await ctx.context.adapter.update({
+		model: "user",
+		where: [{ field: "id", value: userId }],
+		update: { role: invitation.role },
+	});
+
+	const updatedUser = { ...invitedUser, role: invitation.role };
+
+	// Update session with new role
+	await setSessionCookie(ctx, {
+		session,
+		user: updatedUser,
+	});
 
 	// Fire optional hook
 	if (options.onInvitationUsed) {

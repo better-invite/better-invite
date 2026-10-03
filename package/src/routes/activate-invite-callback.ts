@@ -28,10 +28,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 		"/invite/:token/activate",
 		{
 			method: "GET",
-			use: [
-				originCheck((ctx) => ctx.query.callbackURL),
-				originCheck((ctx) => ctx.query.signInUpUrl),
-			],
+			use: [originCheck((ctx) => ctx.query.callbackURL)],
 			query: z.object({
 				/**
 				 * Where to redirect the user after sign in/up
@@ -44,14 +41,6 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				callbackURL: z
 					.string()
 					.describe("Where to redirect the user after sign in/up")
-					.optional(),
-				/**
-				 * Where to redirect the user to sign in/up.
-				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
-				 */
-				signInUpUrl: z
-					.string()
-					.describe("The URL of the sign in/up page.")
 					.optional(),
 			}),
 			metadata: {

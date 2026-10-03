@@ -13,7 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			url: url(page.url),
 			lastModified: lastModified ? new Date(lastModified) : undefined,
 			changeFrequency: "weekly",
-			priority: 0.5,
+			priority: 0.7,
 		} satisfies MetadataRoute.Sitemap[number];
 	});
 
@@ -24,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			url: url(page.url),
 			lastModified: lastModified ? new Date(lastModified) : undefined,
 			changeFrequency: "weekly",
-			priority: 0.5,
+			priority: 0.6,
 		} satisfies MetadataRoute.Sitemap[number];
 	});
 

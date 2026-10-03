@@ -1027,11 +1027,12 @@ test("private invite includes email in default redirect URL", async ({
 
 	const { headers } = await signInWithTestUser();
 
-	await client.invite.create({
+	const createRes = await client.invite.create({
 		role: "user",
 		email,
 		fetchOptions: { headers },
 	});
+	expect(createRes.error).toBeNull();
 
 	const call = mock.sendUserInvitation.mock.calls[0][0];
 	const url = call.url;
@@ -1058,12 +1059,13 @@ test("private invite includes email in custom invite URL", async ({
 
 	const { headers } = await signInWithTestUser();
 
-	await client.invite.create({
+	const createRes = await client.invite.create({
 		role: "user",
 		email,
 		customInviteUrl,
 		fetchOptions: { headers },
 	});
+	expect(createRes.error).toBeNull();
 
 	const call = mock.sendUserInvitation.mock.calls[0][0];
 	const url = call.url;

@@ -55,12 +55,6 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 	const scope = (href: string | undefined) => scopeDocsHref(href, version);
 	const DefaultAnchor = defaultMdxComponents.a;
 
-	// TODO: Remove gitConfig and GithubInfo
-	const gitConfig = {
-		user: "better-invite",
-		repo: "better-invite",
-		branch: "main",
-	};
 	const npmName = "better-invite";
 
 	const lastModifiedTime = page.data.lastModified;
@@ -152,9 +146,7 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 						/>
 						Donate
 					</Link>
-					<EditOnGitHub
-						href={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/docs/content/docs/${page.path}`}
-					/>
+					<EditOnGitHub href={`${githubBase}/${page.path}`} />
 				</div>
 			</Feedback>
 			{lastModifiedTime && <PageLastUpdate date={lastModifiedTime} />}

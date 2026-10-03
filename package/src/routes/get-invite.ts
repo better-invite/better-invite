@@ -165,6 +165,9 @@ export const getInvite = (options: NewInviteOptions) => {
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVITER_NOT_FOUND);
 			}
 
+			const responseEmails =
+				isPrivate && sessionUser?.email ? [sessionUser.email] : emails;
+
 			return ctx.json({
 				status: true,
 				inviter: {
@@ -173,7 +176,7 @@ export const getInvite = (options: NewInviteOptions) => {
 					image: inviter.image,
 				},
 				invitation: {
-					emails,
+					emails: responseEmails,
 					createdAt: invitation.createdAt,
 					role: invitation.role,
 					type: isPrivate ? "private" : "public",

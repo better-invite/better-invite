@@ -17,7 +17,10 @@ async function fetchNpmDownloads(): Promise<number | undefined> {
 	try {
 		const response = await fetch(
 			"https://api.npmjs.org/downloads/point/last-week/better-invite",
-			{ next: { revalidate: 3600 } }, // Cache for 1 hour
+			{
+				next: { revalidate: 3600 },
+				signal: AbortSignal.timeout(3000),
+			}, // Cache for 1 hour
 		);
 
 		if (!response.ok) {
@@ -55,7 +58,10 @@ async function fetchNpmWeeklyHistory(): Promise<number[] | undefined> {
 		const fmt = (d: Date) => d.toISOString().slice(0, 10);
 		const response = await fetch(
 			`https://api.npmjs.org/downloads/range/${fmt(start)}:${fmt(end)}/better-invite`,
-			{ next: { revalidate: 3600 } },
+			{
+				next: { revalidate: 3600 },
+				signal: AbortSignal.timeout(3000),
+			},
 		);
 		if (!response.ok) return undefined;
 		const data = await response.json();
@@ -88,6 +94,7 @@ async function fetchGitHubStars(): Promise<number | undefined> {
 			{
 				next: { revalidate: 3600 },
 				headers: githubHeaders,
+				signal: AbortSignal.timeout(3000),
 			},
 		);
 
