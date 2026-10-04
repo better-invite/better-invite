@@ -40,7 +40,7 @@ type createInvite = {
 
 	/**
 	 * The number of times an invitation can be used.
-	 * If omitted, public invites and private invites with `maxUsesPerUser` are unlimited overall. A private invite without `maxUsesPerUser` allows one use total.
+	 * If omitted, public invites and private invites with an effective finite per-user limit (including the multi-email default) are unlimited overall. Other private invites allow one use total.
 	 */
 	maxUses?: number
 	/**
