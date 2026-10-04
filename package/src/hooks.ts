@@ -149,7 +149,7 @@ export const invitesHooks = (options: NewInviteOptions) => {
 
 					const callbackUrl = validateCallbackUrl(
 						callbackUrlFromBody ??
-							callbackUrlFromCookie ??
+							(callbackUrlFromCookie || undefined) ??
 							invitation.callbackUrl ??
 							invitation.redirectToAfterUpgrade,
 						ctx.request?.url,
@@ -179,7 +179,10 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						},
 					});
 
-					// Clean up the cookie only when the cookie-based flow was used
+					// The callback cookie may be left over from an earlier invite flow.
+					expireCookie(ctx, callbackCookie);
+
+					// Clean up the invite cookie only when the cookie-based flow was used
 					if (!inviteTokenFromBody) {
 						const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
 						const inviteCookie = ctx.context.createAuthCookie(
@@ -187,7 +190,6 @@ export const invitesHooks = (options: NewInviteOptions) => {
 							{ maxAge },
 						);
 						expireCookie(ctx, inviteCookie);
-						expireCookie(ctx, callbackCookie);
 					}
 
 					// Optional hook after accepting

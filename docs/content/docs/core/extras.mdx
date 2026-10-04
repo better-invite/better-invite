@@ -55,6 +55,8 @@ export const auth = betterAuth({
 
 The invite plugin stores the token in an HTTP-only cookie called `{my_app_name}.invite_token` by default. You can customize cookies globally using Better Auth's `advanced` options.
 
+The same `inviteCookieMaxAge` option controls the lifetime of the signed post-acceptance callback cookie. After the invite is successfully consumed, the callback cookie is expired for both cookie-token and body-token flows; the invite-token cookie is expired when the legacy cookie-token flow is used.
+
 ### Cookie Prefix
 
 Change the default cookie prefix (the app name) with `cookiePrefix`:
@@ -135,8 +137,17 @@ The `acceptInviteCallback` route uses an optional session, which allows invites 
   The invite is immediately applied, and your role is upgraded according to the invite.
 
 - **If you are not logged in:**  
-  Before redirecting you to the sign-in/sign-up page, the plugin creates a temporary **invite cookie** in your browser.  
-  This cookie stores the invite token securely, so once you complete the login or registration process, a hook automatically reads the cookie and upgrades your role.  
+  Before redirecting you to the sign-in/sign-up page, the plugin creates temporary signed cookies for the **invite token** and the **post-acceptance callback URL**. Once you complete the login or registration process, a hook reads them and upgrades your role. The callback URL is selected in this order: the authentication request's `callbackUrl`, the callback cookie, then the URL stored with the invite. Successful invite consumption expires the callback cookie and, for this cookie-based flow, the invite-token cookie.
+
+  Advanced integrations can pass `inviteToken` and `callbackUrl` in the sign-in or sign-up request body instead of relying on the invite cookies. The callback cookie is still cleared after successful consumption.
+
+# Resending Invitations
+
+`authClient.invite.resend({ token })` resends a private invite to every address stored on it. Only the invite creator can resend it, and the invitation must still be pending, unexpired, and have uses remaining. The same token is retained. You can override `redirectToSignUp`, `redirectToSignIn`, `redirectToAfterUpgrade`, or `customInviteUrl` for the resent links; otherwise the stored callback and plugin defaults are used.
+
+# Keeping Rejected Invitations
+
+By default, the last recipient's rejection follows `cleanupInvitesOnDecision`: the invitation is deleted when cleanup is enabled, or kept with rejected status otherwise. Set `keepInviteAfterLastRejection` to keep the invitation record pending after the last recipient rejects it.
 
 # Rate Limit
 

@@ -126,11 +126,11 @@ export type InviteOptions = {
 	 */
 	defaultShareInviterName?: boolean;
 	/**
-	 * @deprecated Not used anymore, use `maxUses` in `createInvite` instead.
+	 * @deprecated This option is ignored. Configure `maxUses` on each `invite.create()` call instead.
 	 */
 	defaultMaxUses?: number;
 	/**
-	 * @deprecated Not used anymore, use `maxUsesPerUser` in `createInvite` instead.
+	 * @deprecated This option is ignored. Configure `maxUsesPerUser` on each `invite.create()` call instead.
 	 */
 	defaultMaxUsesPerUser?: number;
 	/**
@@ -148,7 +148,8 @@ export type InviteOptions = {
 	 */
 	defaultSenderResponseRedirect?: "signUp" | "signIn";
 	/**
-	 * Send email to the user with the invite link.
+	 * Send an email to each recipient with the invite link. A multi-email invite
+	 * has one shared invitation and token, passed to every invocation.
 	 */
 	sendUserInvitation?: (
 		data: {
@@ -176,8 +177,8 @@ export type InviteOptions = {
 	invitationTokenExpiresIn?: number;
 	/**
 	 * Maximum age (in seconds) for the invitation cookie.
-	 * This controls how long users have to complete the login flow
-	 * before accepting the token if they are not logged in.
+	 * This controls how long the invite token and post-acceptance callback cookies
+	 * last while users complete the login flow before accepting the invite.
 	 *
 	 * @default 600 (10 minutes)
 	 */
@@ -195,8 +196,8 @@ export type InviteOptions = {
 	 */
 	cleanupInvitesAfterMaxUses?: boolean;
 	/**
-	 * Keep the invite after the last rejection.
-	 * If set to false, the value of `cleanupInvitesOnDecision` will be used to determine if the invite should be deleted or marked as rejected.
+	 * Keep the invite pending after its last recipient rejects it. When false,
+	 * `cleanupInvitesOnDecision` determines whether to delete it or mark it rejected.
 	 *
 	 * @default false
 	 */

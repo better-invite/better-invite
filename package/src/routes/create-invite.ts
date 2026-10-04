@@ -268,18 +268,21 @@ export const createInviteBodySchema = z.object({
 		.optional(),
 	/**
 	 * The number of times an invitation can be used.
-	 * If not defined and maxUsesPerUser is defined, maxUses will be infinite.
-	 * @default options.defaultMaxUses
+	 * If omitted, the total is unlimited for public invites and private invites with a per-user limit; otherwise a private invite allows one use total.
+	 * @default Infinity for public and per-user-limited invites; 1 for other private invites
 	 */
 	maxUses: z
 		.number()
+		.int()
+		.positive()
+		.or(z.literal(Infinity))
 		.describe("The number of times an invitation can be used")
 		.optional(),
 	/**
 	 * The number of times an invitation can be used by the same user.
-	 * Use `Infinity` for unlimited uses per user.
-	 * Only works for private invites, public invites are always unlimited per user.
-	 * @default options.defaultMaxUsesPerUser
+	 * Must be a positive integer or `Infinity` for unlimited uses per user.
+	 * Only works for private invites, public invites are always unlimited per user. Multi-email private invites default to one use per recipient; explicitly set `Infinity` for no per-user limit.
+	 * @default Infinity for public invites; 1 for private invites with multiple email addresses
 	 */
 	maxUsesPerUser: z
 		.number()

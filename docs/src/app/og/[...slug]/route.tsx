@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
-import { resolveVersionFromSlug } from "@/lib/docs-versions";
+import { docsVersions, resolveVersionFromSlug } from "@/lib/docs-versions";
 import { getPageImage } from "@/lib/metadata";
 import { getSourceFor } from "@/lib/source";
 import { getImageResponseOptions, generate as MetadataImage } from "./generate";
@@ -28,7 +28,7 @@ export async function GET(
 export function generateStaticParams(): {
 	slug: string[];
 }[] {
-	return [null, "beta"].flatMap((versionSlug) => {
+	return docsVersions.flatMap(({ slug: versionSlug }) => {
 		const source = getSourceFor(versionSlug);
 		return source.getPages().map((page) => ({
 			slug: [

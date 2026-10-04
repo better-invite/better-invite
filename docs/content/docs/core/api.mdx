@@ -6,7 +6,7 @@ icon: Route
 
 # Create Invite
 
-<APIMethod path="/invite/create" method="POST" requireSession note="All parameters default to the plugin's options defaults, except for role and email.">
+<APIMethod path="/invite/create" method="POST" requireSession note="Most optional parameters use the plugin defaults. Usage limits default according to invite type; role and email have no plugin defaults.">
 ```ts
 type createInvite = {
 	/**
@@ -40,13 +40,14 @@ type createInvite = {
 
 	/**
 	 * The number of times an invitation can be used.
-	 * If not defined and maxUsesPerUser is defined, maxUses will be infinite.
+	 * If omitted, public invites and private invites with `maxUsesPerUser` are unlimited overall. A private invite without `maxUsesPerUser` allows one use total.
 	 */
 	maxUses?: number
 	/**
 	 * The number of times an invitation can be used by the same user.
-	 * Use `Infinity` for unlimited uses per user.
+	 * Must be a positive integer or `Infinity` for unlimited uses per user.
 	 * Only works for private invites, public invites are always unlimited per user.
+	 * For a private invite with multiple emails, the default is one use per recipient. Explicitly set `Infinity` to remove that per-recipient limit.
 	 */
 	maxUsesPerUser?: number
 
@@ -119,6 +120,27 @@ type acceptInvite = {
 	 * The email address of the user to sign in/up to.
 	*/	
 	email?: string
+}
+```
+</APIMethod>
+
+# Resend Invite
+
+Resend the invitation email or emails for an existing private invite. The authenticated user must be the invite creator. The invite must still be pending, unexpired, and have uses remaining. Each stored recipient receives a fresh email using the same invite token.
+
+<APIMethod path="/invite/resend" method="POST" requireSession note="Only the creator can resend a pending, unexpired private invite with uses remaining.">
+```ts
+type resendInvite = {
+	/** The invite token to resend. */
+	token: string
+	/** Override the sign-up page URL for recipients who do not have an account. */
+	redirectToSignUp?: string
+	/** Override the sign-in page URL for recipients who already have an account. */
+	redirectToSignIn?: string
+	/** Override the post-acceptance URL saved with the invite. */
+	redirectToAfterUpgrade?: string
+	/** Override the custom URL used to open the invite. */
+	customInviteUrl?: string
 }
 ```
 </APIMethod>
@@ -233,7 +255,7 @@ Get basic information about an invitation.
   Otherwise, the invitation will upgrade the role of an existing account.
 </Callout>
 
-<APIMethod path="/invite/get" method="GET" optionalSession note="For private invites, the requester must match the invite email, unless `allowDangerousGetInvite` is set to true.">
+<APIMethod path="/invite/get" method="GET" optionalSession note="For private invites, the requester must match an invite email, unless `allowDangerousGetInvite` is set to true. An authenticated recipient only sees their own email in the response.">
 ```ts
 type getInvite = {
   /**
@@ -244,6 +266,8 @@ type getInvite = {
 }
 ```
 </APIMethod>
+
+For a private invite, an authenticated recipient who matches one of its email addresses receives only their own address in `invitation.emails`. This keeps other recipients' addresses private. `allowDangerousGetInvite` bypasses the recipient check and should only be enabled when that exposure is intended.
 
 # List Invites
 

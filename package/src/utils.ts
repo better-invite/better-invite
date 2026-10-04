@@ -458,7 +458,7 @@ export const resolveInvitePayload = (
 	tokenType: body.tokenType ?? options.defaultTokenType,
 	redirectToSignUp: body.redirectToSignUp ?? options.defaultRedirectToSignUp,
 	redirectToSignIn: body.redirectToSignIn ?? options.defaultRedirectToSignIn,
-	maxUses: body.maxUses ?? options.defaultMaxUses,
+	maxUses: body.maxUses,
 	expiresIn: body.expiresIn ?? options.invitationTokenExpiresIn,
 	shareInviterName: body.shareInviterName ?? options.defaultShareInviterName,
 	senderResponse: body.senderResponse ?? options.defaultSenderResponse,

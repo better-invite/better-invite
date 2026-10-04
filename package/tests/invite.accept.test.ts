@@ -690,10 +690,7 @@ test("test acceptInvite with custom schema", async ({ createAuth }) => {
 
 test("test acceptInvite with infiniteMaxUses", async ({ createAuth }) => {
 	const { client, db, signInWithTestUser } = await createAuth({
-		pluginOptions: {
-			...defaultOptions,
-			defaultMaxUses: undefined,
-		},
+		pluginOptions: { ...defaultOptions },
 	});
 
 	const { headers } = await signInWithTestUser();
