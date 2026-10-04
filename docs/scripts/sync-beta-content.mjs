@@ -49,6 +49,9 @@ try {
 	writeFileSync(join(DEST, ".gitkeep"), "");
 
 	console.log("[sync-beta] done");
+} catch (error) {
+	console.warn("[sync-beta] warning: unable to sync beta documentation.");
+	console.warn(error instanceof Error ? error.message : error);
 } finally {
 	rmSync(TMP, { recursive: true, force: true });
 }

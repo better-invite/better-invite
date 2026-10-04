@@ -36,29 +36,31 @@ export const getInviteAdapter = (
 			const token = generateToken();
 			const now = options.getDate();
 
-			let maxUsesPerUser: number | undefined =
-				invite.maxUsesPerUser ??
-				options.defaultMaxUsesPerUser ??
-				defaultMaxUsesPerUser;
+			const maxUsesPerUserWasExplicitlyUnlimited =
+				invite.maxUsesPerUser === Infinity;
 
-			if (maxUsesPerUser === Infinity) {
-				maxUsesPerUser = undefined;
-			}
+			const resolvedMaxUsesPerUser =
+				invite.maxUsesPerUser ?? defaultMaxUsesPerUser;
 
-			// Multi-email private invites share one invitation row. Without an explicit
-			// maxUsesPerUser, default to 1 use per recipient so later invitees are not
-			// blocked by the private single-use maxUses default after the first accept.
-			if (isPrivate && emails.length > 1 && maxUsesPerUser == null) {
+			let maxUsesPerUser: number | undefined;
+
+			if (
+				isPrivate &&
+				emails.length > 1 &&
+				!maxUsesPerUserWasExplicitlyUnlimited &&
+				resolvedMaxUsesPerUser === Infinity
+			) {
 				maxUsesPerUser = 1;
+			} else if (resolvedMaxUsesPerUser === Infinity) {
+				maxUsesPerUser = undefined;
+			} else {
+				maxUsesPerUser = resolvedMaxUsesPerUser;
 			}
 
-			// If maxUsesPerUser is defined, then maxUses will be infinite unless explicitly set
-			// If not defined, then maxUses will be 1 for private invites and infinite for public invites
 			const defaultMaxUses =
 				maxUsesPerUser != null ? Infinity : isPrivate ? 1 : Infinity;
 
-			const maxUses =
-				invite.maxUses ?? defaultMaxUses ?? options.defaultMaxUses;
+			const maxUses = invite.maxUses ?? defaultMaxUses;
 
 			const isUnlimited = maxUses === Infinity;
 

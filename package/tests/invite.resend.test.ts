@@ -97,8 +97,8 @@ test("does not resend public invites", async ({ createAuth }) => {
 	});
 
 	expect(resend.error).toStrictEqual({
-		code: "INVALID_TOKEN",
-		message: "Invalid or non-existent token",
+		code: "PRIVATE_INVITES_ONLY",
+		message: "Resend only works on private invites",
 		status: 400,
 		statusText: "BAD_REQUEST",
 	});

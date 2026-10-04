@@ -131,9 +131,11 @@ export const getInvite = (options: NewInviteOptions) => {
 				isPrivate &&
 				(!sessionUser || !emails?.includes(sessionUser.email));
 
-			const inviter = (await ctx.context.internalAdapter.findUserById(
-				invitation.createdByUserId,
-			)) as UserWithRole | null;
+			const inviter = invitation.createdByUserId
+				? ((await ctx.context.internalAdapter.findUserById(
+						invitation.createdByUserId,
+					)) as UserWithRole | null)
+				: null;
 
 			// For private invites, the requester must exist, match the invite email, and the invite must have a creator.
 			if (privateChecks || !invitation.createdByUserId) {

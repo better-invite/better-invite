@@ -10,23 +10,22 @@ beforeEach(() => {
 
 // accept Invite (POST) Tests
 
-test("test acceptInvite with an invalid token", async ({ createAuth }) => {
-	const { client } = await createAuth({
+test("acceptInvite with an invalid token returns INVALID_TOKEN", async ({
+	createAuth,
+}) => {
+	const { client, signInWithTestUser } = await createAuth({
 		pluginOptions: {
 			...defaultOptions,
 		},
 	});
+	const { headers } = await signInWithTestUser();
 	const { error } = await client.invite.accept({
 		token: "invalid_token",
+		fetchOptions: { headers },
 	});
 
-	// Should throw an error because the invite token is invalid
-	expect(error).toStrictEqual({
-		code: "UNAUTHORIZED",
-		message: "Unauthorized",
-		status: 401,
-		statusText: "UNAUTHORIZED",
-	});
+	expect(error?.status).toBe(400);
+	expect(error?.code).toBe("INVALID_TOKEN");
 });
 
 test("test acceptInvite with maxUses set to 2", async ({ createAuth }) => {
@@ -96,7 +95,7 @@ test("test acceptInvite with maxUses set to 2", async ({ createAuth }) => {
 	expect(newInvite).not.toBeNull();
 });
 
-test("invite and inviteUses are deleted after reaching maxUses", async ({
+test("invite is marked used and inviteUse recorded after reaching maxUses", async ({
 	createAuth,
 }) => {
 	const { client, db, signInWithTestUser } = await createAuth({
@@ -199,15 +198,11 @@ test("test acceptInvite with an expired invite", async ({ createAuth }) => {
 
 	const { error } = await client.invite.accept({
 		token: tokenValue,
+		fetchOptions: { headers },
 	});
 
-	// Should throw an error because the invite has expired
-	expect(error).toStrictEqual({
-		code: "UNAUTHORIZED",
-		message: "Unauthorized",
-		status: 401,
-		statusText: "UNAUTHORIZED",
-	});
+	expect(error?.status).toBe(400);
+	expect(error?.code).toBe("INVALID_OR_EXPIRED_INVITE");
 });
 
 test("acceptInvite skips login step if already logged in", async ({

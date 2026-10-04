@@ -93,9 +93,7 @@ export const test = baseTest.extend<{
 	},
 });
 
-export const defaultOptions: InviteOptions = {
-	defaultMaxUses: 1,
-};
+export const defaultOptions: InviteOptions = {};
 
 export async function acceptInviteGet(
 	// biome-ignore lint/suspicious/noExplicitAny: client doesn't have a specific type here
@@ -180,8 +178,8 @@ export async function resolveInviteRedirect(
 	} | null;
 	path: string | null;
 	data: Record<string, never> | null;
-	params: URLSearchParams;
-	fullPath: string;
+	params?: URLSearchParams | null;
+	fullPath?: string;
 }> {
 	let location: string | null = null;
 
@@ -198,7 +196,7 @@ export async function resolveInviteRedirect(
 	});
 
 	if (!location) {
-		return res;
+		return { ...res, path: null, newError: null, params: null };
 	}
 
 	const { params, path, allParams, fullPath } = parseInviteError(location);

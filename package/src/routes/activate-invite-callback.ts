@@ -96,14 +96,12 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 
 			let res: Awaited<ReturnType<typeof acceptInviteLogic>> | null = null;
 			try {
-				// Run the real invite logic
 				res = await acceptInviteLogic(options, ctx, {
 					...ctx.params,
 					...ctx.query,
 					callbackUrl: ctx.query.callbackURL,
 				});
 			} catch (e) {
-				// If something fails, we don't return JSON, we redirect with error info
 				const err = e as
 					| { body?: { code?: string; message?: string } }
 					| undefined;
@@ -116,17 +114,14 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 				);
 			}
 
-			// Shouldn't really happen, but just in case
 			if (!res) {
 				return;
 			}
 
-			// User is already logged in => upgrade flow
 			if (res.action === "REDIRECT_TO_AFTER_UPGRADE" && res.redirectTo) {
 				return ctx.redirect(redirectError(ctx.context, res.redirectTo));
 			}
 
-			// User needs to sign in or sign up first
 			if (res.action === "SIGN_IN_UP_REQUIRED")
 				return ctx.redirect(
 					redirectCallback(
@@ -135,7 +130,6 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 					),
 				);
 
-			// Fallback: something unexpected happened
 			return ctx.redirect(
 				redirectError(ctx.context, ctx.query.callbackURL, {
 					message: "Internal server error",

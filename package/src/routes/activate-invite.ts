@@ -97,7 +97,7 @@ export const activateInvite = (options: NewInviteOptions) => {
 				...ctx.body,
 				signInUpUrl: ctx.body.callbackUrl,
 				callbackUrl: undefined,
-			});
+			}).then((result) => ctx.json(result));
 		},
 	);
 };

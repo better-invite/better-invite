@@ -1,4 +1,9 @@
-import { APIError, createAuthEndpoint } from "better-auth/api";
+import {
+	APIError,
+	createAuthEndpoint,
+	originCheck,
+	sessionMiddleware,
+} from "better-auth/api";
 import * as z from "zod";
 import { getInviteAdapter } from "../adapter";
 import { defaultRedirectAfterUpgrade, ERROR_CODES } from "../constants";
@@ -10,6 +15,13 @@ export const resendInvite = (options: NewInviteOptions) => {
 		"/invite/resend",
 		{
 			method: "POST",
+			use: [
+				originCheck((ctx) => ctx.body.redirectToSignUp),
+				originCheck((ctx) => ctx.body.redirectToSignIn),
+				originCheck((ctx) => ctx.body.redirectToAfterUpgrade),
+				originCheck((ctx) => ctx.body.customInviteUrl),
+				sessionMiddleware,
+			],
 			body: z.object({
 				/**
 				 * The invite token to resend.
@@ -56,11 +68,18 @@ export const resendInvite = (options: NewInviteOptions) => {
 				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 			}
 
+			if (
+				!invitation.createdByUserId ||
+				invitation.createdByUserId !== ctx.context.session.user.id
+			) {
+				throw APIError.from("FORBIDDEN", ERROR_CODES.INVALID_TOKEN);
+			}
+
 			const emails = normalizeArray(invitation.emails ?? invitation.email);
 
 			// Resending only works for private invites.
 			if (emails.length === 0) {
-				throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
+				throw APIError.from("BAD_REQUEST", ERROR_CODES.PRIVATE_INVITES_ONLY);
 			}
 
 			if (invitation.status && invitation.status !== "pending") {
@@ -152,6 +171,7 @@ export const resendInvite = (options: NewInviteOptions) => {
 							url: redirectURL.toString(),
 							token: invitation.token,
 							newAccount: recipient.newAccount,
+							invitation,
 						},
 						ctx.request,
 					);

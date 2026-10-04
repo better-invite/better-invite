@@ -12,6 +12,7 @@ import { getInviteAdapter } from "../adapter";
 import {
 	defaultRedirectAfterUpgrade,
 	ERROR_CODES,
+	INVITE_CALLBACK_COOKIE_NAME,
 	INVITE_COOKIE_NAME,
 } from "../constants";
 import type { NewInviteOptions } from "../types";
@@ -76,10 +77,6 @@ export const acceptInvite = (options: NewInviteOptions) => {
 											action: {
 												type: "string",
 												example: "SIGN_IN_UP_REQUIRED",
-											},
-											email: {
-												type: "string",
-												example: "user@example.com",
 											},
 											redirectTo: {
 												type: "string",
@@ -210,14 +207,14 @@ export const acceptInviteLogic = async (
 			invitedUser: user,
 		});
 
-		return ctx.json({
+		return {
 			status: true,
 			message: "Invite accepted successfully",
 			action: "REDIRECT_TO_AFTER_UPGRADE",
 			redirectTo: replacePlaceholders(callbackUrl, {
 				token: invitation.token,
 			}),
-		});
+		};
 	}
 
 	// If not logged in, store the token and ask the user to sign in/up
@@ -233,6 +230,16 @@ export const acceptInviteLogic = async (
 		ctx.context.secret,
 		inviteCookie.attributes,
 	);
+	const callbackCookie = ctx.context.createAuthCookie(
+		INVITE_CALLBACK_COOKIE_NAME,
+		{ maxAge },
+	);
+	await ctx.setSignedCookie(
+		callbackCookie.name,
+		callbackUrl,
+		ctx.context.secret,
+		callbackCookie.attributes,
+	);
 
 	const redirectTo = replacePlaceholders(
 		body.signInUpUrl ?? options.defaultRedirectToSignIn,
@@ -242,11 +249,10 @@ export const acceptInviteLogic = async (
 		},
 	);
 
-	return ctx.json({
+	return {
 		status: true,
 		message: "Please sign in or sign up to continue.",
 		action: "SIGN_IN_UP_REQUIRED",
 		redirectTo,
-		email: body.email,
-	});
+	};
 };

@@ -126,16 +126,11 @@ export type InviteOptions = {
 	 */
 	defaultShareInviterName?: boolean;
 	/**
-	 * Max times an invite can be used
-	 * If not defined and maxUsesPerUser is defined, maxUses will be infinite.
-	 * @default 1 on private invites and infinite on public invites
+	 * @deprecated Not used anymore, use `maxUses` in `createInvite` instead.
 	 */
 	defaultMaxUses?: number;
 	/**
-	 * Max times an invite can be used by the same user
-	 * Use `Infinity` for unlimited uses per user.
-	 * Only works for private invites, public invites are always unlimited per user.
-	 * @default Infinity
+	 * @deprecated Not used anymore, use `maxUsesPerUser` in `createInvite` instead.
 	 */
 	defaultMaxUsesPerUser?: number;
 	/**

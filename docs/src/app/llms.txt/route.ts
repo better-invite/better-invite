@@ -62,7 +62,7 @@ Versions:
 
 	for (const version of docsVersions) {
 		const url = version.slug ? `/docs/${version.slug}` : "/docs";
-		content += `- ${version.label} - URL: ${url}/\n`;
+		content += `- ${version.label} - URL: ${url}/...\n`;
 	}
 
 	content += "\n";

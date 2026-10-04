@@ -133,6 +133,13 @@ export const rejectInvite = (options: NewInviteOptions) => {
 
 			if (
 				remainingEmails.length === 0 &&
+				options.keepInviteAfterLastRejection
+			) {
+				await adapter.updateInvitation(invitation.id, "pending");
+			}
+
+			if (
+				remainingEmails.length === 0 &&
 				!options.keepInviteAfterLastRejection
 			) {
 				if (options.cleanupInvitesOnDecision) {

@@ -352,10 +352,9 @@ export const createRedirectURL = ({
 }) => {
 	// Default redirect URL with query parameters
 	// For private invites, we also include the email in the query params to pre-fill the sign-in/up form
+	const storedEmails = normalizeArray(invitation.emails ?? invitation.email);
 	const emailQuery =
-		invitation.emails && invitation.emails.length > 0
-			? `&email=${encodeURIComponent(email ?? "")}`
-			: "";
+		storedEmails.length > 0 ? `&email=${encodeURIComponent(email ?? "")}` : "";
 	const urlQuery = `signInUpUrl=${encodeURIComponent(signInUpUrl)}&callbackUrl=${encodeURIComponent(callbackUrl)}${emailQuery}`;
 	let redirectUrl = `/invite/${invitation.token}?${urlQuery}`;
 

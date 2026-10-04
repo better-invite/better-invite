@@ -624,9 +624,7 @@ test("test acceptInviteCallback with custom schema", async ({ createAuth }) => {
 	expect(newInvite).not.toBeNull();
 });
 
-test("acceptInviteCallback uses redirectAfterUpgrade", async ({
-	createAuth,
-}) => {
+test("acceptInviteCallback uses callbackUrl", async ({ createAuth }) => {
 	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
 		pluginOptions: {
 			...defaultOptions,

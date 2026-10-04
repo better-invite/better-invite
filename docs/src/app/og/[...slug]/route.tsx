@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
+import { resolveVersionFromSlug } from "@/lib/docs-versions";
 import { getPageImage } from "@/lib/metadata";
-import { source } from "@/lib/source";
+import { getSourceFor } from "@/lib/source";
 import { getImageResponseOptions, generate as MetadataImage } from "./generate";
 
 export const revalidate = false;
@@ -11,7 +12,8 @@ export async function GET(
 	{ params }: RouteContext<"/og/[...slug]">,
 ) {
 	const { slug } = await params;
-	const page = source.getPage(slug.slice(0, -1));
+	const { version, relSlug } = resolveVersionFromSlug(slug);
+	const page = getSourceFor(version.slug).getPage(relSlug.slice(0, -1));
 	if (!page) notFound();
 
 	return new ImageResponse(
@@ -26,7 +28,13 @@ export async function GET(
 export function generateStaticParams(): {
 	slug: string[];
 }[] {
-	return source.getPages().map((page) => ({
-		slug: getPageImage(page).segments,
-	}));
+	return [null, "beta"].flatMap((versionSlug) => {
+		const source = getSourceFor(versionSlug);
+		return source.getPages().map((page) => ({
+			slug: [
+				...(versionSlug ? [versionSlug] : []),
+				...getPageImage(page).segments,
+			],
+		}));
+	});
 }

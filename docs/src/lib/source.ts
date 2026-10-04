@@ -46,7 +46,7 @@ export async function getLLMText(
 
 	const versionNote = version?.slug
 		? `> You are reading Better Invite documentation for \`${version.label}\`. This is not the current stable release. APIs may differ from the latest stable version.\n\n`
-		: ""; // no version note for latest stable release
+		: ""; // No version note for latest stable release, only for versioned docs (like beta)
 
 	return `${versionNote}# ${category}: ${page.data.title}
 URL: ${page.url}

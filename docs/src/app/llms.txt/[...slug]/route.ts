@@ -15,9 +15,15 @@ export async function GET(
 ) {
 	let slug = (await params).slug;
 
-	// Remove .md extension if present in the last segment
-	if (slug[slug.length - 1]?.endsWith(".md")) {
-		slug = [...slug.slice(0, -1), slug[slug.length - 1].replace(/\.md$/, "")];
+	// Remove .md and .mdx extension if present in the last segment
+	if (
+		slug[slug.length - 1]?.endsWith(".md") ||
+		slug[slug.length - 1]?.endsWith(".mdx")
+	) {
+		slug = [
+			...slug.slice(0, -1),
+			slug[slug.length - 1].replace(/\.(md|mdx)$/, ""),
+		];
 	}
 
 	// Remove 'docs' prefix if present (since source already includes /docs in baseUrl)

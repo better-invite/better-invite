@@ -4,7 +4,11 @@ import { expireCookie } from "better-auth/cookies";
 import type { UserWithRole } from "better-auth/plugins";
 import * as z from "zod";
 import { getInviteAdapter } from "./adapter";
-import { ERROR_CODES, INVITE_COOKIE_NAME } from "./constants";
+import {
+	ERROR_CODES,
+	INVITE_CALLBACK_COOKIE_NAME,
+	INVITE_COOKIE_NAME,
+} from "./constants";
 import type { NewInviteOptions } from "./types";
 import {
 	consumeInvite,
@@ -133,8 +137,19 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						});
 					}
 
+					const callbackMaxAge = options.inviteCookieMaxAge ?? 10 * 60;
+					const callbackCookie = ctx.context.createAuthCookie(
+						INVITE_CALLBACK_COOKIE_NAME,
+						{ maxAge: callbackMaxAge },
+					);
+					const callbackUrlFromCookie = await ctx.getSignedCookie(
+						callbackCookie.name,
+						ctx.context.secret,
+					);
+
 					const callbackUrl = validateCallbackUrl(
 						callbackUrlFromBody ??
+							callbackUrlFromCookie ??
 							invitation.callbackUrl ??
 							invitation.redirectToAfterUpgrade,
 						ctx.request?.url,
@@ -172,6 +187,7 @@ export const invitesHooks = (options: NewInviteOptions) => {
 							{ maxAge },
 						);
 						expireCookie(ctx, inviteCookie);
+						expireCookie(ctx, callbackCookie);
 					}
 
 					// Optional hook after accepting

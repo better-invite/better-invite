@@ -74,7 +74,7 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 				{page.data.description}
 			</DocsDescription>
 			<div className="flex flex-row gap-2 items-center border-b pb-6">
-				<LLMCopyButton markdownUrl={`${rawBase}.mdx`} />
+				<LLMCopyButton markdownUrl={`${rawBase}/${page.path}`} />
 				<ViewOptions
 					markdownUrl={`${page.url}.mdx`}
 					githubUrl={`${githubBase}/${page.path}`}
@@ -84,7 +84,6 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 			<DocsBody>
 				<MDX
 					components={getMDXComponents({
-						// this allows you to link to other pages with relative file paths
 						a: (props: React.ComponentProps<"a">) => (
 							<DefaultAnchor {...props} href={scope(props.href)} />
 						),
@@ -194,7 +193,7 @@ export async function generateMetadata(
 		page.data.description ??
 		"A plugin for Better Auth that adds an invitation system, allowing you to create, send, and manage invites for user sign-ups or role upgrades.";
 
-	const ogUrl = getPageImage(page).url;
+	const ogUrl = `${version.slug ? `/og/${version.slug}` : "/og"}/${getPageImage(page).segments.join("/")}`;
 
 	return createMetadata({
 		title,

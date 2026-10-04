@@ -23,6 +23,7 @@ export const ERROR_CODES = defineErrorCodes({
 export const Tokens = ["token", "code", "custom"] as const;
 
 export const INVITE_COOKIE_NAME = "invite_token";
+export const INVITE_CALLBACK_COOKIE_NAME = "invite_callback_url";
 
 export const defaultRedirectAfterUpgrade = "/";
 

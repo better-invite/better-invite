@@ -151,7 +151,21 @@ export async function getCommunityStats(
 
 export function formatCount(num: number | null | undefined): string {
 	if (num == null) return "—";
-	if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
-	if (num >= 1_000) return `${(num / 1_000).toFixed(num >= 10_000 ? 0 : 1)}k`;
+
+	if (num >= 1_000_000) {
+		return `${(num / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+	}
+
+	if (num >= 1_000) {
+		const value = num / 1_000;
+		const rounded = Math.round(value * 10) / 10;
+
+		if (rounded >= 1000) {
+			return "1M";
+		}
+
+		return `${rounded.toString().replace(/\.0$/, "")}k`;
+	}
+
 	return num.toString();
 }
