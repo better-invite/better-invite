@@ -676,3 +676,66 @@ test("rejectInvite removes only the rejecting user from a private invite", async
 		redirectTo: "http://localhost:3000/",
 	});
 });
+
+test("keeping an invite after the last rejection preserves its private recipient", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			keepInviteAfterLastRejection: true,
+			sendUserInvitation: () => {},
+		},
+	});
+	const recipient = {
+		email: "last-reject@test.com",
+		role: "user",
+		name: "Last Reject",
+		password: "12345678",
+	};
+	const otherUser = {
+		email: "other-user@test.com",
+		role: "user",
+		name: "Other User",
+		password: "12345678",
+	};
+	await Promise.all([createUser(recipient, db), createUser(otherUser, db)]);
+	const { headers: creatorHeaders } = await signInWithTestUser();
+	const created = await client.invite.create({
+		role: "admin",
+		email: recipient.email,
+		fetchOptions: { headers: creatorHeaders },
+	});
+	expect(created.error).toBeNull();
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([recipient.email]) }],
+	});
+	if (!invite) throw new Error("Invite not found");
+	const { headers: recipientHeaders } = await signInWithUser(
+		recipient.email,
+		recipient.password,
+	);
+	const rejected = await client.invite.reject({
+		token: invite.token,
+		fetchOptions: { headers: recipientHeaders },
+	});
+	expect(rejected.error).toBeNull();
+
+	const keptInvite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "id", value: invite.id }],
+	});
+	expect(keptInvite?.status).toBe("pending");
+	expect(keptInvite?.emails).toEqual([recipient.email]);
+
+	const { headers: otherHeaders } = await signInWithUser(
+		otherUser.email,
+		otherUser.password,
+	);
+	const acceptedByOtherUser = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: { headers: otherHeaders },
+	});
+	expect(acceptedByOtherUser.error?.code).toBe("INVALID_EMAIL");
+});

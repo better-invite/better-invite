@@ -1,20 +1,9 @@
 import { createAuthEndpoint, originCheck } from "better-auth/api";
 import * as z from "zod";
 import type { NewInviteOptions } from "../types";
-import { redirectCallback, redirectError } from "../utils";
+import { redirectCallback, redirectError, replacePlaceholders } from "../utils";
 import { acceptInviteLogic } from "./accept-invite";
 
-/**
- * This endpoint is what runs when a user clicks an invite link (from email, for example).
- *
- * It doesn't implement the invite logic itself. Instead, it acts as a bridge:
- *
- * - It takes a browser request (GET + query params)
- * - Calls the core logic (acceptInviteLogic)
- * - Converts the result into a redirect
- *
- * Think of it as a "bridge" between JSON responses and browser redirects.
- */
 export const acceptInviteCallback = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
 		"/invite/:token",
@@ -52,7 +41,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 					.optional(),
 				/**
 				 * Where to redirect the user to sign in/up.
-				 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
+				 * {callbackUrl} will be replaced by the actual callback URL from the query string.
 				 * {email} will be replaced by the actual email in private invites.
 				 */
 				signInUpUrl: z
@@ -111,6 +100,10 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 		},
 		async (ctx) => {
 			const { callbackUrl, callbackURL } = ctx.query;
+			const errorCallbackUrl = callbackUrl ?? callbackURL;
+			const expandedErrorCallbackUrl = errorCallbackUrl
+				? replacePlaceholders(errorCallbackUrl, { token: ctx.params.token })
+				: undefined;
 
 			let res: Awaited<ReturnType<typeof acceptInviteLogic>> | null = null;
 			try {
@@ -128,7 +121,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 				const message = err?.body?.message ?? "Internal server error";
 
 				return ctx.redirect(
-					redirectError(ctx.context, callbackUrl ?? callbackURL, {
+					redirectError(ctx.context, expandedErrorCallbackUrl, {
 						message,
 						error,
 					}),
@@ -152,7 +145,7 @@ export const acceptInviteCallback = (options: NewInviteOptions) => {
 				);
 
 			return ctx.redirect(
-				redirectError(ctx.context, callbackUrl ?? callbackURL, {
+				redirectError(ctx.context, expandedErrorCallbackUrl, {
 					message: "Internal server error",
 					error: "SERVER_ERROR",
 				}),

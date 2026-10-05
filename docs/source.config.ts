@@ -11,55 +11,35 @@ import { z } from "zod";
 
 // You can customise Zod schemas for frontmatter and `meta.json` here
 // see https://fumadocs.dev/docs/mdx/collections
-export const docs = defineDocs({
-	dir: "content/docs",
-	docs: {
-		schema: pageSchema,
-		postprocess: {
-			includeProcessedMarkdown: true,
-		},
-		async mdxOptions(environment) {
-			const { remarkFeedbackBlock } = await import(
-				"fumadocs-core/mdx-plugins/remark-feedback-block"
-			);
-			const { remarkMdxMermaid } = await import(
-				"fumadocs-core/mdx-plugins/remark-mdx-mermaid"
-			);
+function defineDocsCollection(dir: string) {
+	return defineDocs({
+		dir,
+		docs: {
+			schema: pageSchema,
+			postprocess: {
+				includeProcessedMarkdown: true,
+			},
+			async mdxOptions(environment) {
+				const { remarkFeedbackBlock } = await import(
+					"fumadocs-core/mdx-plugins/remark-feedback-block"
+				);
+				const { remarkMdxMermaid } = await import(
+					"fumadocs-core/mdx-plugins/remark-mdx-mermaid"
+				);
 
-			return applyMdxPreset({
-				remarkPlugins: [remarkMdxMermaid, remarkFeedbackBlock],
-			})(environment);
+				return applyMdxPreset({
+					remarkPlugins: [remarkMdxMermaid, remarkFeedbackBlock],
+				})(environment);
+			},
 		},
-	},
-	meta: {
-		schema: metaSchema,
-	},
-});
+		meta: {
+			schema: metaSchema,
+		},
+	});
+}
 
-export const docsBeta = defineDocs({
-	dir: "./content/docs-beta",
-	docs: {
-		schema: pageSchema,
-		postprocess: {
-			includeProcessedMarkdown: true,
-		},
-		async mdxOptions(environment) {
-			const { remarkFeedbackBlock } = await import(
-				"fumadocs-core/mdx-plugins/remark-feedback-block"
-			);
-			const { remarkMdxMermaid } = await import(
-				"fumadocs-core/mdx-plugins/remark-mdx-mermaid"
-			);
-
-			return applyMdxPreset({
-				remarkPlugins: [remarkMdxMermaid, remarkFeedbackBlock],
-			})(environment);
-		},
-	},
-	meta: {
-		schema: metaSchema,
-	},
-});
+export const docs = defineDocsCollection("content/docs");
+export const docsBeta = defineDocsCollection("./content/docs-beta");
 
 export const blog = defineCollections({
 	type: "doc",

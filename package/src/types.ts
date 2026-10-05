@@ -126,11 +126,11 @@ export type InviteOptions = {
 	 */
 	defaultShareInviterName?: boolean;
 	/**
-	 * @deprecated This option is ignored. Configure `maxUses` on each `invite.create()` call instead.
+	 * @deprecated This option is ignored. Set `maxUses` on each `invite.create()` call.
 	 */
 	defaultMaxUses?: number;
 	/**
-	 * @deprecated This option is ignored. Configure `maxUsesPerUser` on each `invite.create()` call instead.
+	 * @deprecated This option is ignored. Set `maxUsesPerUser` on each `invite.create()` call.
 	 */
 	defaultMaxUsesPerUser?: number;
 	/**
@@ -190,7 +190,8 @@ export type InviteOptions = {
 	 */
 	cleanupInvitesOnDecision?: boolean;
 	/**
-	 * Delete invitations after they reach max uses.
+	 * Delete the invitation and its usage history after it reaches its total-use limit.
+	 * Keep this disabled to retain consumed invitations and their acceptance history.
 	 *
 	 * @default false
 	 */
@@ -372,7 +373,10 @@ export type InviteType = {
 	expiresAt: Date;
 	maxUses: number;
 	maxUsesPerUser?: number;
-	infinityMaxUses: boolean;
+	/** @deprecated Use `maxUses: -1` to represent unlimited uses. */
+	infinityMaxUses?: boolean;
+	/** @deprecated Use `maxUsesPerUser: -1` to represent unlimited uses per user. */
+	infinityMaxUsesPerUser?: boolean;
 	shareInviterName: boolean;
 	/**
 	 * @deprecated Use emails

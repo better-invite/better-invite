@@ -5,6 +5,11 @@ icon: Database
 ---
 
 # Invite
+
+At the API boundary, `invite.create()` accepts `redirectToAfterUpgrade` and stores it in `callbackUrl`. The legacy database column named `redirectToAfterUpgrade` is retained only to read older invitations. The `newAccount` column is also retained for compatibility, although `invite.get()` no longer returns it.
+
+Consumed invites and their usage rows are retained as acceptance history by default. `cleanupInvitesAfterMaxUses` defaults to `false`; when enabled, the invitation and all its usage rows are deleted after the final allowed use.
+
 <DatabaseTable
   fields={[
     {
@@ -82,6 +87,7 @@ icon: Database
       type: "boolean",
       required: false,
       description: "Whether this invite is for creating a new account or upgrading an existing one",
+      deprecated: true,
     }
   ]}
 />

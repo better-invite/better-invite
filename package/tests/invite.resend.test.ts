@@ -54,6 +54,9 @@ test("resends emails for private invites", async ({ createAuth }) => {
 	expect(resend.error).toBe(null);
 
 	expect(mock.sendUserInvitation).toHaveBeenCalledTimes(2);
+	expect(
+		mock.sendUserInvitation.mock.calls.map(([invitation]) => invitation.email),
+	).toEqual(expect.arrayContaining(["test@email.com", "test2@email.com"]));
 	expect(mock.sendUserInvitation).toHaveBeenCalledWith(
 		expect.objectContaining({
 			email: "test@email.com",
@@ -237,7 +240,8 @@ test("resend uses custom redirect options", async ({ createAuth }) => {
 
 	const resend = await client.invite.resend({
 		token: invite.token,
-		customInviteUrl: "https://example.com/custom-invite",
+		customInviteUrl:
+			"https://example.com/custom-invite?destination={signInUpUrl}",
 		redirectToSignUp: "/signup",
 		redirectToSignIn: "/signin",
 		fetchOptions: {
@@ -250,7 +254,7 @@ test("resend uses custom redirect options", async ({ createAuth }) => {
 	expect(mock.sendUserInvitation).toHaveBeenCalledWith(
 		expect.objectContaining({
 			email: "test@email.com",
-			url: expect.stringContaining("https://example.com/custom-invite"),
+			url: "https://example.com/custom-invite?destination=%2Fsignup",
 		}),
 		expect.anything(),
 	);

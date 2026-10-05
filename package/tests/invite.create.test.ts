@@ -10,6 +10,83 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
+test("uses default values when request values are omitted", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+	const { headers } = await signInWithTestUser();
+
+	const publicInvite = await client.invite.create({
+		role: "user",
+		fetchOptions: { headers },
+	});
+	const privateSingleInvite = await client.invite.create({
+		role: "user",
+		email: "default-uses@test.com",
+		fetchOptions: { headers },
+	});
+	const privateMultipleInvite = await client.invite.create({
+		role: "user",
+		email: ["default-per-user-a@test.com", "default-per-user-b@test.com"],
+		fetchOptions: { headers },
+	});
+
+	expect(publicInvite.error).toBeNull();
+	expect(privateSingleInvite.error).toBeNull();
+	expect(privateMultipleInvite.error).toBeNull();
+
+	const invites = await db.findMany<InviteTypeWithId>({ model: "invite" });
+	expect(invites).toHaveLength(3);
+
+	const publicInviteRecord = invites.find((invite) => !invite.emails?.length);
+	const privateSingleInviteRecord = invites.find(
+		(invite) => invite.emails?.length === 1,
+	);
+	const privateMultipleInviteRecord = invites.find(
+		(invite) => invite.emails?.length === 2,
+	);
+
+	expect(publicInviteRecord).toMatchObject({
+		maxUses: -1,
+		maxUsesPerUser: -1,
+	});
+
+	expect(privateSingleInviteRecord).toMatchObject({
+		maxUses: 1,
+		maxUsesPerUser: -1,
+	});
+
+	expect(privateMultipleInviteRecord).toMatchObject({
+		maxUses: -1,
+		maxUsesPerUser: 1,
+	});
+});
+
+test("reads legacy infinity flags as a fallback to -1 sentinels", () => {
+	const legacyInvite = {
+		maxUses: 10,
+		maxUsesPerUser: 4,
+		infinityMaxUses: true,
+		infinityMaxUsesPerUser: true,
+	} as InviteTypeWithId;
+
+	expect(utils.getMaxUses(legacyInvite)).toBe(Infinity);
+	expect(utils.getMaxUsesPerUser(legacyInvite)).toBe(Infinity);
+
+	const sentinelInvite = {
+		maxUses: -1,
+		maxUsesPerUser: -1,
+	} as InviteTypeWithId;
+
+	expect(utils.getMaxUses(sentinelInvite)).toBe(Infinity);
+	expect(utils.getMaxUsesPerUser(sentinelInvite)).toBe(Infinity);
+});
+
 // Activate Invite Tests
 
 test("uses sendUserInvitation when invited user does not exist", async ({

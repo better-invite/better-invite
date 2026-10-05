@@ -12,6 +12,7 @@ import {
 import type { NewInviteOptions } from "./types";
 import {
 	consumeInvite,
+	getMaxUses,
 	redirectError,
 	replacePlaceholders,
 	validateCallbackUrl,
@@ -62,45 +63,17 @@ export const invitesHooks = (options: NewInviteOptions) => {
 
 					if (!invitedUser) return;
 
-					// Support two ways of passing the invite token:
-					// 1) old flow: signed cookie
-					// 2) new flow: body.inviteToken
-					const bodyValidation = z
-						.object({
-							inviteToken: z.string().optional(),
-							// Optional callback URL to redirect after accepting the invite
-							callbackUrl: z.string().optional(),
-						})
-						.safeParse(ctx.body);
-
-					const inviteTokenFromBody = bodyValidation.success
-						? bodyValidation.data.inviteToken
-						: undefined;
-
-					const callbackUrlFromBody = bodyValidation.success
-						? bodyValidation.data.callbackUrl
-						: undefined;
-
-					let inviteToken = inviteTokenFromBody;
-
-					if (!inviteToken) {
-						// Fallback to the legacy cookie-based flow
-						const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
-						const inviteCookie = ctx.context.createAuthCookie(
-							INVITE_COOKIE_NAME,
-							{ maxAge },
-						);
-
-						const inviteTokenString = await ctx.getSignedCookie(
-							inviteCookie.name,
-							ctx.context.secret,
-						);
-
-						if (!inviteTokenString) return;
-
-						inviteToken = inviteTokenString;
-					}
-
+					// The pinned Better Auth sign-in/up schemas do not accept inviteToken,
+					// so the callback flow carries it in the signed invite cookie.
+					const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
+					const inviteCookie = ctx.context.createAuthCookie(
+						INVITE_COOKIE_NAME,
+						{ maxAge },
+					);
+					const inviteToken = await ctx.getSignedCookie(
+						inviteCookie.name,
+						ctx.context.secret,
+					);
 					if (!inviteToken) return;
 
 					const adapter = getInviteAdapter(ctx.context, options);
@@ -119,7 +92,7 @@ export const invitesHooks = (options: NewInviteOptions) => {
 					const timesUsed = await adapter.countInvitationUses(invitation.id);
 
 					// Check if the invite was already fully used
-					if (!invitation.infinityMaxUses && timesUsed >= invitation.maxUses) {
+					if (timesUsed >= getMaxUses(invitation)) {
 						throw APIError.from(
 							"BAD_REQUEST",
 							ERROR_CODES.NO_USES_LEFT_FOR_INVITE,
@@ -148,11 +121,11 @@ export const invitesHooks = (options: NewInviteOptions) => {
 					);
 
 					const callbackUrl = validateCallbackUrl(
-						callbackUrlFromBody ??
-							(callbackUrlFromCookie || undefined) ??
+						(callbackUrlFromCookie || undefined) ??
 							invitation.callbackUrl ??
 							invitation.redirectToAfterUpgrade,
 						ctx.request?.url,
+						(origin) => ctx.context.isTrustedOrigin(origin),
 					);
 
 					// Optional hook before accepting the invite
@@ -173,8 +146,6 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						adapter,
 						meta: {
 							userId,
-							timesUsed,
-							token: inviteToken,
 							newAccount: true,
 						},
 					});
@@ -182,15 +153,7 @@ export const invitesHooks = (options: NewInviteOptions) => {
 					// The callback cookie may be left over from an earlier invite flow.
 					expireCookie(ctx, callbackCookie);
 
-					// Clean up the invite cookie only when the cookie-based flow was used
-					if (!inviteTokenFromBody) {
-						const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
-						const inviteCookie = ctx.context.createAuthCookie(
-							INVITE_COOKIE_NAME,
-							{ maxAge },
-						);
-						expireCookie(ctx, inviteCookie);
-					}
+					expireCookie(ctx, inviteCookie);
 
 					// Optional hook after accepting
 					await options.inviteHooks?.afterAcceptInvite?.({

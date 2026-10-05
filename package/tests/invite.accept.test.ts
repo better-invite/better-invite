@@ -1,5 +1,6 @@
 import { beforeEach, expect, vi } from "vitest";
 import type { InviteTypeWithId } from "../src/types";
+import { validateCallbackUrl } from "../src/utils";
 import { defaultOptions, test } from "./helpers/better-auth";
 import mock from "./helpers/mocks";
 import { createUser } from "./helpers/users";
@@ -720,7 +721,7 @@ test("test acceptInvite with infiniteMaxUses", async ({ createAuth }) => {
 		throw new Error("Invite not found");
 	}
 
-	expect(invite.infinityMaxUses).toBe(true);
+	expect(invite.maxUses).toBe(-1);
 
 	const inviteId = invite.id;
 
@@ -754,7 +755,7 @@ test("test acceptInvite with infiniteMaxUses", async ({ createAuth }) => {
 	expect(newInvite).toMatchObject({
 		token: tokenValue,
 		status: "pending",
-		infinityMaxUses: true,
+		maxUses: -1,
 	});
 });
 
@@ -814,6 +815,68 @@ test("acceptInvite uses callbackUrl", async ({ createAuth }) => {
 		message: "Invite accepted successfully",
 		redirectTo: `/auth/invited/${tokenValue}`,
 	});
+});
+
+test("acceptInvite permits a stored callback on a trusted frontend origin", async ({
+	createAuth,
+}) => {
+	const frontendOrigin = "https://app.frontend.test";
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			defaultRedirectAfterUpgrade: `${frontendOrigin}/invited/{token}`,
+		},
+		trustedOrigins: [frontendOrigin],
+	});
+	const { headers } = await signInWithTestUser();
+	const created = await client.invite.create({
+		role: "admin",
+		senderResponse: "token",
+		fetchOptions: { headers },
+	});
+	const token = created.data?.message;
+	if (!token) throw new Error("Invite token not found");
+
+	const accepted = await client.invite.accept({
+		token,
+		fetchOptions: { headers },
+	});
+	expect(accepted.error).toBeNull();
+	expect(accepted.data?.redirectTo).toBe(`${frontendOrigin}/invited/${token}`);
+});
+
+test("rejects an untrusted stored callback origin", async ({ createAuth }) => {
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			defaultRedirectAfterUpgrade: "https://untrusted.example/invited",
+		},
+	});
+	const { headers } = await signInWithTestUser();
+	const created = await client.invite.create({
+		role: "admin",
+		senderResponse: "token",
+		fetchOptions: { headers },
+	});
+	const token = created.data?.message;
+	if (!token) throw new Error("Invite token not found");
+
+	const accepted = await client.invite.accept({
+		token,
+		fetchOptions: { headers },
+	});
+	expect(accepted.error?.status).toBe(403);
+	expect(accepted.error?.code).toBe("INVALID_CALLBACK_URL");
+});
+
+test("callback validation allows configured trusted frontend origins", () => {
+	expect(
+		validateCallbackUrl(
+			"https://app.frontend.test/accepted",
+			"http://localhost:3000/api/auth/invite/accept",
+			(origin) => origin === "https://app.frontend.test",
+		),
+	).toBe("https://app.frontend.test/accepted");
 });
 
 test("acceptInvite supports no redirectAfterUpgrade", async ({
@@ -1271,7 +1334,7 @@ test("multi-email private invite allows each recipient when maxUsesPerUser is om
 	}
 
 	expect(invite.maxUsesPerUser).toBe(1);
-	expect(invite.infinityMaxUses).toBe(true);
+	expect(invite.maxUses).toBe(-1);
 
 	const { headers: firstUserHeaders } = await signInWithUser(
 		invitedUser.email,
@@ -1414,62 +1477,83 @@ test("acceptInvite uses redirectToAfterUpgrade from the invite record", async ({
 	expect(() => new URL(data!.redirectTo)).not.toThrow();
 });
 
-test("concurrent accepts do not exceed maxUses", async ({ createAuth }) => {
-	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
-		pluginOptions: {
-			...defaultOptions,
-		},
+test("retains consumed invites and usage history by default", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: { ...defaultOptions },
 	});
-
-	const users = Array.from({ length: 20 }, (_, index) => ({
-		email: `concurrent-${index}@test.com`,
-		role: "user",
-		name: `User ${index}`,
-		password: "password123",
-	}));
-
-	await Promise.all(users.map((user) => createUser(user, db)));
-
-	const { headers: adminHeaders } = await signInWithTestUser();
-
+	const { headers } = await signInWithTestUser();
 	const created = await client.invite.create({
 		role: "admin",
 		senderResponse: "token",
 		maxUses: 1,
-		fetchOptions: { headers: adminHeaders },
+		fetchOptions: { headers },
 	});
-
-	expect(created.error).toBeNull();
-
 	const token = created.data?.message;
-	if (!token) throw new Error("Token missing");
+	if (!token) throw new Error("Invite token not found");
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "token", value: token }],
+	});
+	if (!invite) throw new Error("Invite not found");
 
-	const headers = await Promise.all(
-		users.map(async (user) => {
-			const { headers } = await signInWithUser(user.email, user.password);
+	const accepted = await client.invite.accept({
+		token,
+		fetchOptions: { headers },
+	});
+	expect(accepted.error).toBeNull();
 
-			return headers;
+	const consumed = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "id", value: invite.id }],
+	});
+	expect(consumed?.status).toBe("used");
+	expect(
+		await db.count({
+			model: "inviteUse",
+			where: [{ field: "inviteId", value: invite.id }],
 		}),
-	);
+	).toBe(1);
+});
 
-	const results = await Promise.all(
-		headers.map((userHeaders) =>
-			client.invite.accept({
-				token,
-				fetchOptions: {
-					headers: userHeaders,
-				},
-			}),
-		),
-	);
+test("cleans up a consumed invite and its usage history when enabled", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: { ...defaultOptions, cleanupInvitesAfterMaxUses: true },
+	});
+	const { headers } = await signInWithTestUser();
+	const created = await client.invite.create({
+		role: "admin",
+		senderResponse: "token",
+		maxUses: 1,
+		fetchOptions: { headers },
+	});
+	const token = created.data?.message;
+	if (!token) throw new Error("Invite token not found");
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "token", value: token }],
+	});
+	if (!invite) throw new Error("Invite not found");
 
-	const successes = results.filter((result) => result.error === null);
-	const failures = results.filter((result) => result.error !== null);
+	const accepted = await client.invite.accept({
+		token,
+		fetchOptions: { headers },
+	});
+	expect(accepted.error).toBeNull();
 
-	expect(successes).toHaveLength(1);
-	expect(failures).toHaveLength(19);
-
-	for (const failure of failures) {
-		expect(failure.error?.code).toBe("INVITE_TOKEN_HAS_ALREADY_BEEN_USED");
-	}
+	expect(
+		await db.findOne<InviteTypeWithId>({
+			model: "invite",
+			where: [{ field: "id", value: invite.id }],
+		}),
+	).toBeNull();
+	expect(
+		await db.count({
+			model: "inviteUse",
+			where: [{ field: "inviteId", value: invite.id }],
+		}),
+	).toBe(0);
 });

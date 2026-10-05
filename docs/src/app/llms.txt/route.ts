@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { docsVersions } from "@/lib/docs-versions";
 import { formatCategoryName, getSection } from "@/lib/navigation";
-import { source } from "../../lib/source";
+import { getSourceFor } from "../../lib/source";
 
 export const revalidate = false;
 
@@ -39,7 +39,9 @@ function groupPagesByCategory(pages: any[]): Map<string, PageInfo[]> {
 }
 
 export async function GET() {
-	const pages = source.getPages();
+	const pages = docsVersions.flatMap((version) =>
+		getSourceFor(version.slug).getPages(),
+	);
 	const groupedPages = groupPagesByCategory(pages);
 
 	let content = `# Better Invite

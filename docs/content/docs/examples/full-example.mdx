@@ -109,7 +109,7 @@ if (invite.invitation.type === "private" && user?.email && invite.invitation.ema
 
 Now that the user has accepted or rejected the invite, `invite.accept()` and `invite.reject()` will create a redirect URL using the input `callbackUrl`
 
-Use the option `redirectToAfterUpgrade` when creating an invite to configure where the user is redirected after the invite action is completed.
+Set `redirectToAfterUpgrade` on each `invite.create()` request to configure the final redirect after an invite action. The `defaultRedirectAfterUpgrade` plugin option remains available as a deprecated server-wide fallback.
 
 This is different from `customInviteUrl`:
 

@@ -303,6 +303,7 @@ export const createInviteBodySchema = z.object({
 	/**
 	 * The URL to redirect the user to after upgrade their role (after accepting the invite).
 	 * {token} will be replaced with the actual invite token.
+	 * Prefer this per-invite setting; `defaultRedirectAfterUpgrade` is a deprecated server-wide fallback.
 	 *
 	 * @default options.defaultRedirectAfterUpgrade
 	 */

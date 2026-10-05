@@ -3,6 +3,7 @@ import { ImageResponse } from "next/og";
 import { docsVersions, resolveVersionFromSlug } from "@/lib/docs-versions";
 import { getPageImage } from "@/lib/metadata";
 import { getSourceFor } from "@/lib/source";
+import { getVersionedStaticParams } from "@/lib/static-params";
 import { getImageResponseOptions, generate as MetadataImage } from "./generate";
 
 export const revalidate = false;
@@ -28,13 +29,9 @@ export async function GET(
 export function generateStaticParams(): {
 	slug: string[];
 }[] {
-	return docsVersions.flatMap(({ slug: versionSlug }) => {
-		const source = getSourceFor(versionSlug);
-		return source.getPages().map((page) => ({
-			slug: [
-				...(versionSlug ? [versionSlug] : []),
-				...getPageImage(page).segments,
-			],
-		}));
-	});
+	return getVersionedStaticParams(docsVersions, (versionSlug) =>
+		getSourceFor(versionSlug)
+			.getPages()
+			.map((page) => getPageImage(page).segments),
+	);
 }

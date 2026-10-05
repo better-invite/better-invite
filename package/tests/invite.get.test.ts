@@ -66,6 +66,54 @@ test("public invite returns inviter info without session", async ({
 	});
 });
 
+test("private multi-recipient response exposes only the authenticated recipient email", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+	const recipient = {
+		email: "visible-recipient@test.com",
+		role: "user",
+		name: "Visible Recipient",
+		password: "12345678",
+	};
+	await createUser(recipient, db);
+	const { headers } = await signInWithTestUser();
+	const created = await client.invite.create({
+		role: "admin",
+		email: [recipient.email, "hidden-recipient@test.com"],
+		fetchOptions: { headers },
+	});
+	expect(created.error).toBeNull();
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [
+			{
+				field: "emails",
+				value: JSON.stringify([recipient.email, "hidden-recipient@test.com"]),
+			},
+		],
+	});
+	expect(invite).not.toBeNull();
+	const { headers: recipientHeaders } = await signInWithUser(
+		recipient.email,
+		recipient.password,
+	);
+
+	const response = await client.invite.get({
+		query: { token: invite?.token },
+		fetchOptions: { headers: recipientHeaders },
+	});
+
+	expect(response.error).toBeNull();
+	expect(response.data?.invitation.emails).toEqual([recipient.email]);
+});
+
 test("getInvite without token and without cookie returns INVALID_TOKEN", async ({
 	createAuth,
 }) => {

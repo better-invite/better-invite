@@ -6,6 +6,7 @@ import {
 	resolveVersionFromSlug,
 } from "../../../lib/docs-versions";
 import { getLLMText, getSourceFor, LLM_TEXT_ERROR } from "../../../lib/source";
+import { getLlmsStaticParams } from "../../../lib/static-params";
 
 export const revalidate = false;
 
@@ -51,10 +52,9 @@ export async function GET(
 }
 
 export function generateStaticParams() {
-	return docsVersions.flatMap((v) => {
-		const src = getSourceFor(v.slug);
-		return src.generateParams().map((p) => ({
-			slug: v.slug ? [v.slug, ...(p.slug ?? [])] : (p.slug ?? []),
-		}));
-	});
+	return getLlmsStaticParams(docsVersions, (versionSlug) =>
+		getSourceFor(versionSlug)
+			.generateParams()
+			.map((page) => page.slug ?? []),
+	);
 }

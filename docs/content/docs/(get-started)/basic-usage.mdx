@@ -15,7 +15,7 @@ Example:
 const res = await authClient.invite.create({
 	role: "user",
 	email: ["test@test.com"], // Since an email is present, the invite is private
-  redirectToAfterUpgrade: "/invite/accepted", // Optional: redirect the user to this URL after accepting the invite and upgrading their role or account
+	redirectToAfterUpgrade: "/invite/accepted", // Optional: redirect after accepting the invite
 })
 ```
 
@@ -26,7 +26,9 @@ By default, a multi-email invite allows one use per recipient and has no total-u
 Set `maxUsesPerUser` to choose a different per-recipient limit, or set `maxUses` to impose a total cap across all recipients.
 </Callout>
 
-Public invites allow unlimited total uses and unlimited uses per user by default. A private invite with one email allows one use total by default. These defaults replace the deprecated `defaultMaxUses` and `defaultMaxUsesPerUser` plugin options, which are ignored, configure limits on each `invite.create()` call.
+Public invites allow unlimited total uses and unlimited uses per user by default. A private invite with one email allows one use total by default. Set `maxUses` or `maxUsesPerUser` on each `invite.create()` call to override these defaults.
+
+`defaultRedirectAfterUpgrade` remains available as a deprecated server-wide fallback. Prefer `redirectToAfterUpgrade` on each `invite.create()` request.
 
 If the invite is private, the plugin will send an email to the user (or users) with the invite link (see [Accept Invite Callback](/docs/core/api#accept-invite-callback)).
 
@@ -44,4 +46,8 @@ const res = await authClient.invite.accept({
   callbackUrl: "/invite/accepted", // The user will be redirected here after accepting the invite
   token: "token123",
 });
+
+if (res.data?.redirectTo) {
+  window.location.assign(res.data.redirectTo);
+}
 ```

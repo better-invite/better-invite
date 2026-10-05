@@ -129,13 +129,15 @@ export const rejectInvite = (options: NewInviteOptions) => {
 				(email) => email !== inviteeUser.email,
 			);
 
-			await adapter.removeUserByEmail(invitation.id, inviteeUser.email);
-
 			if (
 				remainingEmails.length === 0 &&
 				options.keepInviteAfterLastRejection
 			) {
+				// Keep the final recipient on the pending invite so its private access
+				// restriction remains intact after the last rejection.
 				await adapter.updateInvitation(invitation.id, "pending");
+			} else {
+				await adapter.removeUserByEmail(invitation.id, inviteeUser.email);
 			}
 
 			if (

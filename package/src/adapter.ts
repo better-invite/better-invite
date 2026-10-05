@@ -1,6 +1,5 @@
 import type { AuthContext, DBAdapter, Where } from "better-auth";
 import type { UserWithRole } from "better-auth/plugins";
-import { defaultMaxUsesPerUser } from "./constants";
 import type { CreateInvite } from "./routes/create-invite";
 import type {
 	InvitationStatus,
@@ -36,31 +35,33 @@ export const getInviteAdapter = (
 			const token = generateToken();
 			const now = options.getDate();
 
-			const maxUsesPerUserWasExplicitlyUnlimited =
-				invite.maxUsesPerUser === Infinity;
-
-			const resolvedMaxUsesPerUser =
-				invite.maxUsesPerUser ?? defaultMaxUsesPerUser;
+			const hasMaxUsesPerUserLimit =
+				invite.maxUsesPerUser !== undefined || (isPrivate && emails.length > 1);
 
 			let maxUsesPerUser: number | undefined;
 
 			if (
 				isPrivate &&
 				emails.length > 1 &&
-				!maxUsesPerUserWasExplicitlyUnlimited &&
-				resolvedMaxUsesPerUser === Infinity
+				invite.maxUsesPerUser === undefined
 			) {
 				maxUsesPerUser = 1;
-			} else if (resolvedMaxUsesPerUser === Infinity) {
+			} else if (
+				invite.maxUsesPerUser === undefined ||
+				invite.maxUsesPerUser === Infinity
+			) {
 				maxUsesPerUser = undefined;
 			} else {
-				maxUsesPerUser = resolvedMaxUsesPerUser;
+				maxUsesPerUser = invite.maxUsesPerUser;
 			}
 
-			const defaultMaxUses =
-				maxUsesPerUser != null ? Infinity : isPrivate ? 1 : Infinity;
+			const inviteTypeMaxUses = hasMaxUsesPerUserLimit
+				? Infinity
+				: isPrivate
+					? 1
+					: Infinity;
 
-			const maxUses = invite.maxUses ?? defaultMaxUses;
+			const maxUses = invite.maxUses ?? inviteTypeMaxUses;
 
 			const isUnlimited = maxUses === Infinity;
 
@@ -71,9 +72,8 @@ export const getInviteAdapter = (
 					createdByUserId: user.id,
 					createdAt: now,
 					expiresAt,
-					maxUses: isUnlimited ? 1 : maxUses,
-					maxUsesPerUser,
-					infinityMaxUses: isUnlimited,
+					maxUses: isUnlimited ? -1 : maxUses,
+					maxUsesPerUser: maxUsesPerUser ?? -1,
 					shareInviterName: payload.shareInviterName,
 					emails: normalizeArray(invite.email, true),
 					role: invite.role,
@@ -196,12 +196,7 @@ export const getInviteAdapter = (
 		removeUserByEmail: async (id: string, email: string) => {
 			const invite = await baseAdapter.findOne<InviteTypeWithId>({
 				model: inviteTable,
-				where: [
-					{
-						field: "id",
-						value: id,
-					},
-				],
+				where: [{ field: "id", value: id }],
 			});
 
 			if (!invite) return null;
@@ -210,17 +205,10 @@ export const getInviteAdapter = (
 
 			return baseAdapter.update<InviteTypeWithId>({
 				model: inviteTable,
-				where: [
-					{
-						field: "id",
-						value: id,
-					},
-				],
+				where: [{ field: "id", value: id }],
 				update: {
 					emails,
-					...(emails.length === 0 && {
-						status: "used",
-					}),
+					...(emails.length === 0 && { status: "used" }),
 				},
 			});
 		},

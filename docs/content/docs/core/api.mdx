@@ -6,7 +6,14 @@ icon: Route
 
 # Create Invite
 
-<APIMethod path="/invite/create" method="POST" requireSession note="Most optional parameters use the plugin defaults. Usage limits default according to invite type; role and email have no plugin defaults.">
+<Callout type="info" title="Usage limits">
+  Public invites allow unlimited uses. A private invite with one recipient defaults to one total use unless a per-user limit is configured. Multi-email private invites default to one use per recipient and unlimited total uses.
+
+  Set `maxUses` or `maxUsesPerUser` on `invite.create()` to override the invite-type defaults.
+</Callout>
+
+<APIMethod path="/invite/create" method="POST" requireSession note="Most optional parameters use plugin defaults. Usage limits use request values first, then invite-type defaults.">
+
 ```ts
 type createInvite = {
 	/**
@@ -60,6 +67,7 @@ type createInvite = {
 	 * The URL to redirect the user to after upgrading their role
 	 * (after accepting the invite).
 	 * {token} will be replaced with the actual invite token.
+	 * Prefer this per-invite setting; `defaultRedirectAfterUpgrade` is a deprecated server-wide fallback.
 	 */
 	redirectToAfterUpgrade?: string
 
@@ -95,6 +103,17 @@ type createInvite = {
   This endpoint is deprecated. Prefer [Accept Invite](#accept-invite).
 </Callout>
 
+<APIMethod path="/invite/activate" method="POST" requireSession note="Deprecated. Prefer Accept Invite.">
+```ts
+type activateInvite = {
+	/** Where to redirect the user to sign in/up. */
+	callbackUrl?: string
+	/** The invite token. */
+	token: string
+}
+```
+</APIMethod>
+
 # Accept Invite
 
 <APIMethod path="/invite/accept" method="POST" requireSession note="Requires an authenticated session. Unauthenticated email links should use Accept Invite Callback instead.">
@@ -107,18 +126,11 @@ type acceptInvite = {
 	 * @default /
 	*/
 	callbackUrl?: string
+	/** The invite token. */
+	token: string
 	/**
-	 * Where to redirect the user to sign in/up.
-	 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
-	*/
-	signInUpUrl?: string
-  /**
-   * The invite token
-  */
-  token: string
-	/**
-	 * The email address of the user to sign in/up to.
-	*/	
+	 * The invited user's email address, used when the user needs to sign in or sign up.
+	 */
 	email?: string
 }
 ```
@@ -189,8 +201,14 @@ type acceptInviteCallback = {
 	*/
 	callbackUrl?: string
 	/**
+	 * @deprecated Use `callbackUrl`.
+	 * Legacy callback URL query parameter.
+	 */
+	callbackURL?: string
+	/**
 	 * Where to redirect the user to sign in/up.
-	 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
+	 * {callbackUrl} will be replaced by the actual callback URL from the query string.
+	 * {email} will be replaced by the actual email in private invites.
 	*/
 	signInUpUrl?: string
 	/**

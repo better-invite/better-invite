@@ -38,6 +38,7 @@ test("test activateInvite with an invalid token", async ({ createAuth }) => {
 	});
 
 	expect(warnSpy).toHaveBeenCalled(); // Expect a warning to be logged about the deprecation of activateInvite
+	warnSpy.mockRestore();
 });
 
 test("test activateInvite with maxUses set to 2", async ({ createAuth }) => {
@@ -766,7 +767,7 @@ test("test activateInvite with infiniteMaxUses", async ({ createAuth }) => {
 		throw new Error("Invite not found");
 	}
 
-	expect(invite.infinityMaxUses).toBe(true);
+	expect(invite.maxUses).toBe(-1);
 
 	const inviteId = invite.id;
 
@@ -801,7 +802,7 @@ test("test activateInvite with infiniteMaxUses", async ({ createAuth }) => {
 	expect(newInvite).toMatchObject({
 		token: tokenValue,
 		status: "pending",
-		infinityMaxUses: true,
+		maxUses: -1,
 	});
 });
 

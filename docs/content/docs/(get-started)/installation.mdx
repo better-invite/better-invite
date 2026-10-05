@@ -71,6 +71,8 @@ npx @better-auth/cli generate
 
 See the [Schema](/docs/core/schema) section to add the fields manually.
 
+For a server-wide post-acceptance redirect fallback, `defaultRedirectAfterUpgrade` is still supported but deprecated. Prefer setting `redirectToAfterUpgrade` on each `invite.create()` request.
+
 </Step>
 
 <Step>

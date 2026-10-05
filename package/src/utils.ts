@@ -30,8 +30,6 @@ type ConsumeInviteParams = {
 	adapter: InviteAdapter;
 	meta: {
 		userId: string;
-		token: string;
-		timesUsed: number;
 		newAccount: boolean;
 	};
 };
@@ -55,7 +53,7 @@ export const consumeInvite = async ({
 	adapter,
 	meta,
 }: ConsumeInviteParams) => {
-	const { userId, token, timesUsed, newAccount } = meta;
+	const { userId, newAccount } = meta;
 
 	// Normalize emails and detect private invite
 	const emails = normalizeArray(invitation.emails ?? invitation.email);
@@ -69,19 +67,6 @@ export const consumeInvite = async ({
 	// Validate invitation status
 	if (invitation.status && invitation.status !== "pending") {
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
-	}
-
-	const userUses =
-		invitation.maxUsesPerUser != null && isPrivate
-			? await adapter.countInvitationUsesByUser(invitation.id, userId)
-			: 0;
-
-	if (
-		invitation.maxUsesPerUser != null &&
-		isPrivate &&
-		userUses >= invitation.maxUsesPerUser
-	) {
-		throw APIError.from("BAD_REQUEST", ERROR_CODES.NO_USES_LEFT_FOR_INVITE);
 	}
 
 	// Check permissions
@@ -98,56 +83,64 @@ export const consumeInvite = async ({
 	if (!canAccept) {
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.CANT_ACCEPT_INVITE);
 	}
-
 	const maxUses = getMaxUses(invitation);
+	const timesUsed = await adapter.countInvitationUses(invitation.id);
+	if (timesUsed >= maxUses) {
+		throw APIError.from(
+			"BAD_REQUEST",
+			ERROR_CODES.INVITE_TOKEN_HAS_ALREADY_BEEN_USED,
+		);
+	}
+	const maxUsesPerUser = getMaxUsesPerUser(invitation);
+	const userUses =
+		maxUsesPerUser !== Infinity && isPrivate
+			? await adapter.countInvitationUsesByUser(invitation.id, userId)
+			: 0;
+	if (maxUsesPerUser !== Infinity && isPrivate && userUses >= maxUsesPerUser) {
+		throw APIError.from("BAD_REQUEST", ERROR_CODES.NO_USES_LEFT_FOR_INVITE);
+	}
+
 	const usedAt = options.getDate();
-	const isLastUse = timesUsed === maxUses - 1;
-	const shouldCleanup = isLastUse && options.cleanupInvitesAfterMaxUses;
-	const shouldCreateInviteUse = !shouldCleanup;
-
-	// Handle invite lifecycle
-	if (shouldCleanup) {
-		await adapter.deleteInviteUses(invitation.id);
-		await adapter.deleteInvitation(token);
-	}
-
-	if (isLastUse && !options.cleanupInvitesAfterMaxUses) {
-		await adapter.updateInvitation(invitation.id, "used");
-	}
-
-	// Track usage only if invite still active
-	if (shouldCreateInviteUse) {
-		await adapter.createInviteUse({
-			inviteId: invitation.id,
-			usedByUserId: userId,
-			usedAt,
-		});
-
-		// If maxUsesPerUser is enabled for a private invitation,
-		// remove the user's email once they have reached their per-user limit.
-		if (
-			invitation.maxUsesPerUser != null &&
-			isPrivate &&
-			userUses + 1 >= invitation.maxUsesPerUser
-		) {
-			await adapter.removeUserByEmail(invitation.id, invitedUser.email);
-		}
-	}
-
-	// Update user role
-	await ctx.context.adapter.update({
+	const updatedUser = { ...invitedUser, role: invitation.role };
+	const roleUpdate = await ctx.context.adapter.update<UserWithRole>({
 		model: "user",
 		where: [{ field: "id", value: userId }],
 		update: { role: invitation.role },
 	});
-
-	const updatedUser = { ...invitedUser, role: invitation.role };
-
-	// Update session with new role
-	await setSessionCookie(ctx, {
-		session,
-		user: updatedUser,
+	const persistedUser = await ctx.context.adapter.findOne<UserWithRole>({
+		model: "user",
+		where: [{ field: "id", value: userId }],
 	});
+	if (!roleUpdate || persistedUser?.role !== invitation.role) {
+		throw APIError.from("INTERNAL_SERVER_ERROR", {
+			code: "INVITE_USER_ROLE_UPDATE_FAILED",
+			message: "Could not update the invited user's role",
+		});
+	}
+
+	await adapter.createInviteUse({
+		inviteId: invitation.id,
+		usedByUserId: userId,
+		usedAt,
+	});
+	if (timesUsed === maxUses - 1) {
+		if (options.cleanupInvitesAfterMaxUses) {
+			await adapter.deleteInviteUses(invitation.id);
+			await adapter.deleteInvitation(invitation.token);
+		} else {
+			await adapter.updateInvitation(invitation.id, "used");
+		}
+	}
+	if (
+		maxUsesPerUser !== Infinity &&
+		isPrivate &&
+		userUses + 1 >= maxUsesPerUser
+	) {
+		await adapter.removeUserByEmail(invitation.id, invitedUser.email);
+	}
+
+	// Update the session after the role update and usage record are written.
+	await setSessionCookie(ctx, { session, user: updatedUser });
 
 	// Fire optional hook
 	if (options.onInvitationUsed) {
@@ -167,7 +160,17 @@ export const consumeInvite = async ({
 };
 
 export function getMaxUses(invitation: InviteTypeWithId) {
-	return invitation.infinityMaxUses ? Infinity : invitation.maxUses;
+	return invitation.maxUses === -1 || invitation.infinityMaxUses === true
+		? Infinity
+		: invitation.maxUses;
+}
+
+export function getMaxUsesPerUser(invitation: InviteTypeWithId) {
+	return invitation.maxUsesPerUser === -1 ||
+		invitation.infinityMaxUsesPerUser === true ||
+		invitation.maxUsesPerUser == null
+		? Infinity
+		: invitation.maxUsesPerUser;
 }
 
 /**
@@ -416,6 +419,7 @@ export const createFullURL = ({
 export const validateCallbackUrl = (
 	callbackUrl: string | undefined,
 	requestUrl: string | undefined,
+	isTrustedOrigin?: (origin: string) => boolean,
 ) => {
 	if (!callbackUrl || !requestUrl) return undefined;
 
@@ -423,7 +427,7 @@ export const validateCallbackUrl = (
 		const url = new URL(callbackUrl, requestUrl);
 		const requestOrigin = new URL(requestUrl).origin;
 
-		if (url.origin !== requestOrigin) {
+		if (url.origin !== requestOrigin && !isTrustedOrigin?.(url.origin)) {
 			return undefined;
 		}
 

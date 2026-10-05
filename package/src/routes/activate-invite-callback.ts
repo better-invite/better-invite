@@ -7,16 +7,6 @@ import { acceptInviteLogic } from "./accept-invite";
 let alreadyWarned = false;
 
 /**
- * This endpoint is what runs when a user clicks an invite link (from email, for example).
- *
- * It doesn't implement the invite logic itself. Instead, it acts as a bridge:
- *
- * - It takes a browser request (GET + query params)
- * - Calls the core logic (acceptInviteLogic)
- * - Converts the result into a redirect
- *
- * Think of it as a "bridge" between JSON responses and browser redirects.
- *
  * @deprecated Use `acceptInviteCallback` instead. This endpoint will remain available for backward compatibility, but it may be removed in a future release.
  */
 export const activateInviteCallback = (options: NewInviteOptions) => {

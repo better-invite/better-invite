@@ -22,6 +22,7 @@ export const test = baseTest.extend<{
 		pluginOptions: InviteOptions;
 		advancedOptions?: BetterAuthAdvancedOptions;
 		baseURL?: string;
+		trustedOrigins?: string[];
 	}) => ReturnType<
 		typeof getTestInstance<{
 			plugins: [InviteClientPlugin, AdminClientPlugin];
@@ -36,13 +37,16 @@ export const test = baseTest.extend<{
 				pluginOptions,
 				advancedOptions,
 				baseURL,
+				trustedOrigins,
 			}: {
 				pluginOptions: InviteOptions;
 				advancedOptions?: BetterAuthAdvancedOptions;
 				baseURL?: string;
+				trustedOrigins?: string[];
 			}) => {
 				const authOptions = {
 					baseURL: baseURL ?? "http://localhost:3000",
+					trustedOrigins,
 					database,
 					plugins: [
 						adminPlugin({

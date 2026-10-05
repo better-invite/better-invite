@@ -25,8 +25,9 @@ test("test acceptInviteCallback with an invalid token", async ({
 		},
 	});
 
-	const { newError } = await acceptInviteGet(client, {
+	const { newError, path } = await acceptInviteGet(client, {
 		token: "invalid_token",
+		callbackUrl: "/auth/error/{token}",
 		signInUpUrl: "/auth/sign-in",
 	});
 
@@ -34,6 +35,7 @@ test("test acceptInviteCallback with an invalid token", async ({
 		error: "INVALID_TOKEN",
 		message: "Invalid or non-existent token",
 	});
+	expect(path).toBe("http://localhost:3000/auth/error/invalid_token");
 });
 
 test("test acceptInviteCallback with maxUses set to 2", async ({

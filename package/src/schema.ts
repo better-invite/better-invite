@@ -8,7 +8,8 @@ export const schema = {
 			expiresAt: { type: "date", required: true },
 			maxUses: { type: "number", required: true },
 			maxUsesPerUser: { type: "number", required: false },
-			infinityMaxUses: { type: "boolean", required: true, defaultValue: false },
+			infinityMaxUses: { type: "boolean", required: false }, //! Deprecated
+			infinityMaxUsesPerUser: { type: "boolean", required: false }, //! Deprecated
 			createdByUserId: {
 				type: "string",
 				references: { model: "user", field: "id", onDelete: "set null" },

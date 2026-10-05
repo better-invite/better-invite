@@ -134,7 +134,6 @@ export const acceptInviteLogic = async (
 ) => {
 	const adapter = getInviteAdapter(ctx.context, options);
 
-	// Find the invitation
 	const invitation = await adapter.findInvitation(body.token);
 	if (!invitation) {
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
@@ -148,6 +147,15 @@ export const acceptInviteLogic = async (
 		invitation.redirectToAfterUpgrade ??
 		fallbackCallback;
 
+	if (
+		!ctx.context.isTrustedOrigin(rawCallbackUrl, { allowRelativePaths: true })
+	) {
+		throw APIError.from("FORBIDDEN", {
+			code: "INVALID_CALLBACK_URL",
+			message: "The invitation callback URL is not trusted",
+		});
+	}
+
 	// Keep templates with placeholders intact (URL() would encode `{token}`).
 	// Expand plain relative paths so defaults like `/` become absolute.
 	const callbackUrl =
@@ -158,7 +166,6 @@ export const acceptInviteLogic = async (
 	const maxUses = getMaxUses(invitation);
 	const timesUsed = await adapter.countInvitationUses(invitation.id);
 
-	// Check if the invite was already fully used
 	if (timesUsed >= maxUses) {
 		throw APIError.from(
 			"BAD_REQUEST",
@@ -166,17 +173,14 @@ export const acceptInviteLogic = async (
 		);
 	}
 
-	// Check if the invite expired
 	if (options.getDate() > invitation.expiresAt) {
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_OR_EXPIRED_INVITE);
 	}
 
-	// Get current session and user
 	const sessionData = await getSessionFromCtx(ctx);
 	const session = sessionData?.session;
 	let user = sessionData?.user as UserWithRole | null;
 
-	// If the user is already logged in, accept the invite
 	if (user && session) {
 		const before = await options.inviteHooks?.beforeAcceptInvite?.({
 			ctx,
@@ -185,7 +189,6 @@ export const acceptInviteLogic = async (
 
 		if (before?.user) user = before.user;
 
-		// Consume the invite (update role, refresh session, etc)
 		await consumeInvite({
 			ctx,
 			invitation,
@@ -195,8 +198,6 @@ export const acceptInviteLogic = async (
 			adapter,
 			meta: {
 				userId: user.id,
-				token: body.token,
-				timesUsed,
 				newAccount: false,
 			},
 		});

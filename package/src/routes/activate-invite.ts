@@ -14,10 +14,7 @@ export const activateInvite = (options: NewInviteOptions) => {
 		"/invite/activate",
 		{
 			method: "POST",
-			use: [
-				originCheck((ctx) => ctx.body.callbackUrl),
-				originCheck((ctx) => ctx.body.signInUpUrl),
-			],
+			use: [originCheck((ctx) => ctx.body.callbackUrl)],
 			body: z.object({
 				/**
 				 * Where to redirect the user to sign in/up.
