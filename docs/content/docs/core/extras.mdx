@@ -55,7 +55,7 @@ export const auth = betterAuth({
 
 The invite plugin stores the token in an HTTP-only cookie called `{my_app_name}.invite_token` by default. You can customize cookies globally using Better Auth's `advanced` options.
 
-The same `inviteCookieMaxAge` option controls the lifetime of the signed post-acceptance callback cookie. After the invite is successfully consumed, the callback and invite-token cookies are expired.
+The same `inviteCookieMaxAge` option controls the lifetime of the signed post-acceptance callback cookie. After the sign-in/up hook consumes an invite from these cookies, both cookies are expired.
 
 ### Cookie Prefix
 
