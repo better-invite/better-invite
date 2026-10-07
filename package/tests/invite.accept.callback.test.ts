@@ -251,7 +251,7 @@ test("does not set acceptance cookies for a canceled invite", async ({
 	});
 
 	expect(newError?.error).toBe("INVALID_TOKEN");
-	expect(setCookie ?? "").not.toContain("invite_test=");
+	expect(setCookie ?? "").not.toContain("invite_token=");
 	expect(setCookie ?? "").not.toContain("invite_callback_url=");
 });
 
