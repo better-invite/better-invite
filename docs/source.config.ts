@@ -29,6 +29,11 @@ function defineDocsCollection(dir: string) {
 
 				return applyMdxPreset({
 					remarkPlugins: [remarkMdxMermaid, remarkFeedbackBlock],
+					remarkNpmOptions: {
+						persist: {
+							id: "persist-install",
+						},
+					},
 				})(environment);
 			},
 		},

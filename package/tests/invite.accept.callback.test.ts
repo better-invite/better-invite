@@ -87,7 +87,6 @@ test("test acceptInviteCallback with maxUses set to 2", async ({
 
 	expect(newError).toBe(null);
 
-	// We should be redirected to the invited page since we used the invitation successfully
 	expect(path).toBe("http://localhost:3000/");
 
 	const newInvite = await db.findOne<InviteTypeWithId>({
@@ -155,7 +154,6 @@ test("invite and inviteUses are deleted after reaching maxUses", async ({
 
 	expect(newError).toBe(null);
 
-	// We should be redirected to the invited page since we used the invitation successfully
 	expect(path).toBe("http://localhost:3000/");
 
 	const newInvite = await db.findOne({
@@ -214,6 +212,47 @@ test("test acceptInvite with an expired invite", async ({ createAuth }) => {
 		error: "INVALID_OR_EXPIRED_INVITE",
 		message: "Invalid or expired invite code",
 	});
+});
+
+test("does not set acceptance cookies for a canceled invite", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: { ...defaultOptions },
+	});
+	const { headers } = await signInWithTestUser();
+	const created = await client.invite.create({
+		role: "owner",
+		senderResponse: "token",
+		fetchOptions: { headers },
+	});
+	const token = created.data?.message;
+	if (!token) throw new Error("Token value is undefined");
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "token", value: token }],
+	});
+	if (!invite) throw new Error("Invite not found");
+	await db.update({
+		model: "invite",
+		where: [{ field: "id", value: invite.id }],
+		update: { status: "canceled" },
+	});
+
+	let setCookie: string | null = null;
+	const { newError } = await acceptInviteGet(client, {
+		token,
+		fetchOptions: {
+			onResponse({ response }) {
+				setCookie = response.headers.get("set-cookie");
+			},
+		},
+	});
+
+	expect(newError?.error).toBe("INVALID_TOKEN");
+	expect(setCookie ?? "").not.toContain("invite_test=");
+	expect(setCookie ?? "").not.toContain("invite_callback_url=");
 });
 
 test("acceptInvite skips login step if already logged in", async ({
@@ -608,7 +647,6 @@ test("test acceptInviteCallback with custom schema", async ({ createAuth }) => {
 
 	expect(newError).toBe(null);
 
-	// We should be redirected to the invited page since we used the invitation successfully
 	expect(path).toBe("http://localhost:3000/");
 
 	const newInvite = await db.findOne<InviteTypeWithId>({
@@ -926,7 +964,7 @@ test("acceptInviteCallback gives callbackUrl and email when signing in", async (
 		throw new Error("Token value is undefined");
 	}
 
-	// We accept the invite while being logged in as the invited user
+	// The callback stores the invite token in a cookie and redirects to sign-in.
 	// This represents the URL that would be generated when sending invitation emails.
 	const { fullPath } = await acceptInviteGet(client, {
 		token,

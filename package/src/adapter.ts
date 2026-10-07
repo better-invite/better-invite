@@ -36,19 +36,22 @@ export const getInviteAdapter = (
 			const now = options.getDate();
 
 			const hasMaxUsesPerUserLimit =
-				invite.maxUsesPerUser !== undefined || (isPrivate && emails.length > 1);
+				isPrivate &&
+				((invite.maxUsesPerUser !== undefined &&
+					invite.maxUsesPerUser !== Infinity &&
+					invite.maxUsesPerUser !== -1) ||
+					emails.length > 1);
 
 			let maxUsesPerUser: number | undefined;
 
-			if (
-				isPrivate &&
-				emails.length > 1 &&
-				invite.maxUsesPerUser === undefined
-			) {
+			if (!isPrivate) {
+				maxUsesPerUser = undefined;
+			} else if (emails.length > 1 && invite.maxUsesPerUser === undefined) {
 				maxUsesPerUser = 1;
 			} else if (
 				invite.maxUsesPerUser === undefined ||
-				invite.maxUsesPerUser === Infinity
+				invite.maxUsesPerUser === Infinity ||
+				invite.maxUsesPerUser === -1
 			) {
 				maxUsesPerUser = undefined;
 			} else {

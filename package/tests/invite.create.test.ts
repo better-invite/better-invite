@@ -35,13 +35,19 @@ test("uses default values when request values are omitted", async ({
 		email: ["default-per-user-a@test.com", "default-per-user-b@test.com"],
 		fetchOptions: { headers },
 	});
+	const publicWithPerUserLimit = await client.invite.create({
+		role: "user",
+		maxUsesPerUser: 2,
+		fetchOptions: { headers },
+	});
 
 	expect(publicInvite.error).toBeNull();
 	expect(privateSingleInvite.error).toBeNull();
 	expect(privateMultipleInvite.error).toBeNull();
+	expect(publicWithPerUserLimit.error).toBeNull();
 
 	const invites = await db.findMany<InviteTypeWithId>({ model: "invite" });
-	expect(invites).toHaveLength(3);
+	expect(invites).toHaveLength(4);
 
 	const publicInviteRecord = invites.find((invite) => !invite.emails?.length);
 	const privateSingleInviteRecord = invites.find(
@@ -49,6 +55,9 @@ test("uses default values when request values are omitted", async ({
 	);
 	const privateMultipleInviteRecord = invites.find(
 		(invite) => invite.emails?.length === 2,
+	);
+	const publicInviteRecords = invites.filter(
+		(invite) => !invite.emails?.length,
 	);
 
 	expect(publicInviteRecord).toMatchObject({
@@ -65,6 +74,14 @@ test("uses default values when request values are omitted", async ({
 		maxUses: -1,
 		maxUsesPerUser: 1,
 	});
+
+	expect(publicInviteRecords).toHaveLength(2);
+	for (const invite of publicInviteRecords) {
+		expect(invite).toMatchObject({
+			maxUses: -1,
+			maxUsesPerUser: -1,
+		});
+	}
 });
 
 test("reads legacy infinity flags as a fallback to -1 sentinels", () => {
@@ -496,6 +513,35 @@ test("canCreateInvite supports Permissions objects", async ({ createAuth }) => {
 	);
 });
 
+test("canCreateInvite receives a single invited email as a string", async ({
+	createAuth,
+}) => {
+	const canCreateInvite = vi.fn(() => true);
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			canCreateInvite,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+	const email = "single-recipient@test.com";
+
+	const { error } = await client.invite.create({
+		role: "user",
+		email,
+		fetchOptions: { headers },
+	});
+
+	expect(error).toBeNull();
+	expect(canCreateInvite).toHaveBeenCalledWith(
+		expect.objectContaining({
+			invitedUser: { email, role: "user" },
+		}),
+	);
+});
+
 test("returns default api redirect URL when inviteUrlType is api", async ({
 	createAuth,
 }) => {
@@ -612,7 +658,8 @@ test("passes the created invitation to sendUserInvitation", async ({
 test("returns custom redirect URL when inviteUrlType is custom", async ({
 	createAuth,
 }) => {
-	const customInviteUrl = "/invite/{token}?redirect={callbackUrl}";
+	const customInviteUrl =
+		"/invite/{token}?redirect={callbackURL}&{defaultUrlQuery}";
 
 	const { client, signInWithTestUser } = await createAuth({
 		pluginOptions: {
@@ -639,9 +686,7 @@ test("returns custom redirect URL when inviteUrlType is custom", async ({
 		throw new Error("Token not found in the URL");
 	}
 
-	const expectedURL = customInviteUrl
-		.replace("{token}", token)
-		.replace("{callbackUrl}", "%2Fauth%2Finvited");
+	const expectedURL = `/invite/${token}?redirect=%2Fauth%2Finvited&signInUpUrl=%2Fauth%2Fsign-up&callbackUrl=%2Fauth%2Finvited`;
 
 	expect(data?.message).toBe(`http://localhost:3000${expectedURL}`);
 });
@@ -694,6 +739,7 @@ test("supports multiple emails in a single invite", async ({ createAuth }) => {
 			expect.objectContaining({
 				email,
 				role: "user",
+				url: expect.stringContaining(encodeURIComponent(email)),
 			}),
 			expect.anything(),
 		);

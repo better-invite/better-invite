@@ -22,7 +22,7 @@ const res = await authClient.invite.create({
 <Callout>
 A private invite can include multiple emails. Internally, the plugin creates **one shared invitation** (one token) that stores the full recipient list, and sends each recipient their own invite link
 (links differ because they include a `?email=...` query).
-By default, a multi-email invite allows one use per recipient and has no total-use cap. The recipient list is shared, but each recipient's acceptance or rejection removes only that recipient after their allowed uses are reached.
+By default, a multi-email invite allows one use per recipient and has no total-use cap. The recipient list is shared. Accepting an invite removes that recipient after their allowed uses are reached, while rejecting it removes that recipient immediately.
 Set `maxUsesPerUser` to choose a different per-recipient limit, or set `maxUses` to impose a total cap across all recipients.
 </Callout>
 

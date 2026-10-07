@@ -8,8 +8,8 @@
 		"start": "next start",
 		"types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
 		"postinstall": "fumadocs-mdx",
-		"predev": "pnpm sync-beta",
-		"prebuild": "pnpm sync-beta",
+		"predev": "pnpm sync-beta && fumadocs-mdx",
+		"prebuild": "pnpm sync-beta && fumadocs-mdx",
 		"sync-beta": "node scripts/sync-beta-content.mjs"
 	},
 	"dependencies": {

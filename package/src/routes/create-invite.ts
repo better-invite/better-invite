@@ -78,9 +78,9 @@ export const createInvite = (options: NewInviteOptions) => {
 				);
 			}
 
-			// Pass the full email list to permission checks when this is a private invite.
+			// Keep the existing single-recipient callback shape while passing all recipients for group invites.
 			const basicInvitedUser = {
-				email: isPrivate ? emails : email,
+				email: isPrivate ? (emails.length === 1 ? emails[0] : emails) : email,
 				role,
 			};
 

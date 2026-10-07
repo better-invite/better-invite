@@ -138,6 +138,9 @@ export const acceptInviteLogic = async (
 	if (!invitation) {
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
 	}
+	if (invitation.status && invitation.status !== "pending") {
+		throw APIError.from("BAD_REQUEST", ERROR_CODES.INVALID_TOKEN);
+	}
 
 	const fallbackCallback =
 		options.defaultRedirectAfterUpgrade ?? defaultRedirectAfterUpgrade;

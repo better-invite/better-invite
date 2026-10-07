@@ -228,10 +228,10 @@ export type InviteOptions = {
 	 */
 	allowDangerousGetInvite?: boolean;
 	/**
-	 * Called when an invite cannot be retrieved. This is especially useful
-	 * when `allowDangerousGetInvite` is enabled and you want to return a
-	 * fallback response (for example, some fake data) instead of revealing
-	 * whether a private invite exists.
+	 * Called when an existing invite is found but cannot be returned because
+	 * private-invite access checks fail or its inviter record is missing. It is
+	 * not called when the token does not match an invite. Use this to return a
+	 * fallback response instead of revealing whether a private invite exists.
 	 */
 	getInviteNotFound?: (
 		data: {

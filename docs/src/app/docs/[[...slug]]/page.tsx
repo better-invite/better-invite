@@ -201,6 +201,7 @@ export async function generateMetadata(
 		openGraph: {
 			title,
 			description,
+			url: page.url,
 			type: "article",
 			images: [
 				{

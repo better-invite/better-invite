@@ -362,13 +362,12 @@ export const createRedirectURL = ({
 	let redirectUrl = `/invite/${invitation.token}?${urlQuery}`;
 
 	if (customInviteUrl) {
-		redirectUrl = customInviteUrl
+		redirectUrl = replacePlaceholders(customInviteUrl, {
+			signInUpUrl,
+			email,
+			callbackUrl,
+		})
 			.replaceAll("{token}", invitation.token)
-			.replaceAll("{signInUpUrl}", encodeURIComponent(signInUpUrl))
-			.replaceAll("{email}", encodeURIComponent(email ?? ""))
-			.replaceAll("{callbackUrl}", encodeURIComponent(callbackUrl))
-			//! Deprecated
-			.replaceAll("{callbackURL}", encodeURIComponent(callbackUrl))
 			.replaceAll("{defaultUrlQuery}", urlQuery);
 
 		// Absolute custom URLs bypass the auth base path entirely.
