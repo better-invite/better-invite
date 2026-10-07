@@ -11,7 +11,7 @@ import { setSessionCookie } from "better-auth/cookies";
 import { generateRandomString } from "better-auth/crypto";
 import type { admin, UserWithRole } from "better-auth/plugins";
 import type { InviteAdapter } from "./adapter";
-import { ERROR_CODES } from "./constants";
+import { defaultRedirectAfterUpgrade, ERROR_CODES } from "./constants";
 import type { CreateInvite } from "./routes/create-invite";
 import type {
 	InviteOptions,
@@ -30,8 +30,6 @@ type ConsumeInviteParams = {
 	adapter: InviteAdapter;
 	meta: {
 		userId: string;
-		token: string;
-		timesUsed: number;
 		newAccount: boolean;
 	};
 };
@@ -55,13 +53,10 @@ export const consumeInvite = async ({
 	adapter,
 	meta,
 }: ConsumeInviteParams) => {
-	const { userId, token, timesUsed, newAccount } = meta;
+	const { userId, newAccount } = meta;
 
 	// Normalize emails and detect private invite
-	const emails = normalizeEmails<string[]>(
-		invitation.emails ?? invitation.email,
-		[],
-	);
+	const emails = normalizeArray(invitation.emails ?? invitation.email);
 	const isPrivate = emails.length > 0;
 
 	// Validate email for private invites
@@ -82,61 +77,82 @@ export const consumeInvite = async ({
 
 	const canAccept =
 		typeof canAcceptRaw === "object"
-			? await exports.checkPermissions(ctx, canAcceptRaw) // fix vitest errors with vi.spyOn (https://github.com/vitest-dev/vitest/issues/6551)
+			? await checkPermissions(ctx, canAcceptRaw)
 			: canAcceptRaw;
 
 	if (!canAccept) {
 		throw APIError.from("BAD_REQUEST", ERROR_CODES.CANT_ACCEPT_INVITE);
 	}
+	const maxUses = getMaxUses(invitation);
+	const timesUsed = await adapter.countInvitationUses(invitation.id);
+	if (timesUsed >= maxUses) {
+		throw APIError.from(
+			"BAD_REQUEST",
+			ERROR_CODES.INVITE_TOKEN_HAS_ALREADY_BEEN_USED,
+		);
+	}
+	const maxUsesPerUser = getMaxUsesPerUser(invitation);
+	const userUses =
+		maxUsesPerUser !== Infinity && isPrivate
+			? await adapter.countInvitationUsesByUser(invitation.id, userId)
+			: 0;
+	if (maxUsesPerUser !== Infinity && isPrivate && userUses >= maxUsesPerUser) {
+		throw APIError.from("BAD_REQUEST", ERROR_CODES.NO_USES_LEFT_FOR_INVITE);
+	}
 
-	// Update user role
-	await ctx.context.adapter.update({
+	const usedAt = options.getDate();
+	const updatedUser = { ...invitedUser, role: invitation.role };
+	const roleUpdate = await ctx.context.adapter.update<UserWithRole>({
 		model: "user",
 		where: [{ field: "id", value: userId }],
 		update: { role: invitation.role },
 	});
-
-	const updatedUser = { ...invitedUser, role: invitation.role };
-
-	// Update session with new role
-	await setSessionCookie(ctx, {
-		session,
-		user: updatedUser,
+	const persistedUser = await ctx.context.adapter.findOne<UserWithRole>({
+		model: "user",
+		where: [{ field: "id", value: userId }],
 	});
-
-	const maxUses = getMaxUses(invitation);
-	const usedAt = options.getDate();
-	const isLastUse = timesUsed === maxUses - 1;
-	const shouldCleanup = isLastUse && options.cleanupInvitesAfterMaxUses;
-	const shouldCreateInviteUse = !shouldCleanup;
-
-	// Handle invite lifecycle
-	if (shouldCleanup) {
-		await adapter.deleteInviteUses(invitation.id);
-		await adapter.deleteInvitation(token);
-	}
-
-	if (isLastUse && !options.cleanupInvitesAfterMaxUses) {
-		await adapter.updateInvitation(invitation.id, "used");
-	}
-
-	// Track usage only if invite still active
-	if (shouldCreateInviteUse) {
-		await adapter.createInviteUse({
-			inviteId: invitation.id,
-			usedByUserId: userId,
-			usedAt,
+	if (!roleUpdate || persistedUser?.role !== invitation.role) {
+		throw APIError.from("INTERNAL_SERVER_ERROR", {
+			code: "INVITE_USER_ROLE_UPDATE_FAILED",
+			message: "Could not update the invited user's role",
 		});
 	}
+
+	await adapter.createInviteUse({
+		inviteId: invitation.id,
+		usedByUserId: userId,
+		usedAt,
+	});
+	if (timesUsed === maxUses - 1) {
+		if (options.cleanupInvitesAfterMaxUses) {
+			await adapter.deleteInviteUses(invitation.id);
+			await adapter.deleteInvitation(invitation.token);
+		} else {
+			await adapter.updateInvitation(invitation.id, "used");
+		}
+	}
+	if (
+		maxUsesPerUser !== Infinity &&
+		isPrivate &&
+		userUses + 1 >= maxUsesPerUser
+	) {
+		await adapter.removeUserByEmail(invitation.id, invitedUser.email);
+	}
+
+	// Update the session after the role update and usage record are written.
+	await setSessionCookie(ctx, { session, user: updatedUser });
 
 	// Fire optional hook
 	if (options.onInvitationUsed) {
 		try {
-			await options.onInvitationUsed({
-				invitedUser,
-				newUser: updatedUser,
-				newAccount,
-			});
+			await options.onInvitationUsed(
+				{
+					invitedUser,
+					newUser: updatedUser,
+					newAccount,
+				},
+				ctx.request,
+			);
 		} catch (e) {
 			ctx.context.logger.error("Error in onInvitationUsed hook", e);
 		}
@@ -144,31 +160,95 @@ export const consumeInvite = async ({
 };
 
 export function getMaxUses(invitation: InviteTypeWithId) {
-	return invitation.infinityMaxUses ? Infinity : invitation.maxUses;
+	return invitation.maxUses === -1 || invitation.infinityMaxUses === true
+		? Infinity
+		: invitation.maxUses;
+}
+
+export function getMaxUsesPerUser(invitation: InviteTypeWithId) {
+	return invitation.maxUsesPerUser === -1 ||
+		invitation.infinityMaxUsesPerUser === true ||
+		invitation.maxUsesPerUser == null
+		? Infinity
+		: invitation.maxUsesPerUser;
 }
 
 /**
- * Converts a single email string or an array of emails into a normalized array format.
+ * Replaces placeholders in a template string with URL-encoded values.
  *
- * @returns An array of email strings or a default value if the input is undefined.
+ * Placeholders should be wrapped in curly braces and match the keys provided
+ * in the values object (e.g. `{email}`).
+ *
+ * @param template - The string containing placeholders to replace.
+ * @param values - An object mapping placeholder names to their replacement values.
+ * @returns The template string with all matching placeholders replaced by encoded values,
+ * or `undefined` if the template is undefined.
+ */
+export function replacePlaceholders(
+	template: string,
+	values: Record<string, string | undefined>,
+): string;
+
+export function replacePlaceholders(
+	template: string | undefined,
+	values: Record<string, string | undefined>,
+): string | undefined;
+
+export function replacePlaceholders(
+	template: string | undefined,
+	values: Record<string, string | undefined>,
+) {
+	if (template === undefined) {
+		return undefined;
+	}
+
+	const withAliases =
+		"callbackUrl" in values
+			? { ...values, callbackURL: values.callbackUrl }
+			: values;
+
+	return Object.entries(withAliases).reduce(
+		(result, [key, value]) =>
+			result.replaceAll(`{${key}}`, encodeURIComponent(value ?? "")),
+		template,
+	);
+}
+
+/**
+ * Converts a string or a string array into a normalized array format.
+ *
+ * @returns A string array strings or a default value if the input is undefined.
  *
  * @example
- * normalizeEmails("test@example.com")
+ * normalizeArray("test@example.com")
  * // => ["test@example.com"]
  *
  * @example
- * normalizeEmails(["a@test.com", "b@test.com"])
+ * normalizeArray(["a@test.com", "b@test.com"])
  * // => ["a@test.com", "b@test.com"]
  *
  * @example
- * normalizeEmails(undefined, [])
+ * normalizeArray(undefined)
  * // => []
+ *
+ * @example
+ * normalizeArray(undefined, true)
+ * // => undefined
  */
-export function normalizeEmails<T = string[] | undefined>(
-	email: string | string[] | undefined = undefined,
-	undefinedVal: T = undefined as T,
-): string[] | T {
-	return email ? (Array.isArray(email) ? email : [email]) : undefinedVal;
+export function normalizeArray<T extends boolean = false>(
+	email?: string | string[],
+	defaultUndefined?: T,
+	// Returns type string[] if defaultUndefined is false, otherwise returns string[] | undefined
+): T extends true ? string[] | undefined : string[] {
+	return (
+		email
+			? Array.isArray(email)
+				? email
+				: [email]
+			: defaultUndefined
+				? undefined
+				: []
+	) as never;
 }
 
 export const getDate = (span: number, unit: "sec" | "ms" = "ms") => {
@@ -234,7 +314,7 @@ export const checkPermissions = async (
 	}
 
 	try {
-		return await adminPlugin.endpoints.userHasPermission({
+		const res = await adminPlugin.endpoints.userHasPermission({
 			...ctx,
 			body: {
 				userId: session.user.id,
@@ -242,6 +322,8 @@ export const checkPermissions = async (
 			},
 			returnHeaders: true,
 		});
+
+		return res.response.success;
 	} catch {
 		return false;
 	}
@@ -259,33 +341,102 @@ const getPlugin = <P extends BetterAuthPlugin = BetterAuthPlugin>(
 export const createRedirectURL = ({
 	ctx,
 	invitation,
-	callbackURL,
+	signInUpUrl,
 	customInviteUrl,
+	email,
+	callbackUrl,
 }: {
 	ctx: GenericEndpointContext;
 	invitation: InviteTypeWithId;
-	callbackURL: string;
+	signInUpUrl: string;
 	customInviteUrl?: string;
+	email?: string;
+	callbackUrl: string;
+}) => {
+	// Default redirect URL with query parameters
+	// For private invites, we also include the email in the query params to pre-fill the sign-in/up form
+	const storedEmails = normalizeArray(invitation.emails ?? invitation.email);
+	const emailQuery =
+		storedEmails.length > 0 ? `&email=${encodeURIComponent(email ?? "")}` : "";
+	const urlQuery = `signInUpUrl=${encodeURIComponent(signInUpUrl)}&callbackUrl=${encodeURIComponent(callbackUrl)}${emailQuery}`;
+	let redirectUrl = `/invite/${invitation.token}?${urlQuery}`;
+
+	if (customInviteUrl) {
+		redirectUrl = replacePlaceholders(customInviteUrl, {
+			signInUpUrl,
+			email,
+			callbackUrl,
+		})
+			.replaceAll("{token}", invitation.token)
+			.replaceAll("{defaultUrlQuery}", urlQuery);
+
+		// Absolute custom URLs bypass the auth base path entirely.
+		if (/^https?:\/\//i.test(redirectUrl)) {
+			return new URL(redirectUrl);
+		}
+
+		// Relative custom URLs target the application origin (e.g. a Next.js
+		// `/invite/[token]` page), not the Better Auth base path.
+		return new URL(redirectUrl, new URL(ctx.context.baseURL).origin);
+	}
+
+	return createFullURL({
+		ctx,
+		url: redirectUrl,
+		includePathname: true,
+	});
+};
+
+export const createFullURL = ({
+	ctx,
+	url,
+	includePathname = false,
+}: {
+	ctx: GenericEndpointContext;
+	url: string;
+	includePathname?: boolean;
 }) => {
 	const realBaseURL = new URL(ctx.context.baseURL);
-	const pathname = realBaseURL.pathname === "/" ? "" : realBaseURL.pathname;
-	const basePath = pathname ? "" : ctx.context.options.basePath || "";
-	let redirectUrl = `/invite/${invitation.token}?callbackURL=${encodeURIComponent(callbackURL)}`;
 
-	if (customInviteUrl)
-		redirectUrl = customInviteUrl
-			.replace("{token}", invitation.token)
-			.replace("{callbackURL}", encodeURIComponent(callbackURL));
+	const basePath = includePathname
+		? (() => {
+				const pathname =
+					realBaseURL.pathname === "/" ? "" : realBaseURL.pathname;
+				return pathname ? "" : ctx.context.options.basePath || "";
+			})()
+		: "";
+
+	const pathname =
+		includePathname && realBaseURL.pathname !== "/" ? realBaseURL.pathname : "";
 
 	return new URL(
-		`${pathname}${basePath}/${redirectUrl.startsWith("/") ? redirectUrl.slice(1) : redirectUrl}`,
+		`${pathname}${basePath}/${url.startsWith("/") ? url.slice(1) : url}`,
 		realBaseURL.origin,
 	);
 };
 
-export const resolveInviteOptions = (
-	opts: InviteOptions,
-): NewInviteOptions => ({
+export const validateCallbackUrl = (
+	callbackUrl: string | undefined,
+	requestUrl: string | undefined,
+	isTrustedOrigin?: (origin: string) => boolean,
+) => {
+	if (!callbackUrl || !requestUrl) return undefined;
+
+	try {
+		const url = new URL(callbackUrl, requestUrl);
+		const requestOrigin = new URL(requestUrl).origin;
+
+		if (url.origin !== requestOrigin && !isTrustedOrigin?.(url.origin)) {
+			return undefined;
+		}
+
+		return callbackUrl;
+	} catch {
+		return undefined;
+	}
+};
+
+export const resolveInviteOptions = (opts: InviteOptions) => ({
 	getDate: opts.getDate ?? (() => new Date()),
 	invitationTokenExpiresIn: opts.invitationTokenExpiresIn ?? 60 * 60,
 	defaultShareInviterName: opts.defaultShareInviterName ?? true,
@@ -310,15 +461,17 @@ export const resolveInvitePayload = (
 	tokenType: body.tokenType ?? options.defaultTokenType,
 	redirectToSignUp: body.redirectToSignUp ?? options.defaultRedirectToSignUp,
 	redirectToSignIn: body.redirectToSignIn ?? options.defaultRedirectToSignIn,
-	maxUses: body.maxUses ?? options.defaultMaxUses,
+	maxUses: body.maxUses,
 	expiresIn: body.expiresIn ?? options.invitationTokenExpiresIn,
-	redirectToAfterUpgrade:
-		body.redirectToAfterUpgrade ?? options.defaultRedirectAfterUpgrade,
 	shareInviterName: body.shareInviterName ?? options.defaultShareInviterName,
 	senderResponse: body.senderResponse ?? options.defaultSenderResponse,
 	senderResponseRedirect:
 		body.senderResponseRedirect ?? options.defaultSenderResponseRedirect,
 	customInviteUrl: body.customInviteUrl ?? options.defaultCustomInviteUrl,
+	callbackUrl:
+		body.redirectToAfterUpgrade ??
+		options.defaultRedirectAfterUpgrade ??
+		defaultRedirectAfterUpgrade,
 });
 
 export const resolveTokenGenerator = (

@@ -11,7 +11,7 @@ import type { InviteTypeWithId, NewInviteOptions } from "../types";
 import {
 	checkPermissions,
 	createRedirectURL,
-	normalizeEmails,
+	normalizeArray,
 	resolveInvitePayload,
 } from "../utils";
 
@@ -59,13 +59,12 @@ export const createInvite = (options: NewInviteOptions) => {
 				senderResponse,
 				senderResponseRedirect,
 				customInviteUrl,
+				callbackUrl,
 			} = resolveInvitePayload(ctx.body, options);
 
-			const emails = normalizeEmails<string[]>(email, []);
+			// Normalize the input to always work with an array internally.
+			const emails = normalizeArray(email);
 			const isPrivate = emails.length > 0;
-
-			// If the invite is public we use [undefined] so the loop runs once and knows it's as a public invite
-			const targets = isPrivate ? emails : [undefined];
 
 			const invitations: InviteTypeWithId[] = [];
 
@@ -79,7 +78,11 @@ export const createInvite = (options: NewInviteOptions) => {
 				);
 			}
 
-			const basicInvitedUser = { email, role };
+			// Keep the existing single-recipient callback shape while passing all recipients for group invites.
+			const basicInvitedUser = {
+				email: isPrivate ? (emails.length === 1 ? emails[0] : emails) : email,
+				role,
+			};
 
 			const canCreateInviteOption =
 				typeof options.canCreateInvite === "function"
@@ -89,6 +92,7 @@ export const createInvite = (options: NewInviteOptions) => {
 							ctx,
 						})
 					: options.canCreateInvite;
+
 			const canCreateInvite =
 				typeof canCreateInviteOption === "object"
 					? await checkPermissions(ctx, canCreateInviteOption)
@@ -105,65 +109,56 @@ export const createInvite = (options: NewInviteOptions) => {
 
 			await options.inviteHooks?.beforeCreateInvite?.({ ctx });
 
-			// Loop for creating and sending invites
-			for (const email of targets) {
-				// If the invite is public (this is where we use the undefined inside targets) we create the invite, but we don't send any email
-				if (!email) {
-					const invitation = await adapter.createInvite(
-						ctx.body,
-						inviterUser,
-						undefined,
-					);
+			// For private invites, resolve each recipient first so we can create one shared invite.
+			const recipients = isPrivate
+				? await Promise.all(
+						emails.map(async (recipientEmail) => {
+							const invitedUser =
+								await ctx.context.internalAdapter.findUserByEmail(
+									recipientEmail,
+									{
+										includeAccounts: true,
+									},
+								);
 
-					invitations.push(invitation);
-					continue;
-				}
+							return {
+								email: recipientEmail,
+								invitedUser,
+								signInUpUrl: invitedUser ? redirectToSignIn : redirectToSignUp,
+								newAccount: !invitedUser,
+							};
+						}),
+					)
+				: [];
 
-				const invitedUser = await ctx.context.internalAdapter.findUserByEmail(
-					email,
-					{
-						includeAccounts: true,
-					},
-				);
+			const invitation = await adapter.createInvite(
+				isPrivate ? { ...ctx.body, email: emails } : ctx.body,
+				inviterUser,
+			);
 
-				const callbackURL = invitedUser ? redirectToSignIn : redirectToSignUp;
+			invitations.push(invitation);
 
-				const newAccount = !invitedUser;
-
-				const invitation = await adapter.createInvite(
-					{ ...ctx.body, email },
-					inviterUser,
-					newAccount,
-				);
-
-				invitations.push(invitation);
-
-				// If the invite is private, send the user an email
-				if (isPrivate) {
+			// Send one email per recipient, but reuse the same invitation/token.
+			if (isPrivate && options.sendUserInvitation) {
+				for (const recipient of recipients) {
 					const redirectURL = createRedirectURL({
 						ctx,
 						invitation,
-						callbackURL,
+						signInUpUrl: recipient.signInUpUrl,
 						customInviteUrl,
+						email: recipient.email,
+						callbackUrl,
 					});
-
-					// This should never happen because we check it at the beginning of the function, but we check it again to make TypeScript happy
-					if (!options.sendUserInvitation) {
-						throw APIError.from(
-							"INTERNAL_SERVER_ERROR",
-							ERROR_CODES.INVITATION_EMAIL_NOT_ENABLED,
-						);
-					}
 
 					try {
 						await options.sendUserInvitation(
 							{
-								email,
-								name: invitedUser?.user.name,
+								email: recipient.email,
+								name: recipient.invitedUser?.user.name,
 								role,
 								url: redirectURL.toString(),
 								token: invitation.token,
-								newAccount,
+								newAccount: recipient.newAccount,
 								invitation,
 							},
 							ctx.request,
@@ -183,8 +178,8 @@ export const createInvite = (options: NewInviteOptions) => {
 				invitations,
 			});
 
-			// If the invitation is private, we return
-			if (isPrivate)
+			// Private invite: we already sent the emails, so we just return success.
+			if (isPrivate) {
 				return ctx.json({
 					status: true,
 					message:
@@ -192,18 +187,10 @@ export const createInvite = (options: NewInviteOptions) => {
 							? "The invitation was sent"
 							: "The invitations were sent",
 				});
-
-			// If the invite is public, we return the token
-			const invitation = invitations[0];
-
-			if (!invitation) {
-				throw APIError.from(
-					"INTERNAL_SERVER_ERROR",
-					ERROR_CODES.INVITATION_NOT_CREATED,
-				);
 			}
 
-			const redirectTo =
+			// Public invite: return the token or the redirect URL.
+			const signInUpUrl =
 				senderResponseRedirect === "signUp"
 					? redirectToSignUp
 					: redirectToSignIn;
@@ -211,8 +198,9 @@ export const createInvite = (options: NewInviteOptions) => {
 			const redirectURL = createRedirectURL({
 				ctx,
 				invitation,
-				callbackURL: redirectTo,
+				signInUpUrl,
 				customInviteUrl,
+				callbackUrl,
 			});
 
 			const returnToken =
@@ -256,30 +244,52 @@ export const createInviteBodySchema = z.object({
 	 * If the token isn't valid or expired, it'll be redirected with a query parameter `?
 	 * error=INVALID_TOKEN`. If the token is valid, it'll be redirected with a query parameter `?
 	 * token=VALID_TOKEN
+	 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
 	 *
 	 * @default options.defaultRedirectTo
 	 */
 	redirectToSignUp: z
 		.string()
 		.describe(
-			"The URL to redirect the user to create their account. If the token isn't valid or expired, it'll be redirected with a query parameter `?error=INVALID_TOKEN`. If the token is valid, it'll be redirected with a query parameter `?token=VALID_TOKEN",
+			"The URL to redirect the user to create their account. {callbackUrl} will be replaced by the actual callbackUrl in the request body.",
 		)
 		.optional(),
 	/**
 	 * The URL to redirect the user to upgrade their role.
+	 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
+	 *
 	 * @default options.defaultRedirectToSignIn
 	 */
 	redirectToSignIn: z
 		.string()
-		.describe("The URL to redirect the user to upgrade their role.")
+		.describe(
+			"The URL to redirect the user to upgrade their role. {callbackUrl} will be replaced by the actual callbackUrl in the request body.",
+		)
 		.optional(),
 	/**
 	 * The number of times an invitation can be used.
-	 * @default options.defaultMaxUses
+	 * If omitted, the total is unlimited for public invites and private invites with a per-user limit; otherwise a private invite allows one use total.
+	 * @default Infinity for public and per-user-limited invites; 1 for other private invites
 	 */
 	maxUses: z
 		.number()
+		.int()
+		.positive()
+		.or(z.literal(Infinity))
 		.describe("The number of times an invitation can be used")
+		.optional(),
+	/**
+	 * The number of times an invitation can be used by the same user.
+	 * Must be a positive integer or `Infinity` for unlimited uses per user.
+	 * Only works for private invites, public invites are always unlimited per user. Multi-email private invites default to one use per recipient; explicitly set `Infinity` for no per-user limit.
+	 * @default Infinity for public invites; 1 for private invites with multiple email addresses
+	 */
+	maxUsesPerUser: z
+		.number()
+		.int()
+		.positive()
+		.or(z.literal(Infinity))
+		.describe("The number of times an invitation can be used by the same user")
 		.optional(),
 	/**
 	 * Number of seconds the invitation token is
@@ -291,15 +301,16 @@ export const createInviteBodySchema = z.object({
 		.describe("Number of seconds the invitation token is valid for.")
 		.optional(),
 	/**
-	 * The URL to redirect the user to after upgrade their role (if the user is already logged in).
-	 * {token} will be replaced with the user's actual token.
+	 * The URL to redirect the user to after upgrade their role (after accepting the invite).
+	 * {token} will be replaced with the actual invite token.
+	 * Prefer this per-invite setting; `defaultRedirectAfterUpgrade` is a deprecated server-wide fallback.
 	 *
 	 * @default options.defaultRedirectAfterUpgrade
 	 */
 	redirectToAfterUpgrade: z
 		.string()
 		.describe(
-			"The URL to redirect the user to after upgrade their role (if the user is already logged in)",
+			"The URL to redirect the user to after upgrade their role (after accepting the invite)",
 		)
 		.optional(),
 	/**
@@ -339,12 +350,12 @@ export const createInviteBodySchema = z.object({
 		)
 		.optional(),
 	/**
-	 * The user will be redirected here to activate their invite
-	 * Use {token} and {callbackUrl}, this will be replaced with their values
+	 * The user will be redirected here to accept their invite
+	 * Use {token}, {signInUpUrl}, {callbackUrl}, {email} and {defaultUrlQuery}, which will be replaced with their values.
 	 */
 	customInviteUrl: z
 		.string()
-		.describe("The user will be redirected here to activate their invite")
+		.describe("The user will be redirected here to accept their invite")
 		.optional(),
 });
 

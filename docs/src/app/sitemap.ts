@@ -6,17 +6,14 @@ export const revalidate = false;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 	const url = (path: string): string => new URL(path, baseUrl).toString();
-	// biome-ignore lint/suspicious/useIterableCallbackReturn: filtered out in the end
 	const docPages = source.getPages().map((page) => {
-		if (page.data.type === "openapi") return;
-
 		const lastModified = page.data.lastModified;
 
 		return {
 			url: url(page.url),
 			lastModified: lastModified ? new Date(lastModified) : undefined,
 			changeFrequency: "weekly",
-			priority: 0.5,
+			priority: 0.7,
 		} satisfies MetadataRoute.Sitemap[number];
 	});
 
@@ -27,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			url: url(page.url),
 			lastModified: lastModified ? new Date(lastModified) : undefined,
 			changeFrequency: "weekly",
-			priority: 0.5,
+			priority: 0.6,
 		} satisfies MetadataRoute.Sitemap[number];
 	});
 
@@ -42,7 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			changeFrequency: "weekly",
 			priority: 1,
 		},
-		...docPages.filter((v) => v !== undefined),
+		...docPages,
 		...blogPages,
 	];
 }

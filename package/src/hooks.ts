@@ -4,24 +4,45 @@ import { expireCookie } from "better-auth/cookies";
 import type { UserWithRole } from "better-auth/plugins";
 import * as z from "zod";
 import { getInviteAdapter } from "./adapter";
-import { ERROR_CODES, INVITE_COOKIE_NAME } from "./constants";
+import {
+	ERROR_CODES,
+	INVITE_CALLBACK_COOKIE_NAME,
+	INVITE_COOKIE_NAME,
+} from "./constants";
 import type { NewInviteOptions } from "./types";
-import { consumeInvite, redirectError } from "./utils";
+import {
+	consumeInvite,
+	getMaxUses,
+	redirectError,
+	replacePlaceholders,
+	validateCallbackUrl,
+} from "./utils";
+
+const defaultHookPaths = [
+	"/sign-up/email",
+	"/sign-in/email",
+	"/sign-in/email-otp",
+	"/sign-in/username",
+	"/callback/:id",
+	"/verify-email",
+	"/two-factor/verify-totp",
+	"/two-factor/verify-backup-code",
+	"/two-factor/verify-otp",
+];
 
 export const invitesHooks = (options: NewInviteOptions) => {
 	return {
 		after: [
 			{
 				// Run this after sign in/up and callback endpoints to check for invite tokens
-				matcher: (context: HookEndpointContext) =>
-					context.path === "/sign-up/email" ||
-					context.path === "/sign-in/email" ||
-					context.path === "/sign-in/email-otp" ||
-					context.path === "/callback/:id" ||
-					context.path === "/verify-email" ||
-					context.path === "/two-factor/verify-totp" ||
-					context.path === "/two-factor/verify-backup-code" ||
-					context.path === "/two-factor/verify-otp",
+				matcher: (context: HookEndpointContext) => {
+					const paths = [
+						...defaultHookPaths,
+						...(options.hookPathExtender ?? []),
+					];
+
+					return context.path !== undefined && paths.includes(context.path);
+				},
 
 				handler: createAuthMiddleware(async (ctx) => {
 					// Make sure we have a new session with a user
@@ -42,18 +63,17 @@ export const invitesHooks = (options: NewInviteOptions) => {
 
 					if (!invitedUser) return;
 
-					// Read the invite token from the cookie
+					// The pinned Better Auth sign-in/up schemas do not accept inviteToken,
+					// so the callback flow carries it in the signed invite cookie.
 					const maxAge = options.inviteCookieMaxAge ?? 10 * 60;
 					const inviteCookie = ctx.context.createAuthCookie(
 						INVITE_COOKIE_NAME,
 						{ maxAge },
 					);
-
 					const inviteToken = await ctx.getSignedCookie(
 						inviteCookie.name,
 						ctx.context.secret,
 					);
-
 					if (!inviteToken) return;
 
 					const adapter = getInviteAdapter(ctx.context, options);
@@ -72,7 +92,7 @@ export const invitesHooks = (options: NewInviteOptions) => {
 					const timesUsed = await adapter.countInvitationUses(invitation.id);
 
 					// Check if the invite was already fully used
-					if (!invitation.infinityMaxUses && timesUsed >= invitation.maxUses) {
+					if (timesUsed >= getMaxUses(invitation)) {
 						throw APIError.from(
 							"BAD_REQUEST",
 							ERROR_CODES.NO_USES_LEFT_FOR_INVITE,
@@ -89,6 +109,24 @@ export const invitesHooks = (options: NewInviteOptions) => {
 							code: "INTERNAL_SERVER_ERROR",
 						});
 					}
+
+					const callbackMaxAge = options.inviteCookieMaxAge ?? 10 * 60;
+					const callbackCookie = ctx.context.createAuthCookie(
+						INVITE_CALLBACK_COOKIE_NAME,
+						{ maxAge: callbackMaxAge },
+					);
+					const callbackUrlFromCookie = await ctx.getSignedCookie(
+						callbackCookie.name,
+						ctx.context.secret,
+					);
+
+					const callbackUrl = validateCallbackUrl(
+						(callbackUrlFromCookie || undefined) ??
+							invitation.callbackUrl ??
+							invitation.redirectToAfterUpgrade,
+						ctx.request?.url,
+						(origin) => ctx.context.isTrustedOrigin(origin),
+					);
 
 					// Optional hook before accepting the invite
 					const before = await options.inviteHooks?.beforeAcceptInvite?.({
@@ -108,13 +146,13 @@ export const invitesHooks = (options: NewInviteOptions) => {
 						adapter,
 						meta: {
 							userId,
-							timesUsed,
-							token: inviteToken,
 							newAccount: true,
 						},
 					});
 
-					// Clean up cookie after successful use
+					// The callback cookie may be left over from an earlier invite flow.
+					expireCookie(ctx, callbackCookie);
+
 					expireCookie(ctx, inviteCookie);
 
 					// Optional hook after accepting
@@ -125,10 +163,9 @@ export const invitesHooks = (options: NewInviteOptions) => {
 					});
 
 					// Redirect user after upgrading their role
-					const redirectURL = invitation.redirectToAfterUpgrade?.replace(
-						"{token}",
-						ctx.params.token,
-					);
+					const redirectURL = replacePlaceholders(callbackUrl, {
+						token: inviteToken,
+					});
 
 					return ctx.redirect(redirectError(ctx.context, redirectURL));
 				}),

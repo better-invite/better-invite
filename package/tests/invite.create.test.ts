@@ -10,6 +10,100 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
+test("uses default values when request values are omitted", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+	const { headers } = await signInWithTestUser();
+
+	const publicInvite = await client.invite.create({
+		role: "user",
+		fetchOptions: { headers },
+	});
+	const privateSingleInvite = await client.invite.create({
+		role: "user",
+		email: "default-uses@test.com",
+		fetchOptions: { headers },
+	});
+	const privateMultipleInvite = await client.invite.create({
+		role: "user",
+		email: ["default-per-user-a@test.com", "default-per-user-b@test.com"],
+		fetchOptions: { headers },
+	});
+	const publicWithPerUserLimit = await client.invite.create({
+		role: "user",
+		maxUsesPerUser: 2,
+		fetchOptions: { headers },
+	});
+
+	expect(publicInvite.error).toBeNull();
+	expect(privateSingleInvite.error).toBeNull();
+	expect(privateMultipleInvite.error).toBeNull();
+	expect(publicWithPerUserLimit.error).toBeNull();
+
+	const invites = await db.findMany<InviteTypeWithId>({ model: "invite" });
+	expect(invites).toHaveLength(4);
+
+	const publicInviteRecord = invites.find((invite) => !invite.emails?.length);
+	const privateSingleInviteRecord = invites.find(
+		(invite) => invite.emails?.length === 1,
+	);
+	const privateMultipleInviteRecord = invites.find(
+		(invite) => invite.emails?.length === 2,
+	);
+	const publicInviteRecords = invites.filter(
+		(invite) => !invite.emails?.length,
+	);
+
+	expect(publicInviteRecord).toMatchObject({
+		maxUses: -1,
+		maxUsesPerUser: -1,
+	});
+
+	expect(privateSingleInviteRecord).toMatchObject({
+		maxUses: 1,
+		maxUsesPerUser: -1,
+	});
+
+	expect(privateMultipleInviteRecord).toMatchObject({
+		maxUses: -1,
+		maxUsesPerUser: 1,
+	});
+
+	expect(publicInviteRecords).toHaveLength(2);
+	for (const invite of publicInviteRecords) {
+		expect(invite).toMatchObject({
+			maxUses: -1,
+			maxUsesPerUser: -1,
+		});
+	}
+});
+
+test("reads legacy infinity flags as a fallback to -1 sentinels", () => {
+	const legacyInvite = {
+		maxUses: 10,
+		maxUsesPerUser: 4,
+		infinityMaxUses: true,
+		infinityMaxUsesPerUser: true,
+	} as InviteTypeWithId;
+
+	expect(utils.getMaxUses(legacyInvite)).toBe(Infinity);
+	expect(utils.getMaxUsesPerUser(legacyInvite)).toBe(Infinity);
+
+	const sentinelInvite = {
+		maxUses: -1,
+		maxUsesPerUser: -1,
+	} as InviteTypeWithId;
+
+	expect(utils.getMaxUses(sentinelInvite)).toBe(Infinity);
+	expect(utils.getMaxUsesPerUser(sentinelInvite)).toBe(Infinity);
+});
+
 // Activate Invite Tests
 
 test("uses sendUserInvitation when invited user does not exist", async ({
@@ -242,7 +336,7 @@ test("returns URL when senderResponse is url", async ({ createAuth }) => {
 
 	expect(error).toBe(null);
 	expect(data?.message).toContain("/invite/");
-	expect(data?.message).toContain("callbackURL=");
+	expect(data?.message).toContain("callbackUrl=");
 });
 
 test("respects defaultSenderResponseRedirect = signIn", async ({
@@ -419,6 +513,35 @@ test("canCreateInvite supports Permissions objects", async ({ createAuth }) => {
 	);
 });
 
+test("canCreateInvite receives a single invited email as a string", async ({
+	createAuth,
+}) => {
+	const canCreateInvite = vi.fn(() => true);
+	const { client, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			canCreateInvite,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const { headers } = await signInWithTestUser();
+	const email = "single-recipient@test.com";
+
+	const { error } = await client.invite.create({
+		role: "user",
+		email,
+		fetchOptions: { headers },
+	});
+
+	expect(error).toBeNull();
+	expect(canCreateInvite).toHaveBeenCalledWith(
+		expect.objectContaining({
+			invitedUser: { email, role: "user" },
+		}),
+	);
+});
+
 test("returns default api redirect URL when inviteUrlType is api", async ({
 	createAuth,
 }) => {
@@ -441,7 +564,7 @@ test("returns default api redirect URL when inviteUrlType is api", async ({
 
 	const token = data?.message.split("/invite/")[1].split("?")[0];
 
-	const expectedURL = `http://localhost:3000/api/auth/invite/${token}?callbackURL=%2Fauth%2Fsign-up`;
+	const expectedURL = `http://localhost:3000/api/auth/invite/${token}?signInUpUrl=%2Fauth%2Fsign-up&callbackUrl=%2F`;
 
 	expect(data?.message).toBe(expectedURL);
 });
@@ -479,7 +602,7 @@ test("sends correct redirect URL on private invites", async ({
 
 	const token = invite.token;
 
-	const expectedURL = `http://localhost:3000/api/auth/invite/${token}?callbackURL=%2Fauth%2Fsign-up`;
+	const expectedURL = `http://localhost:3000/api/auth/invite/${token}?signInUpUrl=%2Fauth%2Fsign-up&callbackUrl=%2F&email=test%40email.com`;
 
 	expect(mock.sendUserInvitation).toHaveBeenCalledWith(
 		expect.objectContaining({
@@ -535,7 +658,8 @@ test("passes the created invitation to sendUserInvitation", async ({
 test("returns custom redirect URL when inviteUrlType is custom", async ({
 	createAuth,
 }) => {
-	const customInviteUrl = "/invite/{token}?redirect={callbackURL}";
+	const customInviteUrl =
+		"/invite/{token}?redirect={callbackURL}&{defaultUrlQuery}";
 
 	const { client, signInWithTestUser } = await createAuth({
 		pluginOptions: {
@@ -550,6 +674,7 @@ test("returns custom redirect URL when inviteUrlType is custom", async ({
 		role: "user",
 		senderResponse: "url",
 		customInviteUrl,
+		redirectToAfterUpgrade: "/auth/invited",
 		fetchOptions: { headers },
 	});
 
@@ -561,9 +686,62 @@ test("returns custom redirect URL when inviteUrlType is custom", async ({
 		throw new Error("Token not found in the URL");
 	}
 
-	const expectedURL = customInviteUrl
-		.replace("{token}", token)
-		.replace("{callbackURL}", "%2Fauth%2Fsign-up");
+	const expectedURL = `/invite/${token}?redirect=%2Fauth%2Finvited&signInUpUrl=%2Fauth%2Fsign-up&callbackUrl=%2Fauth%2Finvited`;
 
-	expect(data?.message).toBe(`http://localhost:3000/api/auth${expectedURL}`);
+	expect(data?.message).toBe(`http://localhost:3000${expectedURL}`);
+});
+
+test("supports multiple emails in a single invite", async ({ createAuth }) => {
+	const { client, db, signInWithTestUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: mock.sendUserInvitation,
+		},
+	});
+
+	const emails = ["a@test.com", "b@test.com", "c@test.com"];
+
+	const { headers } = await signInWithTestUser();
+
+	const { error } = await client.invite.create({
+		role: "user",
+		email: emails,
+		fetchOptions: { headers },
+	});
+
+	expect(error).toBe(null);
+
+	// Only one invite should exist in DB
+	const invites = await db.findMany<InviteTypeWithId>({
+		model: "invite",
+	});
+
+	expect(invites).toHaveLength(1);
+
+	const invite = invites[0];
+
+	// Emails should be stored as an array
+	expect(invite?.emails).toStrictEqual(emails);
+
+	// sendUserInvitation should be called once per email
+	expect(mock.sendUserInvitation).toHaveBeenCalledTimes(emails.length);
+
+	// All calls should use the SAME token
+	const usedTokens = mock.sendUserInvitation.mock.calls.map(
+		(call) => call[0].token,
+	);
+
+	expect(new Set(usedTokens).size).toBe(1);
+
+	// Each email should receive an invite
+	for (const email of emails) {
+		expect(mock.sendUserInvitation).toHaveBeenCalledWith(
+			expect.objectContaining({
+				email,
+				role: "user",
+				url: expect.stringContaining(encodeURIComponent(email)),
+			}),
+			expect.anything(),
+		);
+	}
 });

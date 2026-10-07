@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const { rewrite: rewriteLLM } = rewritePath(
 	"/docs{/*path}",
-	"/llms.mdx/docs{/*path}",
+	"/llms.txt/docs{/*path}",
 );
 
 // Give markdown to bots

@@ -36,7 +36,6 @@ export const auth = betterAuth({
       defaultRole: "user",
     }),
     invite({ // [!code highlight]
-      defaultRedirectAfterUpgrade: "/auth/invited?token={token}", // Show the user their new role or account
       async sendUserInvitation({ email, role, url, token, newAccount }) {
         if (newAccount)
           void sendInvitationEmail(role as RoleType, email, url);
@@ -72,6 +71,8 @@ npx @better-auth/cli generate
 
 See the [Schema](/docs/core/schema) section to add the fields manually.
 
+For a server-wide post-acceptance redirect fallback, `defaultRedirectAfterUpgrade` is still supported but deprecated. Prefer setting `redirectToAfterUpgrade` on each `invite.create()` request.
+
 </Step>
 
 <Step>
@@ -79,7 +80,7 @@ See the [Schema](/docs/core/schema) section to add the fields manually.
 
 Add the client plugin to your better auth client.
 
-```ts
+```ts title="auth-client.ts"
 import { createAuthClient } from "better-auth/client";
 import { adminClient } from "better-auth/client/plugins";
 import { inviteClient } from "better-invite"; // [!code highlight]

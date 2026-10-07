@@ -1,6 +1,7 @@
 import { setCookieToHeader } from "better-auth/cookies";
 import { beforeEach, expect, vi } from "vitest";
 import {
+	acceptInviteGet,
 	defaultOptions,
 	resolveInviteRedirect,
 	test,
@@ -51,23 +52,18 @@ test("test invite hook after sign-in/email", async ({ createAuth }) => {
 
 	const newHeaders = new Headers();
 
-	const { error, data } = await client.invite.activate({
+	const { newError, path: acceptPath } = await acceptInviteGet(client, {
 		token: tokenValue,
-		callbackURL: "/auth/sign-in",
+		signInUpUrl: "/auth/sign-in",
 		fetchOptions: {
-			onSuccess(context) {
+			onResponse(context) {
 				setCookieToHeader(newHeaders)(context);
 			},
 		},
 	});
 
-	expect(data).toStrictEqual({
-		status: true,
-		message: "Please sign in or sign up to continue.",
-		action: "SIGN_IN_UP_REQUIRED",
-		redirectTo: "/auth/sign-in",
-	});
-	expect(error).toBe(null);
+	expect(acceptPath).toBe("http://localhost:3000/auth/sign-in");
+	expect(newError).toBe(null);
 
 	const { path } = await resolveInviteRedirect(client.signIn.email, {
 		...invitedUser,
@@ -76,7 +72,7 @@ test("test invite hook after sign-in/email", async ({ createAuth }) => {
 		},
 	});
 
-	expect(path).toBe("http://localhost:3000/auth/invited");
+	expect(path).toBe("http://localhost:3000/");
 });
 
 test("invite hook deletes invite cookie after sign-up/email", async ({
@@ -115,23 +111,18 @@ test("invite hook deletes invite cookie after sign-up/email", async ({
 
 	const newHeaders = new Headers();
 
-	const { error, data } = await client.invite.activate({
+	const { newError, path: acceptPath } = await acceptInviteGet(client, {
 		token: tokenValue,
-		callbackURL: "/auth/sign-in",
+		signInUpUrl: "/auth/sign-in",
 		fetchOptions: {
-			onSuccess(context) {
+			onResponse(context) {
 				setCookieToHeader(newHeaders)(context);
 			},
 		},
 	});
 
-	expect(data).toStrictEqual({
-		status: true,
-		message: "Please sign in or sign up to continue.",
-		action: "SIGN_IN_UP_REQUIRED",
-		redirectTo: "/auth/sign-in",
-	});
-	expect(error).toBe(null);
+	expect(acceptPath).toBe("http://localhost:3000/auth/sign-in");
+	expect(newError).toBe(null);
 
 	const { path } = await resolveInviteRedirect(client.signUp.email, {
 		...invitedUser,
@@ -145,7 +136,7 @@ test("invite hook deletes invite cookie after sign-up/email", async ({
 	});
 
 	expect(newHeaders.get("cookie")).toContain("better-auth.invite_token=;");
-	expect(path).toBe("http://localhost:3000/auth/invited");
+	expect(path).toBe("http://localhost:3000/");
 });
 
 test("invite hook doesn't run if no invite cookie is present", async ({
@@ -225,22 +216,18 @@ test("invitesHook runs after sign-up and triggers invite hooks in correct order"
 
 	const newHeaders = new Headers();
 
-	const { data } = await client.invite.activate({
+	const { newError, path: acceptPath } = await acceptInviteGet(client, {
 		token: tokenValue,
-		callbackURL: "/auth/sign-in",
+		signInUpUrl: "/auth/sign-in",
 		fetchOptions: {
-			onSuccess(context) {
+			onResponse(context) {
 				setCookieToHeader(newHeaders)(context);
 			},
 		},
 	});
 
-	expect(data).toStrictEqual({
-		status: true,
-		message: "Please sign in or sign up to continue.",
-		action: "SIGN_IN_UP_REQUIRED",
-		redirectTo: "/auth/sign-in",
-	});
+	expect(acceptPath).toBe("http://localhost:3000/auth/sign-in");
+	expect(newError).toBe(null);
 
 	await client.signIn.email({
 		...invitedUser,

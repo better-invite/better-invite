@@ -12,75 +12,42 @@ To invite a user to our application, we need to create an invite. We can create 
 
 Example:
 ```ts
-const res = authClient.invite.create({
+const res = await authClient.invite.create({
 	role: "user",
-	email: "test@test.com" // If email is present, the invite is private
+	email: ["test@test.com"], // Since an email is present, the invite is private
+	redirectToAfterUpgrade: "/invite/accepted", // Optional: redirect after accepting the invite
 })
 ```
 
-If the invite is private, the plugin will send an email to the user with the invite link (see [Activate Invite Callback](/docs/core/api#activate-invite-callback)).
-The response from `invite.create()` depends on whether the invite is **public** or **private**:
+<Callout>
+A private invite can include multiple emails. Internally, the plugin creates **one shared invitation** (one token) that stores the full recipient list, and sends each recipient their own invite link
+(links differ because they include a `?email=...` query).
+By default, a multi-email invite allows one use per recipient and has no total-use cap. The recipient list is shared. Accepting an invite removes that recipient after their allowed uses are reached, while rejecting it removes that recipient immediately.
+Set `maxUsesPerUser` to choose a different per-recipient limit, or set `maxUses` to impose a total cap across all recipients.
+</Callout>
 
-### Public invite
+Public invites allow unlimited total uses and unlimited uses per user by default. A private invite with one email allows one use total by default. Set `maxUses` or `maxUsesPerUser` on each `invite.create()` call to override these defaults.
 
-No email is sent, and the API returns the invite **token or URL** (depending on your `senderResponse` config):
+`defaultRedirectAfterUpgrade` remains available as a deprecated server-wide fallback. Prefer `redirectToAfterUpgrade` on each `invite.create()` request.
 
-```ts
-{
-  status: true,
-  message: "token", // The invite token or URL
-}
-```
+If the invite is private, the plugin will send an email to the user (or users) with the invite link (see [Accept Invite Callback](/docs/core/api#accept-invite-callback)).
 
-### Private invite
+# Accepting an invite
 
-The plugin will send an invite email, and the response will be:
+Accepting an invite depends on how the user arrives:
 
-```ts
-{
-  status: true,
-  message: "The invitation was sent",
-}
-```
-
-# Activating an invite
-
-Activating an invite handles two cases depending on the user's session:
-
-- **If the user is not signed in**, the invite is stored in a temporary cookie and the API returns an action telling you the user must sign in or sign up first.
-- **If the user is already signed in**, the user's role is updated immediately.
+- **Email / browser link** → [Accept Invite Callback](/docs/core/api#accept-invite-callback) (`GET /invite/:token`). If the user is not signed in, the invite token is stored in a cookie and they are redirected to sign in or sign up.
+- **Authenticated app UI** → [Accept Invite](/docs/core/api#accept-invite) (`POST /invite/accept`, requires a session). The user's role is updated immediately.
 
 Example:
 
 ```ts
-const res = await authClient.invite.activate({
-  callbackURL: "/auth/sign-in-or-sign-up", // The user will be redirected here if they need to sign in or sign up
+const res = await authClient.invite.accept({
+  callbackUrl: "/invite/accepted", // The user will be redirected here after accepting the invite
   token: "token123",
 });
-```
 
-## If the user is not signed in
-
-The API returns:
-
-```ts
-{
-  status: true,
-  message: "Invite activated successfully",
-  action: "SIGN_IN_UP_REQUIRED",
-  redirectTo: "/auth/sign-in-or-sign-up",
-}
-```
-
-At this point, redirect the user to `redirectTo` and perform sign in or sign up. After that, the plugin will automatically activate the invite using a hook, reading the invite data from the cookie. **No further response is returned from the hook**—it just completes the activation once the user has a session.
-
-## If the user is already signed in
-
-The API returns:
-
-```ts
-{
-  status: true,
-  message: "Invite activated successfully",
+if (res.data?.redirectTo) {
+  window.location.assign(res.data.redirectTo);
 }
 ```

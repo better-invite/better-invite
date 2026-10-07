@@ -577,3 +577,165 @@ test("works with old email field in db", async ({ createAuth }) => {
 		}),
 	);
 });
+
+test("rejectInvite removes only the rejecting user from a private invite", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			sendUserInvitation: () => {},
+		},
+	});
+
+	const firstInvitee = {
+		email: "invitee1@test.com",
+		role: "user",
+		name: "Invitee 1",
+		password: "12345678",
+	};
+
+	const secondInvitee = {
+		email: "invitee2@test.com",
+		role: "user",
+		name: "Invitee 2",
+		password: "12345678",
+	};
+
+	await createUser(firstInvitee, db);
+	await createUser(secondInvitee, db);
+
+	const { headers: creatorHeaders } = await signInWithTestUser();
+
+	const created = await client.invite.create({
+		role: "admin",
+		email: [firstInvitee.email, secondInvitee.email],
+		fetchOptions: {
+			headers: creatorHeaders,
+		},
+	});
+
+	expect(created.error).toBeNull();
+
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [
+			{
+				field: "emails",
+				value: JSON.stringify([firstInvitee.email, secondInvitee.email]),
+			},
+		],
+	});
+
+	if (!invite) {
+		throw new Error("Invite not found");
+	}
+
+	const { headers: firstHeaders } = await signInWithUser(
+		firstInvitee.email,
+		firstInvitee.password,
+	);
+
+	const rejected = await client.invite.reject({
+		token: invite.token,
+		fetchOptions: {
+			headers: firstHeaders,
+		},
+	});
+
+	expect(rejected.error).toBeNull();
+
+	const updatedInvite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "token", value: invite.token }],
+	});
+
+	if (!updatedInvite) {
+		throw new Error("Updated invite not found");
+	}
+
+	expect(updatedInvite.emails).toEqual([secondInvitee.email]);
+
+	const { headers: secondHeaders } = await signInWithUser(
+		secondInvitee.email,
+		secondInvitee.password,
+	);
+
+	const accepted = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: {
+			headers: secondHeaders,
+		},
+	});
+
+	expect(accepted.error).toBeNull();
+	expect(accepted.data).toStrictEqual({
+		status: true,
+		action: "REDIRECT_TO_AFTER_UPGRADE",
+		message: "Invite accepted successfully",
+		redirectTo: "http://localhost:3000/",
+	});
+});
+
+test("keeping an invite after the last rejection preserves its private recipient", async ({
+	createAuth,
+}) => {
+	const { client, db, signInWithTestUser, signInWithUser } = await createAuth({
+		pluginOptions: {
+			...defaultOptions,
+			keepInviteAfterLastRejection: true,
+			sendUserInvitation: () => {},
+		},
+	});
+	const recipient = {
+		email: "last-reject@test.com",
+		role: "user",
+		name: "Last Reject",
+		password: "12345678",
+	};
+	const otherUser = {
+		email: "other-user@test.com",
+		role: "user",
+		name: "Other User",
+		password: "12345678",
+	};
+	await Promise.all([createUser(recipient, db), createUser(otherUser, db)]);
+	const { headers: creatorHeaders } = await signInWithTestUser();
+	const created = await client.invite.create({
+		role: "admin",
+		email: recipient.email,
+		fetchOptions: { headers: creatorHeaders },
+	});
+	expect(created.error).toBeNull();
+	const invite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "emails", value: JSON.stringify([recipient.email]) }],
+	});
+	if (!invite) throw new Error("Invite not found");
+	const { headers: recipientHeaders } = await signInWithUser(
+		recipient.email,
+		recipient.password,
+	);
+	const rejected = await client.invite.reject({
+		token: invite.token,
+		fetchOptions: { headers: recipientHeaders },
+	});
+	expect(rejected.error).toBeNull();
+
+	const keptInvite = await db.findOne<InviteTypeWithId>({
+		model: "invite",
+		where: [{ field: "id", value: invite.id }],
+	});
+	expect(keptInvite?.status).toBe("pending");
+	expect(keptInvite?.emails).toEqual([recipient.email]);
+
+	const { headers: otherHeaders } = await signInWithUser(
+		otherUser.email,
+		otherUser.password,
+	);
+	const acceptedByOtherUser = await client.invite.accept({
+		token: invite.token,
+		fetchOptions: { headers: otherHeaders },
+	});
+	expect(acceptedByOtherUser.error?.code).toBe("INVALID_EMAIL");
+});

@@ -2,27 +2,35 @@ import { createAuthEndpoint, originCheck } from "better-auth/api";
 import * as z from "zod";
 import type { NewInviteOptions } from "../types";
 import { redirectCallback, redirectError } from "../utils";
-import { activateInviteLogic } from "./activate-invite";
+import { acceptInviteLogic } from "./accept-invite";
+
+let alreadyWarned = false;
 
 /**
- * Only used for invite links
- *
- * If an error occurs, the user is redirected to the provided callbackURL
- * with the query parameters "error" and "message".
+ * @deprecated Use `acceptInviteCallback` instead. This endpoint will remain available for backward compatibility, but it may be removed in a future release.
  */
 export const activateInviteCallback = (options: NewInviteOptions) => {
 	return createAuthEndpoint(
-		"/invite/:token",
+		// This route exists for backwards compatibility with apps still using the old
+		// activate invite callback (which is NOT recommended). New apps should use
+		// `acceptInviteCallback` instead. `/invite/:token` is now handled by the new
+		// accept invite callback flow.
+		"/invite/:token/activate",
 		{
 			method: "GET",
 			use: [originCheck((ctx) => ctx.query.callbackURL)],
 			query: z.object({
 				/**
-				 * Where to redirect the user after sing in/up
+				 * Where to redirect the user after sign in/up
+				 * {token} will be replaced by the actual token from the URL path.
+				 *
+				 * Note: This is called `callbackURL` instead of `callbackUrl` to match the query parameter name used in the old activate invite callback flow.
+				 *
+				 * @default /
 				 */
 				callbackURL: z
 					.string()
-					.describe("Where to redirect the user after sing in/up")
+					.describe("Where to redirect the user after sign in/up")
 					.optional(),
 			}),
 			metadata: {
@@ -44,7 +52,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 							name: "callbackURL",
 							in: "query",
 							required: true,
-							description: "Where to redirect the user after sing in/up",
+							description: "Where to redirect the user after sign in/up",
 							schema: {
 								type: "string",
 							},
@@ -68,9 +76,21 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 			},
 		},
 		async (ctx) => {
-			let res: Awaited<ReturnType<typeof activateInviteLogic>> | null = null;
+			if (!alreadyWarned) {
+				ctx.context.logger.warn(
+					"activateInviteCallback is deprecated. Use acceptInviteCallback instead.",
+					'This callback should only be triggered from invitation URLs. If you are calling GET client.invite[":token"] directly in your app, migrate to acceptInvite (POST /invite/accept) instead.',
+				);
+				alreadyWarned = true;
+			}
+
+			let res: Awaited<ReturnType<typeof acceptInviteLogic>> | null = null;
 			try {
-				res = await activateInviteLogic(options, ctx, ctx.params);
+				res = await acceptInviteLogic(options, ctx, {
+					...ctx.params,
+					...ctx.query,
+					callbackUrl: ctx.query.callbackURL,
+				});
 			} catch (e) {
 				const err = e as
 					| { body?: { code?: string; message?: string } }
@@ -89,11 +109,7 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 			}
 
 			if (res.action === "REDIRECT_TO_AFTER_UPGRADE" && res.redirectTo) {
-				const redirectURL = res.redirectTo?.replace(
-					"{token}",
-					ctx.params.token,
-				);
-				return ctx.redirect(redirectError(ctx.context, redirectURL));
+				return ctx.redirect(redirectError(ctx.context, res.redirectTo));
 			}
 
 			if (res.action === "SIGN_IN_UP_REQUIRED")
@@ -104,11 +120,12 @@ export const activateInviteCallback = (options: NewInviteOptions) => {
 					),
 				);
 
-			// Fallback (unknown error)
-			redirectError(ctx.context, ctx.query.callbackURL, {
-				message: "Internal server error",
-				error: "SERVER_ERROR",
-			});
+			return ctx.redirect(
+				redirectError(ctx.context, ctx.query.callbackURL, {
+					message: "Internal server error",
+					error: "SERVER_ERROR",
+				}),
+			);
 		},
 	);
 };

@@ -5,6 +5,11 @@ icon: Database
 ---
 
 # Invite
+
+At the API boundary, `invite.create()` accepts `redirectToAfterUpgrade` and stores it in `callbackUrl`. The legacy database column named `redirectToAfterUpgrade` is retained only to read older invitations. The `newAccount` column is also retained for compatibility, although `invite.get()` no longer returns it.
+
+Consumed invites and their usage rows are retained as acceptance history by default. `cleanupInvitesAfterMaxUses` defaults to `false`; when enabled, the invitation and all its usage rows are deleted after the final allowed use.
+
 <DatabaseTable
   fields={[
     {
@@ -29,6 +34,12 @@ icon: Database
       description: "Maximum number of times this invite can be used",
     },
     {
+      name: "maxUsesPerUser",
+      type: "number",
+      isOptional: true,
+      description: "Maximum number of times each user can use this invite",
+    },
+    {
       name: "createdByUserId",
       type: "string",
       description: "ID of the user who created the invite",
@@ -38,7 +49,9 @@ icon: Database
     {
       name: "redirectToAfterUpgrade",
       type: "string",
-      description: "URL to redirect after the user upgrades",
+      description: "Legacy URL column from before v0.6.0. Prefer callbackUrl. Still read as a fallback for in-flight invites",
+      deprecated: true,
+      isOptional: true,
     },
     {
       name: "shareInviterName",
@@ -64,10 +77,17 @@ icon: Database
       description: "Role assigned when the invite is used",
     },
     {
+      name: "callbackUrl",
+      type: "string",
+      isOptional: true,
+      description: "URL to redirect the user to after accepting the invite",
+    },
+    {
       name: "newAccount",
       type: "boolean",
       required: false,
       description: "Whether this invite is for creating a new account or upgrading an existing one",
+      deprecated: true,
     }
   ]}
 />

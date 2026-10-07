@@ -10,7 +10,7 @@ import type {
 } from "./types";
 import {
 	getDate,
-	normalizeEmails,
+	normalizeArray,
 	resolveInvitePayload,
 	resolveTokenGenerator,
 } from "./utils";
@@ -24,25 +24,49 @@ export const getInviteAdapter = (
 	const inviteUseTable = "inviteUse";
 
 	return {
-		createInvite: (
-			invite: CreateInvite,
-			user: UserWithRole,
-			newAccount?: boolean,
-		) => {
+		createInvite: (invite: CreateInvite, user: UserWithRole) => {
 			const payload = resolveInvitePayload(invite, options);
 			const generateToken = resolveTokenGenerator(payload.tokenType, options);
 
-			const emails = normalizeEmails<string[]>(invite.email, []);
+			const emails = normalizeArray(invite.email);
 			const isPrivate = emails.length > 0;
 
 			const expiresAt = getDate(payload.expiresIn, "sec");
 			const token = generateToken();
 			const now = options.getDate();
 
-			const maxUses = invite.maxUses ?? options.defaultMaxUses;
+			const hasMaxUsesPerUserLimit =
+				isPrivate &&
+				((invite.maxUsesPerUser !== undefined &&
+					invite.maxUsesPerUser !== Infinity &&
+					invite.maxUsesPerUser !== -1) ||
+					emails.length > 1);
 
-			const isUnlimited =
-				!isPrivate && (maxUses == null || maxUses === Infinity);
+			let maxUsesPerUser: number | undefined;
+
+			if (!isPrivate) {
+				maxUsesPerUser = undefined;
+			} else if (emails.length > 1 && invite.maxUsesPerUser === undefined) {
+				maxUsesPerUser = 1;
+			} else if (
+				invite.maxUsesPerUser === undefined ||
+				invite.maxUsesPerUser === Infinity ||
+				invite.maxUsesPerUser === -1
+			) {
+				maxUsesPerUser = undefined;
+			} else {
+				maxUsesPerUser = invite.maxUsesPerUser;
+			}
+
+			const inviteTypeMaxUses = hasMaxUsesPerUserLimit
+				? Infinity
+				: isPrivate
+					? 1
+					: Infinity;
+
+			const maxUses = invite.maxUses ?? inviteTypeMaxUses;
+
+			const isUnlimited = maxUses === Infinity;
 
 			return baseAdapter.create<InviteTypeWithId>({
 				model: inviteTable,
@@ -51,13 +75,12 @@ export const getInviteAdapter = (
 					createdByUserId: user.id,
 					createdAt: now,
 					expiresAt,
-					maxUses: isUnlimited ? 1 : (maxUses ?? 1),
-					infinityMaxUses: isUnlimited,
-					redirectToAfterUpgrade: payload.redirectToAfterUpgrade,
+					maxUses: isUnlimited ? -1 : maxUses,
+					maxUsesPerUser: maxUsesPerUser ?? -1,
 					shareInviterName: payload.shareInviterName,
-					emails: normalizeEmails(invite.email),
+					emails: normalizeArray(invite.email, true),
 					role: invite.role,
-					newAccount,
+					callbackUrl: payload.callbackUrl,
 					status: "pending",
 				},
 			});
@@ -104,6 +127,20 @@ export const getInviteAdapter = (
 					{
 						field: "inviteId",
 						value: inviteId,
+					},
+				],
+			}),
+		countInvitationUsesByUser: (inviteId: string, userId: string) =>
+			baseAdapter.count({
+				model: inviteUseTable,
+				where: [
+					{
+						field: "inviteId",
+						value: inviteId,
+					},
+					{
+						field: "usedByUserId",
+						value: userId,
 					},
 				],
 			}),
@@ -159,6 +196,25 @@ export const getInviteAdapter = (
 				model: inviteTable,
 				...data,
 			}),
+		removeUserByEmail: async (id: string, email: string) => {
+			const invite = await baseAdapter.findOne<InviteTypeWithId>({
+				model: inviteTable,
+				where: [{ field: "id", value: id }],
+			});
+
+			if (!invite) return null;
+
+			const emails = (invite.emails ?? []).filter((e) => e !== email);
+
+			return baseAdapter.update<InviteTypeWithId>({
+				model: inviteTable,
+				where: [{ field: "id", value: id }],
+				update: {
+					emails,
+					...(emails.length === 0 && { status: "used" }),
+				},
+			});
+		},
 	};
 };
 

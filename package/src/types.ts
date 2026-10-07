@@ -1,6 +1,8 @@
 import type { Awaitable, GenericEndpointContext } from "better-auth";
 import type { InferOptionSchema, UserWithRole } from "better-auth/plugins";
+import type { Tokens } from "./constants";
 import type { InviteSchema } from "./schema";
+import type { resolveInviteOptions } from "./utils";
 
 export type InviteOptions = {
 	/**
@@ -97,19 +99,21 @@ export type InviteOptions = {
 	defaultTokenType?: TokensType;
 	/**
 	 * The default redirect to make the user to sign up
+	 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
 	 *
 	 * @default /auth/sign-up
 	 */
 	defaultRedirectToSignUp?: string;
 	/**
 	 * The default redirect to make the user to sign up
+	 * {callbackUrl} will be replaced by the actual callbackUrl in the request body.
 	 *
 	 * @default /auth/sign-in
 	 */
 	defaultRedirectToSignIn?: string;
 	/**
-	 * The default redirect after upgrading role (or logging in with an invite)
-	 * {token} will be replaced with the user's actual token.
+	 * The URL to redirect the user to after upgrading their role (after accepting the invite).
+	 * @deprecated Use `redirectToAfterUpgrade` in the request body of `invite.create()` instead.
 	 */
 	defaultRedirectAfterUpgrade?: string;
 	/**
@@ -122,10 +126,13 @@ export type InviteOptions = {
 	 */
 	defaultShareInviterName?: boolean;
 	/**
-	 * Max times an invite can be used
-	 * @default 1 on private invites and infinite on public invites
+	 * @deprecated This option is ignored. Set `maxUses` on each `invite.create()` call.
 	 */
 	defaultMaxUses?: number;
+	/**
+	 * @deprecated This option is ignored. Set `maxUsesPerUser` on each `invite.create()` call.
+	 */
+	defaultMaxUsesPerUser?: number;
 	/**
 	 * How should the sender receive the token by default.
 	 * (sender only receives a token if no email is provided)
@@ -141,7 +148,8 @@ export type InviteOptions = {
 	 */
 	defaultSenderResponseRedirect?: "signUp" | "signIn";
 	/**
-	 * Send email to the user with the invite link.
+	 * Send an email to each recipient with the invite link. A multi-email invite
+	 * has one shared invitation and token, passed to every invocation.
 	 */
 	sendUserInvitation?: (
 		data: {
@@ -169,8 +177,8 @@ export type InviteOptions = {
 	invitationTokenExpiresIn?: number;
 	/**
 	 * Maximum age (in seconds) for the invitation cookie.
-	 * This controls how long users have to complete the login flow
-	 * before activating the token if they are not logged in.
+	 * This controls how long the invite token and post-acceptance callback cookies
+	 * last while users complete the login flow before accepting the invite.
 	 *
 	 * @default 600 (10 minutes)
 	 */
@@ -182,14 +190,22 @@ export type InviteOptions = {
 	 */
 	cleanupInvitesOnDecision?: boolean;
 	/**
-	 * Delete invitations after they reach max uses.
+	 * Delete the invitation and its usage history after it reaches its total-use limit.
+	 * Keep this disabled to retain consumed invitations and their acceptance history.
 	 *
 	 * @default false
 	 */
 	cleanupInvitesAfterMaxUses?: boolean;
 	/**
-	 * The user will be redirected here to activate their invite
-	 * Use {token} and {callbackUrl}, this will be replaced with their values
+	 * Keep the invite pending after its last recipient rejects it. When false,
+	 * `cleanupInvitesOnDecision` determines whether to delete it or mark it rejected.
+	 *
+	 * @default false
+	 */
+	keepInviteAfterLastRejection?: boolean;
+	/**
+	 * The user will be redirected here to accept their invite
+	 * Use {token}, {callbackUrl} and {email}, this will be replaced with their values
 	 */
 	defaultCustomInviteUrl?: string;
 	/**
@@ -204,6 +220,55 @@ export type InviteOptions = {
 		},
 		request?: Request,
 	) => Awaitable<void>;
+	/**
+	 * Allow to get private invites, without checking that the emails
+	 * match (useful for getting invites without a session).
+	 *
+	 * @default false
+	 */
+	allowDangerousGetInvite?: boolean;
+	/**
+	 * Called when an existing invite is found but cannot be returned because
+	 * private-invite access checks fail or its inviter record is missing. It is
+	 * not called when the token does not match an invite. Use this to return a
+	 * fallback response instead of revealing whether a private invite exists.
+	 */
+	getInviteNotFound?: (
+		data: {
+			token: string;
+			invite: InviteTypeWithId;
+			inviter?: UserWithRole | null;
+			invitation: {
+				emails: string[];
+				createdAt: Date;
+				role: string;
+				type: "private" | "public";
+			};
+		},
+		request?: Request,
+	) => Awaitable<
+		| {
+				status: true;
+				inviter: {
+					email: string;
+					name: string | null;
+					image: string | null;
+				};
+				invitation: {
+					emails: string[];
+					createdAt: Date;
+					role: string;
+					type: "private" | "public";
+				};
+		  }
+		| undefined
+	>;
+	/**
+	 * Extend the default hooks URL path matchers
+	 *
+	 * @example ["/sign-in/test"]
+	 */
+	hookPathExtender?: string[];
 	/**
 	 * Custom schema for the invite plugin
 	 */
@@ -224,6 +289,20 @@ export type InviteOptions = {
 		afterCreateInvite?: (data: {
 			ctx: GenericEndpointContext;
 			invitations: InviteTypeWithId[];
+		}) => Awaitable<void>;
+		/**
+		 * A function that runs before invitation emails are resent.
+		 */
+		beforeResendInvite?: (data: {
+			ctx: GenericEndpointContext;
+			invitation: InviteTypeWithId;
+		}) => Awaitable<void>;
+		/**
+		 * A function that runs after invitation emails are resent.
+		 */
+		afterResendInvite?: (data: {
+			ctx: GenericEndpointContext;
+			invitation: InviteTypeWithId;
 		}) => Awaitable<void>;
 		/**
 		 * A function that runs before a user accepts an invite
@@ -285,23 +364,7 @@ export type InviteOptions = {
 	};
 };
 
-type MakeRequired<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
-
-export type NewInviteOptions = MakeRequired<
-	InviteOptions,
-	| "getDate"
-	| "invitationTokenExpiresIn"
-	| "defaultShareInviterName"
-	| "defaultSenderResponse"
-	| "defaultSenderResponseRedirect"
-	| "defaultTokenType"
-	| "defaultRedirectToSignIn"
-	| "defaultRedirectToSignUp"
-	| "canCreateInvite"
-	| "canAcceptInvite"
-	| "canCancelInvite"
-	| "canRejectInvite"
->;
+export type NewInviteOptions = ReturnType<typeof resolveInviteOptions>;
 
 export type InviteType = {
 	token: string;
@@ -309,8 +372,11 @@ export type InviteType = {
 	createdAt: Date;
 	expiresAt: Date;
 	maxUses: number;
-	infinityMaxUses: boolean;
-	redirectToAfterUpgrade?: string;
+	maxUsesPerUser?: number;
+	/** @deprecated Use `maxUses: -1` to represent unlimited uses. */
+	infinityMaxUses?: boolean;
+	/** @deprecated Use `maxUsesPerUser: -1` to represent unlimited uses per user. */
+	infinityMaxUsesPerUser?: boolean;
 	shareInviterName: boolean;
 	/**
 	 * @deprecated Use emails
@@ -318,7 +384,15 @@ export type InviteType = {
 	email?: string;
 	emails?: string[];
 	role: string;
-	newAccount?: boolean; // Only in private invites
+	/**
+	 * @deprecated
+	 */
+	newAccount?: boolean;
+	callbackUrl?: string;
+	/**
+	 * @deprecated Use callbackUrl
+	 */
+	redirectToAfterUpgrade?: string;
 	status: InvitationStatus;
 };
 
@@ -326,7 +400,12 @@ export type InviteTypeWithId = InviteType & {
 	id: string;
 };
 
-export type TokensType = "token" | "code" | "custom";
+export type TokensType = (typeof Tokens)[number];
+
+export type InviteCookie = {
+	token?: string;
+	callbackUrl?: string;
+};
 
 export type InviteUseType = {
 	inviteId: string;
